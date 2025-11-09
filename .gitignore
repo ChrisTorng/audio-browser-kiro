@@ -26,6 +26,12 @@ wheels/
 # Virtual Environment
 backend/venv/
 backend/.venv/
+.venv/
+venv/
+
+# uv
+.uv/
+uv.lock
 
 # Database
 *.db
