@@ -38,22 +38,22 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 以樹狀結構顯示資料夾和音檔的階層關係
-2. THE Frontend SHALL 在單行高度內依序顯示：星級、音檔名稱、波形圖、描述
+2. THE Frontend SHALL 在單行高度內依序顯示：星級、音檔名稱、波形圖、頻譜圖、描述
 3. THE Frontend SHALL 顯示每個資料夾的名稱和包含的音檔數量
 4. WHEN 使用者點擊資料夾，THE Frontend SHALL 展開或收合該資料夾的內容
 5. THE Frontend SHALL 使用緊湊的 UI 設計以最大化可見的音檔數量
 
 ### Requirement 3
 
-**User Story:** 作為使用者，我想要為每個音檔即時生成波形圖，以便視覺化了解音頻內容
+**User Story:** 作為使用者，我想要為每個音檔即時生成波形圖和頻譜圖，以便視覺化了解音頻內容
 
 #### Acceptance Criteria
 
-1. WHEN Frontend 下載音檔後，THE Frontend SHALL 即時在瀏覽器中生成波形圖
+1. WHEN Frontend 下載音檔後，THE Frontend SHALL 即時在瀏覽器中生成波形圖和頻譜圖
 2. THE Frontend SHALL 使用 Web Audio API 或相關函式庫處理音頻資料
-3. THE Frontend SHALL 在音檔列表中顯示生成的波形圖
-4. THE Frontend SHALL 在波形圖上整合播放進度條
-5. THE Frontend SHALL 在 2 秒內完成單一音檔的波形圖生成
+3. THE Frontend SHALL 在音檔列表中依序顯示波形圖和頻譜圖
+4. THE Frontend SHALL 在波形圖和頻譜圖上同步顯示播放進度條
+5. THE Frontend SHALL 在 3 秒內完成單一音檔的波形圖和頻譜圖生成
 
 ### Requirement 4
 

@@ -163,7 +163,7 @@ class DirectoryNode:
 
 **`AudioItem.tsx`**
 - 單一音檔項目（單行顯示）
-- 包含：星級、檔名、波形圖、描述
+- 包含：星級、檔名、波形圖、頻譜圖、描述
 - 處理選擇狀態視覺化
 
 **`StarRating.tsx`**
@@ -175,6 +175,11 @@ class DirectoryNode:
 - 波形圖顯示
 - 整合播放進度條
 - 使用 Canvas 或 SVG 繪製
+
+**`SpectrogramDisplay.tsx`**
+- 頻譜圖顯示
+- 同步顯示播放進度條
+- 使用 Canvas 繪製
 
 **`DescriptionField.tsx`**
 - 可編輯描述欄位
@@ -208,6 +213,16 @@ interface UseWaveformReturn {
   isLoading: boolean;
   error: Error | null;
   generateWaveform: (audioBuffer: AudioBuffer) => void;
+}
+```
+
+**`useSpectrogram.ts`**
+```typescript
+interface UseSpectrogramReturn {
+  spectrogramData: number[][];  // 頻譜資料（2D 陣列）
+  isLoading: boolean;
+  error: Error | null;
+  generateSpectrogram: (audioBuffer: AudioBuffer) => void;
 }
 ```
 
@@ -249,6 +264,14 @@ class AudioBrowserAPI {
 class WaveformGenerator {
   async generateFromAudioBuffer(audioBuffer: AudioBuffer, width: number): Promise<number[]>;
   async generateFromBlob(audioBlob: Blob, width: number): Promise<number[]>;
+}
+```
+
+**`spectrogramGenerator.ts`**
+```typescript
+class SpectrogramGenerator {
+  async generateFromAudioBuffer(audioBuffer: AudioBuffer, width: number, height: number): Promise<number[][]>;
+  async generateFromBlob(audioBlob: Blob, width: number, height: number): Promise<number[][]>;
 }
 ```
 
@@ -428,13 +451,13 @@ describe('AudioItem', () => {
    - 只渲染可見的音檔項目
    - 支援 10000+ 音檔
 
-2. **波形圖快取**
-   - 使用 Map 快取已生成的波形資料
+2. **波形圖與頻譜圖快取**
+   - 使用 Map 快取已生成的波形和頻譜資料
    - LRU 策略限制記憶體使用
 
 3. **延遲載入**
    - 音檔按需載入
-   - 波形圖按可見性生成
+   - 波形圖和頻譜圖按可見性生成
 
 4. **防抖與節流**
    - 篩選輸入使用 debounce (100ms)
@@ -484,9 +507,28 @@ describe('AudioItem', () => {
 
 ## Future Enhancements
 
-1. **播放清單功能**
-2. **音檔標籤系統**
-3. **匯出/匯入 metadata**
-4. **多資料夾管理**
-5. **音檔格式轉換**
-6. **協作功能（多使用者）**
+1. **匯出/匯入 metadata**
+
+## Optimization Roadmap
+
+### Phase 1: 智慧預載與自動生成
+- 當前選取音檔下載完畢後自動播放並同步生成波形圖和頻譜圖
+- 自動預載下一個音檔
+- 持續下載直到螢幕可見範圍內的所有音檔都已下載並生成視覺化
+
+### Phase 2: 壓縮檔支援
+- 偵測特定副檔名的壓縮檔（如 .zip）
+- 自動解壓縮並掃描內部音檔
+- 解壓內容快取到專案子資料夾
+- 壓縮檔顯示為虛擬資料夾，可展開瀏覽內部音檔
+- 支援壓縮檔內音檔的播放、評分和描述功能
+
+### Phase 3: 附加音檔功能
+- 每個音檔可附加額外的音檔版本
+- 附加音檔儲存於專案子資料夾
+- 顯示附加音檔播放圖示
+- 使用 → 鍵切換到附加音檔播放
+- 使用 ← 鍵切換回原始音檔播放
+- 空白鍵控制播放/停止，重新播放從頭開始
+- 附加音檔不生成波形圖和頻譜圖
+- 播放附加音檔時在圖示上顯示播放狀態
