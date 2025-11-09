@@ -11,7 +11,7 @@
   - _Requirements: 所有需求的基礎_
 
 - [ ] 2. 實作資料模型和資料庫層
-  - [ ] 2.1 定義共用型別 (src/shared/types/)
+  - [x] 2.1 定義共用型別 (src/shared/types/)
     - 定義 AudioMetadata 介面
     - 定義 AudioFile 和 DirectoryNode 介面
     - 定義 API 請求/回應型別
