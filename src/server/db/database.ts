@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { AudioMetadata } from '../../shared/types/index.js';
+import { validateMetadata } from '../utils/validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -98,12 +99,16 @@ export class AudioDatabase {
    * Insert or update metadata (upsert)
    * @param data - Metadata to insert or update
    * @returns Updated AudioMetadata
+   * @throws ValidationError if data is invalid
    */
   upsertMetadata(data: {
     filePath: string;
     rating: number;
     description: string;
   }): AudioMetadata {
+    // Validate data before database operation
+    validateMetadata(data);
+
     const upsertStmt = this.db.prepare(`
       INSERT INTO audio_metadata (file_path, rating, description, updated_at)
       VALUES (?, ?, ?, CURRENT_TIMESTAMP)

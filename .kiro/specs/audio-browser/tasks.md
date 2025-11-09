@@ -24,7 +24,7 @@
     - 建立索引 (file_path, rating)
     - _Requirements: 1.6, 1.7_
   
-  - [ ] 2.3 實作資料驗證
+  - [x] 2.3 實作資料驗證
     - 實作 rating 範圍驗證 (0-3)
     - 實作 description 長度限制
     - 實作 filePath 格式驗證
