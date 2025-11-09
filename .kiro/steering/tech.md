@@ -24,17 +24,20 @@
 ### 後端
 
 ```bash
+# 建立虛擬環境
+uv venv
+
 # 安裝依賴
-pip install -r requirements.txt
+uv pip install -e ".[dev]"
 
 # 執行開發伺服器
-uvicorn main:app --reload
+uv run uvicorn main:app --reload --port 8000
 
 # 執行測試
-pytest
+uv run pytest
 
 # 執行測試並顯示覆蓋率
-pytest --cov
+uv run pytest --cov
 ```
 
 ### 前端

@@ -52,27 +52,28 @@ audio-browser/
 ### 後端設定
 
 ```bash
-# 建立虛擬環境
 cd backend
-python -m venv venv
+
+# 建立虛擬環境（使用 uv）
+uv venv
 
 # 啟動虛擬環境
 # Linux/Mac:
-source venv/bin/activate
+source .venv/bin/activate
 # Windows:
-venv\Scripts\activate
+.venv\Scripts\activate
 
 # 安裝依賴
-pip install -r requirements.txt
+uv pip install -e ".[dev]"
 
 # 執行開發伺服器
-uvicorn main:app --reload --port 8000
+uv run uvicorn main:app --reload --port 8000
 
 # 執行測試
-pytest
+uv run pytest
 
 # 執行測試並顯示覆蓋率
-pytest --cov
+uv run pytest --cov
 ```
 
 ### 前端設定
