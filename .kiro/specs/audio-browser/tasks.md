@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. 建立專案結構和基礎配置
+- [-] 1. 建立專案結構和基礎配置
   - 建立 backend 和 frontend 資料夾結構
   - 設定 Python 虛擬環境和依賴 (FastAPI, SQLAlchemy, pytest)
   - 設定 React + TypeScript 專案 (Vite)
