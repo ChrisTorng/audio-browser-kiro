@@ -10,6 +10,8 @@ build/
 *.sqlite3
 data/*.db
 data/*.sqlite
+data/*.db-*
+!data/.gitkeep
 
 # IDE
 .vscode/
@@ -23,7 +25,8 @@ data/*.sqlite
 Thumbs.db
 
 # Generated files
-waveforms/
+waveforms/*
+!waveforms/.gitkeep
 
 # Test coverage
 coverage/
