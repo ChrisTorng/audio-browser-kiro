@@ -9,7 +9,7 @@
 - **Audio Browser System**: 整個音頻瀏覽器應用程式，包含前端和後端
 - **Audio File**: 音頻檔案，支援常見格式（如 MP3、WAV、FLAC 等）
 - **Waveform**: 音頻波形圖，視覺化呈現音頻內容
-- **Rating**: 五星評分系統（0-5 星）
+- **Rating**: 三星評分系統（1-3 星），0 星表示未評分
 - **Metadata**: 音檔的附加資訊，包含評分和描述
 - **Scan Service**: 掃描資料夾並識別音檔的後端服務
 - **Waveform Generator**: 生成音頻波形圖的服務
@@ -38,22 +38,22 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 以樹狀結構顯示資料夾和音檔的階層關係
-2. THE Frontend SHALL 顯示每個音檔的檔案名稱
+2. THE Frontend SHALL 在單行高度內依序顯示：星級、音檔名稱、波形圖、描述
 3. THE Frontend SHALL 顯示每個資料夾的名稱和包含的音檔數量
 4. WHEN 使用者點擊資料夾，THE Frontend SHALL 展開或收合該資料夾的內容
 5. THE Frontend SHALL 使用緊湊的 UI 設計以最大化可見的音檔數量
 
 ### Requirement 3
 
-**User Story:** 作為使用者，我想要為每個音檔自動生成波形圖，以便視覺化了解音頻內容
+**User Story:** 作為使用者，我想要為每個音檔即時生成波形圖，以便視覺化了解音頻內容
 
 #### Acceptance Criteria
 
-1. WHEN 系統偵測到音檔沒有對應的波形圖，THE Waveform Generator SHALL 自動生成波形圖
-2. THE Waveform Generator SHALL 將波形圖儲存在專案的 waveforms 子資料夾中
-3. THE Waveform Generator SHALL 使用音檔的相對路徑作為波形圖檔案的命名基礎
-4. THE Frontend SHALL 在音檔列表中顯示對應的波形圖
-5. THE Waveform Generator SHALL 在 3 秒內完成單一音檔的波形圖生成
+1. WHEN Frontend 下載音檔後，THE Frontend SHALL 即時在瀏覽器中生成波形圖
+2. THE Frontend SHALL 使用 Web Audio API 或相關函式庫處理音頻資料
+3. THE Frontend SHALL 在音檔列表中顯示生成的波形圖
+4. THE Frontend SHALL 在波形圖上整合播放進度條
+5. THE Frontend SHALL 在 2 秒內完成單一音檔的波形圖生成
 
 ### Requirement 4
 
@@ -61,11 +61,12 @@
 
 #### Acceptance Criteria
 
-1. WHEN 使用者按下向上鍵，THE Frontend SHALL 選擇上一個音檔
-2. WHEN 使用者按下向下鍵，THE Frontend SHALL 選擇下一個音檔
-3. WHEN 使用者按下 Enter 鍵，THE Frontend SHALL 播放當前選中的音檔
-4. WHEN 使用者按下空白鍵，THE Frontend SHALL 暫停或繼續播放當前音檔
-5. THE Frontend SHALL 視覺化標示當前選中的音檔
+1. WHEN 使用者按下向上鍵，THE Frontend SHALL 選擇上一個項目並立即開始播放（若為音檔）
+2. WHEN 使用者按下向下鍵，THE Frontend SHALL 選擇下一個項目並立即開始播放（若為音檔）
+3. WHEN 使用者按下空白鍵，THE Frontend SHALL 停止當前播放或重新開始播放當前音檔
+4. WHEN 當前選中項目為資料夾且使用者按下左鍵，THE Frontend SHALL 收合該資料夾
+5. WHEN 當前選中項目為資料夾且使用者按下右鍵，THE Frontend SHALL 展開該資料夾
+6. THE Frontend SHALL 視覺化標示當前選中的項目
 
 ### Requirement 5
 
@@ -73,23 +74,23 @@
 
 #### Acceptance Criteria
 
-1. WHEN 使用者點擊或選擇音檔，THE Frontend SHALL 立即開始播放該音檔
-2. THE Frontend SHALL 顯示播放進度條
-3. THE Frontend SHALL 顯示當前播放時間和總時長
-4. THE Frontend SHALL 提供播放、暫停和停止控制按鈕
-5. WHEN 音檔播放完畢，THE Frontend SHALL 自動停止播放
+1. WHEN 使用者點擊或選擇音檔，THE Frontend SHALL 立即開始循環播放該音檔
+2. THE Frontend SHALL 在波形圖上顯示播放進度
+3. WHEN 音檔播放完畢，THE Frontend SHALL 自動重新開始播放
+4. WHEN 使用者選擇其他音檔，THE Frontend SHALL 停止當前播放並開始新音檔的循環播放
+5. WHEN 使用者按下空白鍵停止播放後再次播放，THE Frontend SHALL 從頭開始播放
 
 ### Requirement 6
 
-**User Story:** 作為使用者，我想要為音檔標記五星評分，以便記錄我對音檔的喜好程度
+**User Story:** 作為使用者，我想要為音檔標記三星評分，以便記錄我對音檔的喜好程度
 
 #### Acceptance Criteria
 
-1. THE Frontend SHALL 為每個音檔顯示五星評分介面
-2. WHEN 使用者點擊星星，THE Frontend SHALL 更新該音檔的評分（0-5 星）
-3. WHEN 評分被更新，THE Backend SHALL 將評分儲存到 Database 中
-4. THE Frontend SHALL 視覺化顯示當前的評分狀態
-5. THE Database SHALL 只儲存有評分的音檔記錄
+1. THE Frontend SHALL 為每個音檔顯示三星評分介面
+2. WHEN 使用者點擊星星，THE Frontend SHALL 更新該音檔的評分（1-3 星）並立即儲存
+3. THE Frontend SHALL 不允許使用者直接設定 0 星（0 星僅表示未評分狀態）
+4. WHEN 評分被更新，THE Backend SHALL 將評分儲存到 Database 中
+5. THE Frontend SHALL 視覺化顯示當前的評分狀態（0 星顯示為空星）
 
 ### Requirement 7
 
@@ -97,23 +98,23 @@
 
 #### Acceptance Criteria
 
-1. THE Frontend SHALL 為每個音檔提供描述輸入欄位
-2. WHEN 使用者輸入描述，THE Frontend SHALL 在 1 秒延遲後自動儲存
-3. WHEN 描述被更新，THE Backend SHALL 將描述儲存到 Database 中
-4. THE Frontend SHALL 顯示現有的描述內容
-5. THE Database SHALL 只儲存有描述的音檔記錄
+1. THE Frontend SHALL 為每個音檔提供可點擊的描述欄位
+2. WHEN 使用者點擊描述欄位，THE Frontend SHALL 轉換為輸入框並根據點擊位置設定插入點
+3. WHEN 使用者按下 Esc 鍵，THE Frontend SHALL 取消編輯並恢復原值
+4. WHEN 使用者按下 Enter 鍵或輸入焦點離開，THE Frontend SHALL 自動儲存描述到 Backend
+5. WHEN 描述被更新，THE Backend SHALL 將描述儲存到 Database 中
 
 ### Requirement 8
 
-**User Story:** 作為使用者，我想要搜尋音檔名稱、資料夾名稱和描述，以便快速找到特定音檔
+**User Story:** 作為使用者，我想要篩選音檔名稱、資料夾名稱和描述，以便快速找到特定音檔
 
 #### Acceptance Criteria
 
-1. THE Frontend SHALL 提供搜尋輸入欄位
-2. WHEN 使用者輸入搜尋關鍵字，THE Frontend SHALL 即時過濾顯示的音檔列表
-3. THE Audio Browser System SHALL 搜尋音檔名稱、資料夾名稱和描述欄位
-4. THE Frontend SHALL 高亮顯示符合搜尋條件的文字
-5. THE Frontend SHALL 在 500 毫秒內完成包含 1000 個音檔的搜尋
+1. THE Frontend SHALL 提供篩選輸入欄位
+2. WHEN 使用者輸入文字，THE Frontend SHALL 逐字即時過濾顯示的音檔列表
+3. THE Frontend SHALL 篩選音檔名稱、資料夾名稱和描述欄位
+4. THE Frontend SHALL 高亮顯示符合篩選條件的文字部分
+5. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
 
 ### Requirement 9
 
@@ -121,11 +122,11 @@
 
 #### Acceptance Criteria
 
-1. THE Frontend SHALL 提供星級篩選選項（全部、1 星、2 星、3 星、4 星、5 星）
-2. WHEN 使用者選擇星級篩選，THE Frontend SHALL 只顯示符合該星級的音檔
-3. THE Frontend SHALL 允許選擇「未評分」選項以顯示沒有評分的音檔
-4. THE Frontend SHALL 允許同時使用搜尋和星級篩選
-5. THE Frontend SHALL 顯示當前篩選條件下的音檔數量
+1. THE Frontend SHALL 提供星級篩選選項（全部、未評分、1 星、2 星、3 星）
+2. WHEN 使用者選擇星級篩選，THE Frontend SHALL 即時更新並只顯示符合該星級的音檔
+3. THE Frontend SHALL 允許同時使用文字篩選和星級篩選
+4. THE Frontend SHALL 顯示當前篩選條件下的音檔數量
+5. THE Frontend SHALL 在 100 毫秒內完成篩選更新
 
 ### Requirement 10
 
