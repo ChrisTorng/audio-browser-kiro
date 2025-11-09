@@ -1,63 +1,51 @@
 # 技術棧
 
-## 後端
+## 整合式架構
 
-- **框架**: Python FastAPI
-- **套件管理**: uv (Python 版本及套件管理)
-- **資料庫**: SQLite (本地儲存)
-- **音頻處理**: 用於波形圖生成
-- **測試**: pytest
-
-## 前端
-
-- **框架**: React
-- **語言**: TypeScript
-- **UI 設計**: 緊湊型介面設計
-- **測試**: Jest + React Testing Library
+- **框架**: Node.js + Fastify + TypeScript
+- **前端**: React + TypeScript (整合在同一服務)
+- **資料庫**: SQLite (本地儲存，使用 better-sqlite3)
+- **音頻處理**: Web Audio API / wavesurfer.js
+- **測試**: Vitest (前後端統一)
+- **建置工具**: Vite
+- **未來擴展**: 可轉移到 Electron 桌面應用
 
 ## 開發方法
 
 - **TDD (Test-Driven Development)**: 先寫測試，再寫實作
-- 所有前後端功能都需要對應的測試
+- 所有功能都需要對應的測試
+- 前後端整合在單一服務，簡化開發流程
 
 ## 常用指令
-
-### 後端
-
-```bash
-# 建立虛擬環境
-uv venv
-
-# 安裝依賴
-uv pip install -e ".[dev]"
-
-# 執行開發伺服器
-uv run uvicorn main:app --reload --port 8000
-
-# 執行測試
-uv run pytest
-
-# 執行測試並顯示覆蓋率
-uv run pytest --cov
-```
-
-### 前端
 
 ```bash
 # 安裝依賴
 npm install
 
-# 執行開發伺服器
+# 執行開發伺服器（前後端整合）
 npm run dev
 
 # 執行測試
 npm test
 
+# 執行測試並顯示覆蓋率
+npm run test:coverage
+
 # 建置生產版本
 npm run build
+
+# 執行生產版本
+npm start
 ```
 
 ## 資料儲存
 
 - **SQLite**: 僅儲存有星級評分或描述的音檔資料
 - **波形圖**: 儲存於專案子資料夾（與原始音檔分離）
+
+## 專案特色
+
+- 單一 Node.js 服務，Fastify 同時處理 API 和靜態檔案
+- TypeScript 全棧統一，型別安全
+- 跨平台支援 (Windows/Linux/macOS)
+- 未來可輕鬆轉換為 Electron 桌面應用

@@ -14,8 +14,8 @@
 - **Scan Service**: 掃描資料夾並識別音檔的後端服務
 - **Waveform Generator**: 生成音頻波形圖的服務
 - **Database**: SQLite 本地資料庫
-- **Frontend**: React + TypeScript 前端應用
-- **Backend**: Python FastAPI 後端服務
+- **Application**: Node.js + Fastify + TypeScript 整合式應用
+- **Frontend**: React + TypeScript 前端（整合在同一服務）
 
 ## Requirements
 
@@ -26,7 +26,7 @@
 #### Acceptance Criteria
 
 1. WHEN 使用者指定一個資料夾路徑，THE Audio Browser System SHALL 掃描該資料夾及所有子資料夾
-2. THE Scan Service SHALL 識別所有支援的音頻檔案格式（MP3、WAV、FLAC、OGG、M4A）
+2. THE Scan Service SHALL 識別所有支援的音頻檔案格式（MP3、WAV、FLAC、OGG、M4A、AAC）
 3. THE Audio Browser System SHALL 保留原始資料夾的階層結構
 4. THE Scan Service SHALL 在 5 秒內完成包含 1000 個檔案的資料夾掃描
 5. IF 掃描過程中發生錯誤，THEN THE Audio Browser System SHALL 記錄錯誤並繼續掃描其他檔案

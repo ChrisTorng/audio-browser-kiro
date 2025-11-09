@@ -1,74 +1,86 @@
 # Implementation Plan
 
-- [ ] 1. 建立專案結構和基礎配置
-  - 建立 backend 和 frontend 資料夾結構
-  - 設定 Python 虛擬環境和依賴 (FastAPI, SQLAlchemy, pytest)
-  - 設定 React + TypeScript 專案 (Vite)
-  - 配置 ESLint, Prettier 和 TypeScript
-  - 建立 .gitignore 和基本 README
+- [x] 1. 建立專案結構和基礎配置
+  - 建立整合式專案結構 (src/server, src/client, src/shared)
+  - 初始化 Node.js 專案並設定 TypeScript
+  - 安裝核心依賴 (Fastify, React, Vite, better-sqlite3, Vitest)
+  - 配置 TypeScript (tsconfig.json for server and client)
+  - 配置 ESLint 和 Prettier
+  - 設定 Vite 建置配置
+  - 建立 .gitignore 和更新 README
   - _Requirements: 所有需求的基礎_
 
-- [ ] 2. 實作後端資料模型和資料庫
-  - [ ] 2.1 建立 SQLite 資料庫 schema
-    - 定義 AudioMetadata 模型 (file_path, rating, description, timestamps)
+- [ ] 2. 實作資料模型和資料庫層
+  - [ ] 2.1 定義共用型別 (src/shared/types/)
+    - 定義 AudioMetadata 介面
+    - 定義 AudioFile 和 DirectoryNode 介面
+    - 定義 API 請求/回應型別
+    - _Requirements: 1.1, 1.2, 1.6, 1.7_
+  
+  - [ ] 2.2 實作資料庫層 (src/server/db/)
+    - 使用 better-sqlite3 建立 Database 類別
+    - 實作 SQLite schema 初始化
+    - 實作 CRUD 方法 (getMetadata, getAllMetadata, upsertMetadata, deleteMetadata)
     - 建立索引 (file_path, rating)
-    - 實作資料庫初始化腳本
     - _Requirements: 1.6, 1.7_
   
-  - [ ] 2.2 實作 AudioMetadata ORM 模型
-    - 使用 SQLAlchemy 定義模型類別
-    - 實作資料驗證 (rating 0-3, description 長度限制)
+  - [ ] 2.3 實作資料驗證
+    - 實作 rating 範圍驗證 (0-3)
+    - 實作 description 長度限制
+    - 實作 filePath 格式驗證
     - _Requirements: 1.6, 1.7_
-  
-  - [ ] 2.3 實作 DirectoryTree 資料結構
-    - 定義 AudioFile 和 DirectoryNode dataclass
-    - 實作序列化方法
-    - _Requirements: 1.1, 1.2_
 
-- [ ] 3. 實作後端服務層
+- [ ] 3. 實作伺服器服務層 (src/server/services/)
   - [ ] 3.1 實作 ScanService
-    - 實作 scan_directory 方法掃描資料夾
-    - 實作檔案格式過濾 (MP3, WAV, FLAC, OGG, M4A)
+    - 實作 scanDirectory 方法使用 Node.js fs 模組掃描資料夾
+    - 實作檔案格式過濾 (MP3, WAV, FLAC, OGG, M4A, AAC)
     - 實作遞迴建立目錄樹
     - 實作錯誤處理和日誌記錄
     - _Requirements: 1.1_
   
   - [ ] 3.2 實作 MetadataService
-    - 實作 get_metadata 和 get_all_metadata 方法
-    - 實作 update_metadata 方法 (upsert 邏輯)
-    - 實作 delete_metadata 方法
-    - 實作資料驗證
+    - 整合 Database 類別
+    - 實作 getMetadata 和 getAllMetadata 方法
+    - 實作 updateMetadata 方法 (upsert 邏輯)
+    - 實作 deleteMetadata 方法
     - _Requirements: 1.6, 1.7_
   
   - [ ] 3.3 實作 AudioService
-    - 實作 stream_audio 方法支援音檔串流
+    - 實作 streamAudio 方法使用 fs.createReadStream
     - 實作路徑驗證防止路徑遍歷攻擊
     - 實作 Range requests 支援
+    - 實作 MIME type 偵測
     - _Requirements: 1.5_
 
-- [ ] 4. 實作後端 API 路由
-  - [ ] 4.1 實作掃描 API
+- [ ] 4. 實作 Fastify API 路由 (src/server/routes/)
+  - [ ] 4.1 建立 Fastify 伺服器實例
+    - 初始化 Fastify 應用
+    - 配置 JSON body parser
+    - 設定靜態檔案服務（生產環境）
+    - _Requirements: 所有需求_
+  
+  - [ ] 4.2 實作掃描 API
     - POST /api/scan 接收資料夾路徑並返回目錄樹
-    - 實作請求驗證
+    - 實作請求 schema 驗證
     - 實作錯誤回應格式
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 4.2 實作音檔串流 API
-    - GET /api/audio/{file_path} 串流音檔
+  - [ ] 4.3 實作音檔串流 API
+    - GET /api/audio/* 串流音檔（wildcard route）
     - 實作 Content-Type 和 Content-Length headers
     - 實作 Range requests 支援
     - _Requirements: 1.5_
   
-  - [ ] 4.3 實作 Metadata API
+  - [ ] 4.4 實作 Metadata API
     - GET /api/metadata 取得所有 metadata
     - POST /api/metadata 更新 metadata
-    - DELETE /api/metadata/{file_path} 刪除 metadata
+    - DELETE /api/metadata/:filePath 刪除 metadata
     - _Requirements: 1.6, 1.7_
   
-  - [ ] 4.4 設定 CORS 和中介軟體
-    - 配置 CORS 允許前端存取
-    - 實作錯誤處理中介軟體
-    - 實作請求日誌中介軟體
+  - [ ] 4.5 設定錯誤處理和日誌
+    - 實作全域錯誤處理 hook
+    - 實作請求日誌
+    - 配置開發/生產環境差異
     - _Requirements: 所有需求_
 
 - [ ] 5. 實作前端核心 Hooks
@@ -105,24 +117,24 @@
     - 實作 API 呼叫和錯誤處理
     - _Requirements: 1.6, 1.7_
 
-- [ ] 6. 實作前端服務層
+- [ ] 6. 實作前端服務層 (src/client/services/)
   - [ ] 6.1 實作 AudioBrowserAPI 類別
-    - 實作 scanDirectory 方法
-    - 實作 getAudioFile 方法
-    - 實作 getAllMetadata 方法
+    - 實作 scanDirectory 方法（POST /api/scan）
+    - 實作 getAudioFile 方法（GET /api/audio/*）
+    - 實作 getAllMetadata 方法（GET /api/metadata）
     - 實作 updateMetadata 和 deleteMetadata 方法
     - 實作錯誤處理和重試邏輯
     - _Requirements: 1.1, 1.5, 1.6, 1.7_
   
   - [ ] 6.2 實作 WaveformGenerator 類別
-    - 實作從 AudioBuffer 生成波形
+    - 實作從 AudioBuffer 生成波形使用 Web Audio API
     - 實作從 Blob 生成波形
     - 實作波形資料降採樣以符合顯示寬度
     - _Requirements: 1.3_
   
   - [ ] 6.3 實作 SpectrogramGenerator 類別
-    - 實作從 AudioBuffer 生成頻譜圖
-    - 實作 FFT 分析
+    - 實作從 AudioBuffer 生成頻譜圖使用 Web Audio API
+    - 實作 FFT 分析（AnalyserNode）
     - 實作頻譜資料正規化和色彩映射
     - _Requirements: 1.3_
 
@@ -232,24 +244,25 @@
     - 實作適當的快取策略
     - _Requirements: 1.10_
 
-- [ ] 10. 撰寫測試
-  - [ ] 10.1 撰寫後端單元測試
+- [ ] 10. 撰寫測試（使用 Vitest）
+  - [ ] 10.1 撰寫伺服器端單元測試 (tests/server/)
     - 測試 ScanService 掃描邏輯
     - 測試 MetadataService CRUD 操作
     - 測試 AudioService 串流邏輯
-    - 測試資料模型驗證
+    - 測試 Database 類別操作
     - _Requirements: 所有後端需求_
   
-  - [ ] 10.2 撰寫後端整合測試
-    - 測試 API 路由完整流程
+  - [ ] 10.2 撰寫伺服器端整合測試
+    - 測試 Fastify API 路由完整流程
     - 測試資料庫操作
     - 測試錯誤處理
+    - 測試 Range requests
     - _Requirements: 所有後端需求_
   
-  - [ ] 10.3 撰寫前端單元測試
+  - [ ] 10.3 撰寫前端單元測試 (tests/client/)
     - 測試 Hooks 邏輯
     - 測試 UI 元件渲染和互動
-    - 測試服務層 API 呼叫 (使用 mock)
+    - 測試服務層 API 呼叫 (使用 vi.mock)
     - _Requirements: 所有前端需求_
   
   - [ ] 10.4 撰寫前端整合測試
@@ -258,21 +271,30 @@
     - 測試音頻播放邏輯
     - _Requirements: 所有前端需求_
 
-- [ ] 11. 文件和部署準備
-  - [ ] 11.1 撰寫使用者文件
-    - 撰寫 README 使用說明
+- [ ] 11. 建置配置和啟動腳本
+  - [ ] 11.1 配置 Vite 建置
+    - 設定前端建置輸出到 dist/client
+    - 配置開發環境 proxy 到 Fastify
+    - 設定環境變數處理
+    - _Requirements: 所有需求_
+  
+  - [ ] 11.2 配置 TypeScript 建置
+    - 設定伺服器端 TypeScript 編譯到 dist/server
+    - 配置 source maps
+    - 設定 path aliases
+    - _Requirements: 所有需求_
+  
+  - [ ] 11.3 建立 npm scripts
+    - dev: 並行啟動 Vite dev server 和 Fastify server
+    - build: 建置前後端
+    - start: 執行生產版本
+    - test: 執行所有測試
+    - test:coverage: 執行測試並生成覆蓋率報告
+    - _Requirements: 所有需求_
+  
+  - [ ] 11.4 撰寫使用者文件
+    - 更新 README 使用說明
     - 記錄鍵盤快捷鍵
     - 記錄支援的音檔格式
-    - _Requirements: 所有需求_
-  
-  - [ ] 11.2 撰寫開發者文件
-    - 記錄 API 端點
-    - 記錄資料模型
-    - 記錄架構設計
-    - _Requirements: 所有需求_
-  
-  - [ ] 11.3 準備部署配置
-    - 建立 requirements.txt 和 package.json
-    - 撰寫啟動腳本
-    - 配置生產環境設定
+    - 記錄跨平台執行方式
     - _Requirements: 所有需求_

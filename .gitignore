@@ -1,49 +1,15 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
+# Node
+node_modules/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-backend/venv/
-backend/.venv/
-.venv/
-venv/
-
-# uv
-.uv/
-uv.lock
+build/
+*.log
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
-data/
-
-# Node
-node_modules/
-frontend/node_modules/
-frontend/dist/
-frontend/build/
+data/*.db
+data/*.sqlite
 
 # IDE
 .vscode/
@@ -58,14 +24,14 @@ Thumbs.db
 
 # Generated files
 waveforms/
-*.log
 
 # Test coverage
-.coverage
-htmlcov/
-.pytest_cache/
 coverage/
+.nyc_output/
 
 # Environment variables
 .env
 .env.local
+
+# TypeScript
+*.tsbuildinfo

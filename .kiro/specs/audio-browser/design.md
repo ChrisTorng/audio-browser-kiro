@@ -2,7 +2,7 @@
 
 ## Overview
 
-音頻瀏覽器採用前後端分離架構，後端使用 Python FastAPI 提供 RESTful API，前端使用 React + TypeScript 實現互動式使用者介面。系統設計重點在於高效能的音檔管理、即時波形圖生成、流暢的鍵盤導航體驗，以及緊湊的 UI 設計。
+音頻瀏覽器採用整合式架構，使用 Node.js + Fastify + TypeScript 建構單一服務，同時處理 API 和前端靜態檔案。前端使用 React + TypeScript 實現互動式使用者介面。系統設計重點在於高效能的音檔管理、即時波形圖生成、流暢的鍵盤導航體驗、緊湊的 UI 設計，以及未來可輕鬆轉換為 Electron 桌面應用的架構。
 
 ## Architecture
 
@@ -10,7 +10,33 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         Frontend                             │
+│                   Fastify Server (Node.js)                   │
+│                                                               │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │              Static File Serving                    │     │
+│  │           (React Build / Vite Dev Proxy)            │     │
+│  └────────────────────────────────────────────────────┘     │
+│                            │                                 │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │                  API Routes                         │     │
+│  │  /api/scan  /api/audio  /api/metadata              │     │
+│  └────────────────────────────────────────────────────┘     │
+│                            │                                 │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │                 Service Layer                       │     │
+│  │  ScanService  MetadataService  AudioService         │     │
+│  └────────────────────────────────────────────────────┘     │
+│                            │                                 │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │              Database Layer (better-sqlite3)        │     │
+│  │                   SQLite Database                   │     │
+│  └────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ HTTP (Same Origin)
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (React)                          │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
 │  │   UI Layer   │  │  Audio       │  │  Waveform    │     │
 │  │  Components  │  │  Player      │  │  Generator   │     │
@@ -22,124 +48,117 @@
 │  │              API Service Layer                    │     │
 │  └──────────────────────────────────────────────────┘     │
 └─────────────────────────────────────────────────────────────┘
-                            │
-                            │ HTTP/REST
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         Backend                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │   API        │  │   Service    │  │   Models     │     │
-│  │   Routes     │  │   Layer      │  │              │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-│                            │                                 │
-│                            ▼                                 │
-│                    ┌──────────────┐                         │
-│                    │   SQLite     │                         │
-│                    │   Database   │                         │
-│                    └──────────────┘                         │
-└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Technology Stack
 
-**Backend:**
-- FastAPI: Web 框架
-- SQLAlchemy: ORM
-- SQLite: 資料庫
-- Pydantic: 資料驗證
-- pytest: 測試框架
+**整合式服務:**
+- Node.js: 執行環境
+- Fastify: Web 框架（API + 靜態檔案服務）
+- TypeScript: 全棧型別安全
+- better-sqlite3: SQLite 資料庫驅動
+- Vitest: 測試框架（前後端統一）
 
 **Frontend:**
 - React 18: UI 框架
 - TypeScript: 型別安全
-- Vite: 建置工具
+- Vite: 建置工具和開發伺服器
 - Web Audio API: 音頻處理和波形圖生成
 - Wavesurfer.js 或自訂實作: 波形圖視覺化
-- Jest + React Testing Library: 測試框架
+
+**未來擴展:**
+- 架構設計便於轉換為 Electron 桌面應用
+- Server 程式碼可直接作為 Electron main process
+- React 前端可直接作為 renderer process
 
 ## Components and Interfaces
 
 ### Backend Components
 
-#### 1. API Layer (`backend/api/`)
+#### 1. API Layer (`src/server/routes/`)
 
-**`audio_routes.py`**
-- `GET /api/scan`: 掃描指定資料夾並返回音檔樹狀結構
-- `GET /api/audio/{file_path}`: 串流音檔內容
+**`audioRoutes.ts`**
+- `POST /api/scan`: 掃描指定資料夾並返回音檔樹狀結構
+- `GET /api/audio/*`: 串流音檔內容（支援 Range requests）
 - `GET /api/metadata`: 取得所有已儲存的 metadata
 - `POST /api/metadata`: 更新音檔的評分或描述
-- `DELETE /api/metadata/{file_path}`: 刪除音檔的 metadata
+- `DELETE /api/metadata/:filePath`: 刪除音檔的 metadata
 
-#### 2. Service Layer (`backend/services/`)
+#### 2. Service Layer (`src/server/services/`)
 
-**`scan_service.py`**
-```python
-class ScanService:
-    def scan_directory(self, root_path: str) -> DirectoryTree:
-        """掃描資料夾並建立樹狀結構"""
-        
-    def get_supported_formats(self) -> List[str]:
-        """返回支援的音檔格式"""
-        
-    def build_tree(self, path: str) -> DirectoryNode:
-        """遞迴建立目錄樹"""
+**`scanService.ts`**
+```typescript
+class ScanService {
+  async scanDirectory(rootPath: string): Promise<DirectoryTree>;
+  getSupportedFormats(): string[];
+  private async buildTree(path: string): Promise<DirectoryNode>;
+}
 ```
 
-**`metadata_service.py`**
-```python
-class MetadataService:
-    def get_metadata(self, file_path: str) -> Optional[AudioMetadata]:
-        """取得單一音檔的 metadata"""
-        
-    def get_all_metadata(self) -> Dict[str, AudioMetadata]:
-        """取得所有 metadata"""
-        
-    def update_metadata(self, file_path: str, rating: int, description: str) -> AudioMetadata:
-        """更新或建立 metadata"""
-        
-    def delete_metadata(self, file_path: str) -> bool:
-        """刪除 metadata"""
+**`metadataService.ts`**
+```typescript
+class MetadataService {
+  getMetadata(filePath: string): AudioMetadata | null;
+  getAllMetadata(): Record<string, AudioMetadata>;
+  updateMetadata(filePath: string, rating: number, description: string): AudioMetadata;
+  deleteMetadata(filePath: string): boolean;
+}
 ```
 
-**`audio_service.py`**
-```python
-class AudioService:
-    def stream_audio(self, file_path: str) -> FileResponse:
-        """串流音檔內容"""
-        
-    def validate_audio_file(self, file_path: str) -> bool:
-        """驗證音檔是否存在且可讀取"""
+**`audioService.ts`**
+```typescript
+class AudioService {
+  async streamAudio(filePath: string, range?: string): Promise<ReadStream>;
+  validateAudioFile(filePath: string): boolean;
+  getAudioMimeType(filePath: string): string;
+}
 ```
 
-#### 3. Models (`backend/models/`)
+#### 3. Models (`src/server/models/`)
 
-**`audio_metadata.py`**
-```python
-class AudioMetadata(Base):
-    __tablename__ = "audio_metadata"
-    
-    id: int  # Primary key
-    file_path: str  # Unique, 相對路徑
-    rating: int  # 0-3 (0=未評分, 1-3=評分)
-    description: str  # 可選描述
-    created_at: datetime
-    updated_at: datetime
+**`audioMetadata.ts`**
+```typescript
+interface AudioMetadata {
+  id: number;
+  filePath: string;  // Unique, 相對路徑
+  rating: number;    // 0-3 (0=未評分, 1-3=評分)
+  description: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 ```
 
-**`directory_tree.py`**
-```python
-@dataclass
-class AudioFile:
-    name: str
-    path: str  # 相對路徑
-    size: int
-    
-@dataclass
-class DirectoryNode:
-    name: str
-    path: str
-    files: List[AudioFile]
-    subdirectories: List[DirectoryNode]
+**`directoryTree.ts`**
+```typescript
+interface AudioFile {
+  name: string;
+  path: string;  // 相對路徑
+  size: number;
+}
+
+interface DirectoryNode {
+  name: string;
+  path: string;
+  files: AudioFile[];
+  subdirectories: DirectoryNode[];
+}
+
+type DirectoryTree = DirectoryNode;
+```
+
+#### 4. Database Layer (`src/server/db/`)
+
+**`database.ts`**
+```typescript
+class Database {
+  private db: BetterSQLite3.Database;
+  
+  initialize(): void;
+  getMetadata(filePath: string): AudioMetadata | null;
+  getAllMetadata(): AudioMetadata[];
+  upsertMetadata(data: Omit<AudioMetadata, 'id' | 'createdAt' | 'updatedAt'>): AudioMetadata;
+  deleteMetadata(filePath: string): boolean;
+}
 ```
 
 ### Frontend Components
@@ -246,7 +265,7 @@ interface UseAudioMetadataReturn {
 }
 ```
 
-#### 3. Services (`frontend/src/services/`)
+#### 3. Services (`src/client/services/`)
 
 **`api.ts`**
 ```typescript
@@ -380,29 +399,27 @@ CREATE INDEX idx_rating ON audio_metadata(rating);
 
 ## Testing Strategy
 
-### Backend Testing
+### Backend Testing (Node.js + TypeScript)
 
 #### Unit Tests
-- **Models**: 測試資料驗證、關聯關係
+- **Models**: 測試型別定義和資料驗證
 - **Services**: 測試業務邏輯、邊界條件
+- **Database**: 測試 CRUD 操作
 - **Utils**: 測試工具函式
 
 #### Integration Tests
 - **API Routes**: 測試完整的請求-回應流程
-- **Database**: 測試 CRUD 操作
 - **File System**: 測試檔案掃描邏輯
+- **Audio Streaming**: 測試音檔串流和 Range requests
 
 #### Test Structure
-```python
-# tests/services/test_scan_service.py
-def test_scan_directory_returns_tree_structure():
-    """測試掃描資料夾返回正確的樹狀結構"""
-    
-def test_scan_directory_filters_supported_formats():
-    """測試只返回支援的音檔格式"""
-    
-def test_scan_directory_handles_permission_errors():
-    """測試處理權限錯誤"""
+```typescript
+// tests/server/services/scanService.test.ts
+describe('ScanService', () => {
+  it('should scan directory and return tree structure', async () => {});
+  it('should filter supported audio formats only', async () => {});
+  it('should handle permission errors gracefully', async () => {});
+});
 ```
 
 ### Frontend Testing
@@ -420,7 +437,7 @@ def test_scan_directory_handles_permission_errors():
 
 #### Test Structure
 ```typescript
-// tests/components/AudioItem.test.tsx
+// tests/client/components/AudioItem.test.tsx
 describe('AudioItem', () => {
   it('renders audio file information correctly', () => {});
   it('updates rating when star is clicked', () => {});
@@ -429,6 +446,15 @@ describe('AudioItem', () => {
   it('cancels edit on Escape key', () => {});
 });
 ```
+
+### 統一測試框架
+
+使用 Vitest 作為前後端統一的測試框架：
+- 與 Vite 完美整合
+- 快速的測試執行速度
+- Jest 相容的 API
+- 原生 TypeScript 支援
+- 程式碼覆蓋率報告
 
 ### TDD Workflow
 
@@ -496,14 +522,22 @@ describe('AudioItem', () => {
 ## Deployment Considerations
 
 ### Development
-- Backend: `uvicorn main:app --reload --port 8000`
-- Frontend: `npm run dev --port 3000`
-- 使用 proxy 處理 CORS
+- 使用 `npm run dev` 啟動整合開發環境
+- Vite 開發伺服器處理前端熱更新（port 5173）
+- Fastify 伺服器處理 API 請求（port 3000）
+- Vite 自動 proxy API 請求到 Fastify
 
 ### Production
-- Backend: 使用 Gunicorn + Uvicorn workers
-- Frontend: 建置靜態檔案，由 Backend 提供
-- 單一 port 部署
+- 使用 `npm run build` 建置前端靜態檔案
+- Fastify 同時服務 API 和靜態檔案
+- 單一 port 部署（預設 3000）
+- 跨平台執行（Windows/Linux/macOS）
+
+### 未來 Electron 轉換
+- 最小化改動即可打包為桌面應用
+- Server 程式碼作為 Electron main process
+- React 前端作為 renderer process
+- 使用 electron-builder 打包
 
 ## Future Enhancements
 

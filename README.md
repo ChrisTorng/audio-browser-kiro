@@ -14,92 +14,72 @@
 
 ## 技術棧
 
-### 後端
-- Python FastAPI
-- SQLAlchemy + SQLite
-- pytest
-
-### 前端
-- React 18 + TypeScript
-- Vite
-- Web Audio API
+- **整合式架構**: Node.js + Fastify + TypeScript
+- **前端**: React 18 + TypeScript
+- **資料庫**: SQLite (better-sqlite3)
+- **音頻處理**: Web Audio API / wavesurfer.js
+- **測試**: Vitest
+- **建置工具**: Vite
+- **未來擴展**: 可轉移到 Electron 桌面應用
 
 ## 專案結構
 
 ```
-audio-browser/
-├── backend/              # Python FastAPI 後端
-│   ├── api/             # API 路由
-│   ├── models/          # 資料模型
-│   ├── services/        # 業務邏輯層
-│   ├── utils/           # 工具函式
-│   ├── tests/           # 後端測試
-│   └── main.py          # 應用程式入口
-├── frontend/            # React + TypeScript 前端
-│   ├── src/
-│   │   ├── components/  # React 元件
-│   │   ├── hooks/       # 自訂 Hooks
-│   │   ├── services/    # API 呼叫層
-│   │   ├── types/       # TypeScript 型別定義
-│   │   └── utils/       # 工具函式
-│   └── tests/           # 前端測試
-├── waveforms/           # 生成的波形圖儲存位置
-└── data/                # SQLite 資料庫檔案
+audio-browser-kiro/
+├── src/
+│   ├── server/           # Fastify 後端
+│   │   ├── routes/       # API 路由
+│   │   ├── services/     # 業務邏輯層
+│   │   ├── models/       # 資料模型
+│   │   ├── db/           # 資料庫相關
+│   │   └── utils/        # 後端工具函式
+│   ├── client/           # React 前端
+│   │   ├── components/   # React 元件
+│   │   ├── hooks/        # 自訂 Hooks
+│   │   ├── services/     # API 呼叫層
+│   │   ├── types/        # TypeScript 型別定義
+│   │   ├── utils/        # 前端工具函式
+│   │   └── App.tsx       # 主應用程式
+│   ├── shared/           # 前後端共用
+│   │   └── types/        # 共用型別定義
+│   └── index.ts          # 應用程式入口
+├── tests/                # 測試檔案
+│   ├── server/           # 後端測試
+│   └── client/           # 前端測試
+├── public/               # 靜態資源
+├── waveforms/            # 生成的波形圖儲存位置
+├── data/                 # SQLite 資料庫檔案
+└── dist/                 # 建置輸出
 ```
 
 ## 開發環境設定
 
-### 後端設定
-
-```bash
-cd backend
-
-# 建立虛擬環境（使用 uv）
-uv venv
-
-# 啟動虛擬環境
-# Linux/Mac:
-source .venv/bin/activate
-# Windows:
-.venv\Scripts\activate
-
-# 安裝依賴
-uv pip install -e ".[dev]"
-
-# 執行開發伺服器
-uv run uvicorn main:app --reload --port 8000
-
-# 執行測試
-uv run pytest
-
-# 執行測試並顯示覆蓋率
-uv run pytest --cov
-```
-
-### 前端設定
-
 ```bash
 # 安裝依賴
-cd frontend
 npm install
 
-# 執行開發伺服器
+# 執行開發伺服器（前後端整合）
 npm run dev
 
 # 執行測試
 npm test
 
+# 執行測試並顯示覆蓋率
+npm run test:coverage
+
 # 建置生產版本
 npm run build
+
+# 執行生產版本
+npm start
 ```
 
 ## 使用方式
 
-1. 啟動後端服務（預設 port 8000）
-2. 啟動前端服務（預設 port 3000）
-3. 在瀏覽器開啟 http://localhost:3000
-4. 輸入要掃描的音檔資料夾路徑
-5. 使用鍵盤或滑鼠瀏覽和播放音檔
+1. 啟動整合服務（預設 port 3000）
+2. 在瀏覽器開啟 http://localhost:3000
+3. 輸入要掃描的音檔資料夾路徑
+4. 使用鍵盤或滑鼠瀏覽和播放音檔
 
 ## 鍵盤快捷鍵
 
