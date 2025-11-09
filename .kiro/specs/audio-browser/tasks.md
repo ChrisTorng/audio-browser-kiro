@@ -17,7 +17,7 @@
     - 定義 API 請求/回應型別
     - _Requirements: 1.1, 1.2, 1.6, 1.7_
   
-  - [ ] 2.2 實作資料庫層 (src/server/db/)
+  - [x] 2.2 實作資料庫層 (src/server/db/)
     - 使用 better-sqlite3 建立 Database 類別
     - 實作 SQLite schema 初始化
     - 實作 CRUD 方法 (getMetadata, getAllMetadata, upsertMetadata, deleteMetadata)
