@@ -2,9 +2,10 @@ import React from 'react';
 import { AudioBrowser } from './components/AudioBrowser';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './components/Toast';
+import { ToastProvider } from './contexts/ToastContext';
 import { useToast } from './hooks/useToast';
 
-function App() {
+function AppContent() {
   const toast = useToast();
 
   // Handle global errors
@@ -19,6 +20,14 @@ function App() {
         <ToastContainer toasts={toast.toasts} onClose={toast.closeToast} />
       </div>
     </ErrorBoundary>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

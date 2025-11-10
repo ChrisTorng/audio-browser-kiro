@@ -9,6 +9,8 @@ import {
 } from '../hooks';
 import { FilterBar, FilterCriteria } from './FilterBar';
 import { AudioTree, TreeItem } from './AudioTree';
+import { LoadingSpinner } from './LoadingSpinner';
+import { useToastContext } from '../contexts/ToastContext';
 
 /**
  * Flattened tree item for rendering (extends TreeItem for compatibility)
@@ -30,12 +32,12 @@ export function AudioBrowser() {
   });
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [isScanning, setIsScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
   const [rootPath, setRootPath] = useState<string>('');
 
   // Hooks
   const audioPlayer = useAudioPlayer();
   const audioMetadata = useAudioMetadata();
+  const toast = useToastContext();
 
   /**
    * Flatten directory tree into a list for rendering and navigation
@@ -224,7 +226,6 @@ export function AudioBrowser() {
    */
   const handleScan = useCallback(async (path: string) => {
     setIsScanning(true);
-    setScanError(null);
 
     try {
       const tree = await audioBrowserAPI.scanDirectory(path);
@@ -233,14 +234,17 @@ export function AudioBrowser() {
       
       // Expand root by default
       setExpandedPaths(new Set([tree.path]));
+      
+      // Show success message
+      toast.success(`Successfully scanned directory: ${path}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to scan directory';
-      setScanError(errorMessage);
+      toast.error(`Scan failed: ${errorMessage}`);
       console.error('Scan error:', error);
     } finally {
       setIsScanning(false);
     }
-  }, []);
+  }, [toast]);
 
   /**
    * Update filter criteria
@@ -267,12 +271,6 @@ export function AudioBrowser() {
             {isScanning ? 'Scanning...' : 'Scan'}
           </button>
         </div>
-
-        {scanError && (
-          <div className="audio-browser__error">
-            Error: {scanError}
-          </div>
-        )}
       </div>
 
       {/* Filter bar */}
@@ -284,21 +282,27 @@ export function AudioBrowser() {
 
       {/* Audio tree */}
       <div className="audio-browser__tree">
-        {audioMetadata.isLoading && <div>Loading metadata...</div>}
+        {isScanning && (
+          <LoadingSpinner size="large" message="Scanning directory..." />
+        )}
         
-        {displayItems.length === 0 && !isScanning && directoryTree && (
+        {audioMetadata.isLoading && !isScanning && (
+          <LoadingSpinner size="medium" message="Loading metadata..." />
+        )}
+        
+        {displayItems.length === 0 && !isScanning && !audioMetadata.isLoading && directoryTree && (
           <div className="audio-browser__empty">
             No items match the current filters
           </div>
         )}
 
-        {displayItems.length === 0 && !isScanning && !directoryTree && (
+        {displayItems.length === 0 && !isScanning && !audioMetadata.isLoading && !directoryTree && (
           <div className="audio-browser__empty">
             Enter a directory path and click Scan to begin
           </div>
         )}
 
-        {displayItems.length > 0 && (
+        {displayItems.length > 0 && !isScanning && (
           <AudioTree
             items={displayItems}
             selectedIndex={navigation.selectedIndex}

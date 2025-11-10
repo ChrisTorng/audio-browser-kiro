@@ -1,3 +1,8 @@
+/* Import component styles */
+@import './styles/toast.css';
+@import './styles/loading.css';
+@import './styles/error-boundary.css';
+
 * {
   margin: 0;
   padding: 0;
