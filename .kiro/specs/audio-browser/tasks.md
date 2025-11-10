@@ -145,14 +145,14 @@
     - 整合所有子元件
     - _Requirements: 所有需求_
   
-  - [ ] 7.2 實作 FilterBar 元件
+  - [x] 7.2 實作 FilterBar 元件
     - 實作文字篩選輸入框
     - 實作星級篩選下拉選單
     - 實作篩選結果數量顯示
     - 實作即時篩選邏輯 (debounce 100ms)
     - _Requirements: 1.8, 1.9_
   
-  - [ ] 7.3 實作 AudioTree 元件
+  - [-] 7.3 實作 AudioTree 元件
     - 實作樹狀結構顯示
     - 實作虛擬滾動 (使用 react-window 或 react-virtual)
     - 實作展開/收合狀態管理

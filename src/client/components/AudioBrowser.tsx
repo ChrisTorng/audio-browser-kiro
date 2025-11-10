@@ -7,14 +7,7 @@ import {
   useAudioMetadata,
   NavigationItem,
 } from '../hooks';
-
-/**
- * Filter criteria for audio files
- */
-interface FilterCriteria {
-  text: string;
-  rating: number | null; // null = all, 0 = unrated, 1-3 = specific rating
-}
+import { FilterBar, FilterCriteria } from './FilterBar';
 
 /**
  * Flattened tree item for rendering
@@ -284,35 +277,12 @@ export function AudioBrowser() {
         )}
       </div>
 
-      {/* Filter bar - placeholder for now */}
-      <div className="audio-browser__filters">
-        <input
-          type="text"
-          placeholder="Filter by name or description..."
-          value={filterCriteria.text}
-          onChange={(e) => handleFilterChange({ text: e.target.value })}
-        />
-        
-        <select
-          value={filterCriteria.rating === null ? 'all' : filterCriteria.rating}
-          onChange={(e) => {
-            const value = e.target.value;
-            handleFilterChange({
-              rating: value === 'all' ? null : parseInt(value, 10),
-            });
-          }}
-        >
-          <option value="all">All Ratings</option>
-          <option value="0">Unrated</option>
-          <option value="1">1 Star</option>
-          <option value="2">2 Stars</option>
-          <option value="3">3 Stars</option>
-        </select>
-
-        <span className="audio-browser__count">
-          {displayItems.length} items
-        </span>
-      </div>
+      {/* Filter bar */}
+      <FilterBar
+        filterCriteria={filterCriteria}
+        onFilterChange={handleFilterChange}
+        resultCount={displayItems.length}
+      />
 
       {/* Audio tree - placeholder for now */}
       <div className="audio-browser__tree">
