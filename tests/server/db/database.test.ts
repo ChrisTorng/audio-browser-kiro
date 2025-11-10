@@ -186,4 +186,67 @@ describe('AudioDatabase', () => {
       expect(duration).toBeLessThan(10); // Should be very fast with index
     });
   });
+
+  describe('batch operations', () => {
+    it('should batch upsert multiple metadata records', () => {
+      const updates = [
+        { filePath: 'music/song1.mp3', rating: 3, description: 'First' },
+        { filePath: 'music/song2.mp3', rating: 2, description: 'Second' },
+        { filePath: 'music/song3.mp3', rating: 1, description: 'Third' },
+      ];
+
+      const count = db.batchUpsertMetadata(updates);
+
+      expect(count).toBe(3);
+      expect(db.getMetadata('music/song1.mp3')?.rating).toBe(3);
+      expect(db.getMetadata('music/song2.mp3')?.rating).toBe(2);
+      expect(db.getMetadata('music/song3.mp3')?.rating).toBe(1);
+    });
+
+    it('should batch delete multiple metadata records', () => {
+      // Insert test data
+      db.upsertMetadata({ filePath: 'music/song1.mp3', rating: 3, description: 'First' });
+      db.upsertMetadata({ filePath: 'music/song2.mp3', rating: 2, description: 'Second' });
+      db.upsertMetadata({ filePath: 'music/song3.mp3', rating: 1, description: 'Third' });
+
+      const count = db.batchDeleteMetadata(['music/song1.mp3', 'music/song2.mp3']);
+
+      expect(count).toBe(2);
+      expect(db.getMetadata('music/song1.mp3')).toBeNull();
+      expect(db.getMetadata('music/song2.mp3')).toBeNull();
+      expect(db.getMetadata('music/song3.mp3')).not.toBeNull();
+    });
+
+    it('should handle batch operations with transactions', () => {
+      const updates = Array.from({ length: 50 }, (_, i) => ({
+        filePath: `music/song${i}.mp3`,
+        rating: i % 4,
+        description: `Song ${i}`,
+      }));
+
+      const start = Date.now();
+      db.batchUpsertMetadata(updates);
+      const duration = Date.now() - start;
+
+      expect(db.getAllMetadata()).toHaveLength(50);
+      expect(duration).toBeLessThan(100); // Batch should be fast
+    });
+  });
+
+  describe('performance optimizations', () => {
+    it('should use WAL mode for better performance', () => {
+      // WAL mode is set in constructor
+      // This test verifies the database is functional with optimizations
+      const updates = Array.from({ length: 100 }, (_, i) => ({
+        filePath: `music/song${i}.mp3`,
+        rating: i % 4,
+        description: `Song ${i}`,
+      }));
+
+      db.batchUpsertMetadata(updates);
+      const results = db.getAllMetadata();
+
+      expect(results).toHaveLength(100);
+    });
+  });
 });

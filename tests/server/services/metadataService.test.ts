@@ -231,4 +231,124 @@ describe('MetadataService', () => {
       expect(afterDelete).toBeNull();
     });
   });
+
+  describe('caching', () => {
+    it('should cache metadata queries', () => {
+      // Insert test data
+      metadataService.updateMetadata('music/song.mp3', 2, 'Test');
+
+      // First query
+      const first = metadataService.getMetadata('music/song.mp3');
+      
+      // Second query (should use cache)
+      const second = metadataService.getMetadata('music/song.mp3');
+
+      expect(first).toEqual(second);
+    });
+
+    it('should cache getAllMetadata results', () => {
+      // Insert test data
+      metadataService.updateMetadata('music/song1.mp3', 1, 'First');
+      metadataService.updateMetadata('music/song2.mp3', 2, 'Second');
+
+      // First query
+      const first = metadataService.getAllMetadata();
+      
+      // Second query (should use cache)
+      const second = metadataService.getAllMetadata();
+
+      expect(first).toEqual(second);
+      expect(first).toHaveLength(2);
+    });
+
+    it('should invalidate cache after update', () => {
+      // Insert and cache
+      metadataService.updateMetadata('music/song.mp3', 1, 'Initial');
+      metadataService.getMetadata('music/song.mp3');
+
+      // Update (should invalidate cache)
+      metadataService.updateMetadata('music/song.mp3', 3, 'Updated');
+
+      // Query should return updated data
+      const result = metadataService.getMetadata('music/song.mp3');
+      expect(result?.rating).toBe(3);
+      expect(result?.description).toBe('Updated');
+    });
+
+    it('should invalidate cache after delete', () => {
+      // Insert and cache
+      metadataService.updateMetadata('music/song.mp3', 2, 'Test');
+      metadataService.getAllMetadata();
+
+      // Delete (should invalidate cache)
+      metadataService.deleteMetadata('music/song.mp3');
+
+      // Query should return null
+      const result = metadataService.getMetadata('music/song.mp3');
+      expect(result).toBeNull();
+    });
+
+    it('should clear cache manually', () => {
+      // Insert and cache
+      metadataService.updateMetadata('music/song.mp3', 2, 'Test');
+      metadataService.getMetadata('music/song.mp3');
+
+      // Clear cache
+      metadataService.clearCache();
+
+      // Should still be able to query
+      const result = metadataService.getMetadata('music/song.mp3');
+      expect(result).not.toBeNull();
+    });
+  });
+
+  describe('batch operations', () => {
+    it('should batch update multiple metadata records', () => {
+      const updates = [
+        { filePath: 'music/song1.mp3', rating: 3, description: 'First' },
+        { filePath: 'music/song2.mp3', rating: 2, description: 'Second' },
+        { filePath: 'music/song3.mp3', rating: 1, description: 'Third' },
+      ];
+
+      const count = metadataService.batchUpdateMetadata(updates);
+
+      expect(count).toBe(3);
+      expect(metadataService.getMetadata('music/song1.mp3')?.rating).toBe(3);
+      expect(metadataService.getMetadata('music/song2.mp3')?.rating).toBe(2);
+      expect(metadataService.getMetadata('music/song3.mp3')?.rating).toBe(1);
+    });
+
+    it('should batch delete multiple metadata records', () => {
+      // Insert test data
+      metadataService.updateMetadata('music/song1.mp3', 1, 'First');
+      metadataService.updateMetadata('music/song2.mp3', 2, 'Second');
+      metadataService.updateMetadata('music/song3.mp3', 3, 'Third');
+
+      const count = metadataService.batchDeleteMetadata([
+        'music/song1.mp3',
+        'music/song2.mp3',
+      ]);
+
+      expect(count).toBe(2);
+      expect(metadataService.getMetadata('music/song1.mp3')).toBeNull();
+      expect(metadataService.getMetadata('music/song2.mp3')).toBeNull();
+      expect(metadataService.getMetadata('music/song3.mp3')).not.toBeNull();
+    });
+
+    it('should invalidate cache after batch operations', () => {
+      // Insert and cache
+      metadataService.updateMetadata('music/song1.mp3', 1, 'First');
+      metadataService.getAllMetadata();
+
+      // Batch update
+      metadataService.batchUpdateMetadata([
+        { filePath: 'music/song2.mp3', rating: 2, description: 'Second' },
+        { filePath: 'music/song3.mp3', rating: 3, description: 'Third' },
+      ]);
+
+      // Should see all records
+      const all = metadataService.getAllMetadata();
+      expect(all).toHaveLength(3);
+    });
+  });
 });

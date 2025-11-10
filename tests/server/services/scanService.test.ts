@@ -168,5 +168,53 @@ describe('ScanService', () => {
       expect(tree.name).toBe('test-audio-files');
     });
   });
+
+  describe('caching', () => {
+    it('should cache scan results', async () => {
+      const firstScan = await scanService.scanDirectory(testDir);
+      const secondScan = await scanService.scanDirectory(testDir);
+
+      // Both scans should return the same structure
+      expect(secondScan).toEqual(firstScan);
+    });
+
+    it('should use cached results for faster subsequent scans', async () => {
+      // First scan
+      const start1 = Date.now();
+      await scanService.scanDirectory(testDir);
+      const duration1 = Date.now() - start1;
+
+      // Second scan (should use cache)
+      const start2 = Date.now();
+      await scanService.scanDirectory(testDir);
+      const duration2 = Date.now() - start2;
+
+      // Cached scan should be significantly faster
+      expect(duration2).toBeLessThan(duration1);
+    });
+
+    it('should bypass cache when useCache is false', async () => {
+      // First scan with cache enabled
+      const firstScan = await scanService.scanDirectory(testDir, true);
+      const initialFileCount = firstScan.files.length;
+      
+      // Add a new file (this changes directory mtime, invalidating cache)
+      await fs.writeFile(path.join(testDir, 'new-song.mp3'), 'new content');
+
+      // Scan with cache disabled should see new file
+      const freshTree = await scanService.scanDirectory(testDir, false);
+      expect(freshTree.files.map(f => f.name)).toContain('new-song.mp3');
+      expect(freshTree.files.length).toBe(initialFileCount + 1);
+    });
+
+    it('should clear cache manually', async () => {
+      await scanService.scanDirectory(testDir);
+      scanService.clearCache();
+
+      // After clearing cache, next scan should be fresh
+      const tree = await scanService.scanDirectory(testDir);
+      expect(tree).toBeDefined();
+    });
+  });
 });
 
