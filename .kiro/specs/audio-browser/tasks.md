@@ -118,7 +118,7 @@
     - _Requirements: 1.6, 1.7_
 
 - [ ] 6. 實作前端服務層 (src/client/services/)
-  - [ ] 6.1 實作 AudioBrowserAPI 類別
+  - [x] 6.1 實作 AudioBrowserAPI 類別
     - 實作 scanDirectory 方法（POST /api/scan）
     - 實作 getAudioFile 方法（GET /api/audio/*）
     - 實作 getAllMetadata 方法（GET /api/metadata）
