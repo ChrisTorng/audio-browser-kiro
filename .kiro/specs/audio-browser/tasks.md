@@ -172,27 +172,27 @@
     - 實作視覺化顯示當前評分
     - _Requirements: 1.6_
   
-  - [ ] 7.6 實作 WaveformDisplay 元件
+  - [x] 7.6 實作 WaveformDisplay 元件
     - 實作波形圖繪製 (Canvas)
     - 實作播放進度條覆蓋層
     - 實作載入和錯誤狀態顯示
     - _Requirements: 1.3, 1.5_
   
-  - [ ] 7.7 實作 SpectrogramDisplay 元件
+  - [x] 7.7 實作 SpectrogramDisplay 元件
     - 實作頻譜圖繪製 (Canvas)
     - 實作播放進度條覆蓋層
     - 實作色彩映射 (頻率強度視覺化)
     - 實作載入和錯誤狀態顯示
     - _Requirements: 1.3, 1.5_
   
-  - [ ] 7.8 實作 DescriptionField 元件
+  - [x] 7.8 實作 DescriptionField 元件
     - 實作可點擊的描述欄位
     - 實作編輯模式切換和插入點設定
     - 實作 Esc 取消編輯
     - 實作 Enter 或失焦自動儲存
     - _Requirements: 1.7_
   
-  - [ ] 7.9 實作 AudioPlayer 元件
+  - [x] 7.9 實作 AudioPlayer 元件
     - 實作音頻播放控制邏輯 (無 UI)
     - 實作循環播放
     - 實作播放狀態和進度管理
@@ -200,7 +200,7 @@
     - _Requirements: 1.5_
 
 - [ ] 8. 整合前後端並實作完整流程
-  - [ ] 8.1 實作資料夾掃描流程
+  - [-] 8.1 實作資料夾掃描流程
     - 前端發送掃描請求
     - 後端掃描並返回目錄樹
     - 前端顯示樹狀結構

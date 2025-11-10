@@ -10,3 +10,4 @@ export * from './StarRating';
 export * from './WaveformDisplay';
 export * from './SpectrogramDisplay';
 export * from './DescriptionField';
+export * from './AudioPlayer';
