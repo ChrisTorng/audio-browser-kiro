@@ -1,0 +1,172 @@
+import { useRef, useEffect, useCallback } from 'react';
+// @ts-ignore - react-window exports List but types define FixedSizeList
+import { List } from 'react-window';
+import { AudioFile, DirectoryNode } from '../../shared/types';
+
+/**
+ * Tree item type for rendering
+ */
+export interface TreeItem {
+  id: string;
+  type: 'directory' | 'file';
+  level: number;
+  isExpanded?: boolean;
+  directory?: DirectoryNode;
+  file?: AudioFile;
+  parentPath?: string;
+}
+
+/**
+ * AudioTree component props
+ */
+export interface AudioTreeProps {
+  items: TreeItem[];
+  selectedIndex: number;
+  onItemClick: (index: number) => void;
+  onExpandToggle: (index: number) => void;
+  filterText?: string;
+  height?: number;
+  itemHeight?: number;
+}
+
+/**
+ * Highlight text matching the filter
+ */
+function highlightText(text: string, filter: string): JSX.Element {
+  if (!filter) {
+    return <>{text}</>;
+  }
+
+  const parts: JSX.Element[] = [];
+  const lowerText = text.toLowerCase();
+  const lowerFilter = filter.toLowerCase();
+  let lastIndex = 0;
+  let index = lowerText.indexOf(lowerFilter);
+
+  while (index !== -1) {
+    // Add text before match
+    if (index > lastIndex) {
+      parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex, index)}</span>);
+    }
+
+    // Add highlighted match
+    parts.push(
+      <mark key={`mark-${index}`} className="audio-tree__highlight">
+        {text.substring(index, index + filter.length)}
+      </mark>
+    );
+
+    lastIndex = index + filter.length;
+    index = lowerText.indexOf(lowerFilter, lastIndex);
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex)}</span>);
+  }
+
+  return <>{parts}</>;
+}
+
+/**
+ * AudioTree component
+ * Displays audio files and directories in a tree structure with virtual scrolling
+ */
+export function AudioTree({
+  items,
+  selectedIndex,
+  onItemClick,
+  onExpandToggle,
+  filterText = '',
+  height = 600,
+  itemHeight = 40,
+}: AudioTreeProps) {
+  const listRef = useRef<any>(null);
+
+  /**
+   * Scroll to selected item when selection changes
+   */
+  useEffect(() => {
+    if (listRef.current && selectedIndex >= 0 && selectedIndex < items.length) {
+      listRef.current.scrollToItem(selectedIndex, 'smart');
+    }
+  }, [selectedIndex, items.length]);
+
+  /**
+   * Render a single tree item
+   */
+  const renderRow = useCallback(
+    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+      const item = items[index];
+      const isSelected = index === selectedIndex;
+
+      return (
+        <div
+          style={style}
+          className={`audio-tree__item ${isSelected ? 'audio-tree__item--selected' : ''}`}
+          onClick={() => onItemClick(index)}
+        >
+          <div
+            className="audio-tree__item-content"
+            style={{ paddingLeft: `${item.level * 20}px` }}
+          >
+            {item.type === 'directory' && item.directory && (
+              <div className="audio-tree__directory">
+                <button
+                  className="audio-tree__expand-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onExpandToggle(index);
+                  }}
+                  aria-label={item.isExpanded ? 'Collapse' : 'Expand'}
+                >
+                  <span className="audio-tree__expand-icon">
+                    {item.isExpanded ? '▼' : '▶'}
+                  </span>
+                </button>
+                <span className="audio-tree__directory-name">
+                  {highlightText(item.directory.name, filterText)}
+                </span>
+                <span className="audio-tree__directory-count">
+                  ({item.directory.files.length} files)
+                </span>
+              </div>
+            )}
+
+            {item.type === 'file' && item.file && (
+              <div className="audio-tree__file">
+                <span className="audio-tree__file-icon">🎵</span>
+                <span className="audio-tree__file-name">
+                  {highlightText(item.file.name, filterText)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    },
+    [items, selectedIndex, onItemClick, onExpandToggle, filterText]
+  );
+
+  if (items.length === 0) {
+    return (
+      <div className="audio-tree audio-tree--empty">
+        <p>No items to display</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="audio-tree">
+      {/* @ts-ignore - react-window type mismatch */}
+      <List
+        listRef={listRef}
+        height={height}
+        rowCount={items.length}
+        rowHeight={itemHeight}
+        width="100%"
+        rowComponent={renderRow}
+      />
+    </div>
+  );
+}

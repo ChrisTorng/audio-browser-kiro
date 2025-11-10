@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { DirectoryTree, AudioFile, DirectoryNode } from '../../shared/types';
 import { audioBrowserAPI } from '../services/api';
 import {
@@ -8,14 +8,12 @@ import {
   NavigationItem,
 } from '../hooks';
 import { FilterBar, FilterCriteria } from './FilterBar';
+import { AudioTree, TreeItem } from './AudioTree';
 
 /**
- * Flattened tree item for rendering
+ * Flattened tree item for rendering (extends TreeItem for compatibility)
  */
-interface FlatTreeItem extends NavigationItem {
-  file?: AudioFile;
-  directory?: DirectoryNode;
-  level: number;
+interface FlatTreeItem extends TreeItem, NavigationItem {
   parentPath?: string;
 }
 
@@ -160,7 +158,7 @@ export function AudioBrowser() {
    * Handle item selection
    */
   const handleSelect = useCallback(
-    (item: NavigationItem, index: number) => {
+    (_item: NavigationItem, index: number) => {
       const displayItem = displayItems[index];
 
       // If it's a file, start playing
@@ -176,7 +174,7 @@ export function AudioBrowser() {
    * Handle expand directory
    */
   const handleExpand = useCallback(
-    (item: NavigationItem, index: number) => {
+    (_item: NavigationItem, index: number) => {
       const displayItem = displayItems[index];
 
       if (displayItem.type === 'directory' && displayItem.directory) {
@@ -190,7 +188,7 @@ export function AudioBrowser() {
    * Handle collapse directory
    */
   const handleCollapse = useCallback(
-    (item: NavigationItem, index: number) => {
+    (_item: NavigationItem, index: number) => {
       const displayItem = displayItems[index];
 
       if (displayItem.type === 'directory' && displayItem.directory) {
@@ -284,7 +282,7 @@ export function AudioBrowser() {
         resultCount={displayItems.length}
       />
 
-      {/* Audio tree - placeholder for now */}
+      {/* Audio tree */}
       <div className="audio-browser__tree">
         {audioMetadata.isLoading && <div>Loading metadata...</div>}
         
@@ -300,42 +298,24 @@ export function AudioBrowser() {
           </div>
         )}
 
-        {displayItems.map((item, index) => (
-          <div
-            key={item.id}
-            className={`audio-browser__item ${
-              navigation.selectedIndex === index ? 'audio-browser__item--selected' : ''
-            }`}
-            style={{ paddingLeft: `${item.level * 20}px` }}
-            onClick={() => navigation.selectItem(index)}
-          >
-            {item.type === 'directory' && item.directory && (
-              <div className="audio-browser__directory">
-                <span className="audio-browser__expand-icon">
-                  {item.isExpanded ? '▼' : '▶'}
-                </span>
-                <span className="audio-browser__directory-name">
-                  {item.directory.name}
-                </span>
-                <span className="audio-browser__directory-count">
-                  ({item.directory.files.length} files)
-                </span>
-              </div>
-            )}
-
-            {item.type === 'file' && item.file && (
-              <div className="audio-browser__file">
-                <span className="audio-browser__file-name">
-                  {item.file.name}
-                </span>
-                {audioPlayer.isPlaying && 
-                 navigation.selectedIndex === index && (
-                  <span className="audio-browser__playing-indicator">▶</span>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+        {displayItems.length > 0 && (
+          <AudioTree
+            items={displayItems}
+            selectedIndex={navigation.selectedIndex}
+            onItemClick={(index) => navigation.selectItem(index)}
+            onExpandToggle={(index) => {
+              const item = displayItems[index];
+              if (item.isExpanded) {
+                handleCollapse(navigationItems[index], index);
+              } else {
+                handleExpand(navigationItems[index], index);
+              }
+            }}
+            filterText={filterCriteria.text}
+            height={600}
+            itemHeight={40}
+          />
+        )}
       </div>
 
       {/* Debug info */}

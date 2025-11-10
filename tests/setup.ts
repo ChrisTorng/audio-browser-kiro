@@ -3,6 +3,33 @@ import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
+// Mock react-window for testing
+vi.mock('react-window', () => {
+  const React = require('react');
+  const MockList = React.forwardRef(({ rowComponent, rowCount }: any, _ref: any) => {
+    // Render all items for testing purposes
+    const items = [];
+    for (let index = 0; index < rowCount; index++) {
+      items.push(
+        React.createElement(
+          'div',
+          { key: `item-${index}` },
+          rowComponent({
+            index,
+            style: { position: 'absolute', top: index * 40, height: 40, width: '100%' },
+          })
+        )
+      );
+    }
+    return React.createElement('div', null, items);
+  });
+  
+  return {
+    List: MockList,
+    FixedSizeList: MockList,
+  };
+});
+
 // Mock Web Audio API
 class MockAudioContext {
   createBuffer(channels: number, length: number, sampleRate: number) {

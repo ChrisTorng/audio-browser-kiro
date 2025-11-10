@@ -152,20 +152,20 @@
     - 實作即時篩選邏輯 (debounce 100ms)
     - _Requirements: 1.8, 1.9_
   
-  - [-] 7.3 實作 AudioTree 元件
+  - [x] 7.3 實作 AudioTree 元件
     - 實作樹狀結構顯示
     - 實作虛擬滾動 (使用 react-window 或 react-virtual)
     - 實作展開/收合狀態管理
     - 實作篩選和高亮顯示
     - _Requirements: 1.2, 1.8, 1.10_
   
-  - [ ] 7.4 實作 AudioItem 元件
+  - [x] 7.4 實作 AudioItem 元件
     - 實作單行佈局：星級/檔名/波形圖/頻譜圖/描述
     - 實作選擇狀態視覺化
     - 整合 StarRating, WaveformDisplay, SpectrogramDisplay, DescriptionField
     - _Requirements: 1.2, 1.3, 1.6, 1.7_
   
-  - [ ] 7.5 實作 StarRating 元件
+  - [x] 7.5 實作 StarRating 元件
     - 實作三星評分 UI (0-3 星)
     - 實作點擊互動更新評分
     - 實作立即儲存邏輯
