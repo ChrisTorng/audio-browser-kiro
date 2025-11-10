@@ -211,17 +211,20 @@ describe('User Flow Integration Tests', () => {
       // Initially, subdirectory should not show its files
       expect(screen.queryByText('track1.flac')).not.toBeInTheDocument();
 
-      // Click to expand subdirectory
-      const album1 = screen.getByText('album1');
-      await userEvent.click(album1);
+      // Find and click the expand button for album1
+      const expandButtons = screen.getAllByLabelText('Expand');
+      // album1 is the first (and only) collapsed directory
+      await userEvent.click(expandButtons[0]);
 
       // Verify subdirectory files are now visible
       await waitFor(() => {
         expect(screen.getByText('track1.flac')).toBeInTheDocument();
       });
 
-      // Click again to collapse
-      await userEvent.click(album1);
+      // Click collapse button for album1 (there are now 2 collapse buttons: music and album1)
+      const collapseButtons = screen.getAllByLabelText('Collapse');
+      // album1's collapse button is the second one
+      await userEvent.click(collapseButtons[1]);
 
       // Verify files are hidden again
       await waitFor(() => {
@@ -246,7 +249,11 @@ describe('User Flow Integration Tests', () => {
         expect(screen.getByText('song1.mp3')).toBeInTheDocument();
       });
 
-      // Press ArrowDown to select first file
+      // Tree structure: music (root), album1 (dir), song1.mp3, song2.wav
+      // Press ArrowDown to select album1
+      fireEvent.keyDown(window, { key: 'ArrowDown' });
+      
+      // Press ArrowDown to select song1.mp3
       fireEvent.keyDown(window, { key: 'ArrowDown' });
 
       // Verify first file is selected and playing
@@ -295,10 +302,7 @@ describe('User Flow Integration Tests', () => {
         expect(screen.getByText('album1')).toBeInTheDocument();
       });
 
-      // Navigate to subdirectory
-      fireEvent.keyDown(window, { key: 'ArrowDown' }); // Select music (root)
-      fireEvent.keyDown(window, { key: 'ArrowDown' }); // Select song1.mp3
-      fireEvent.keyDown(window, { key: 'ArrowDown' }); // Select song2.wav
+      // Navigate to subdirectory (album1 is first item after root)
       fireEvent.keyDown(window, { key: 'ArrowDown' }); // Select album1
 
       // Press ArrowRight to expand
@@ -334,8 +338,9 @@ describe('User Flow Integration Tests', () => {
       });
 
       // Navigate down to second file
-      fireEvent.keyDown(window, { key: 'ArrowDown' });
-      fireEvent.keyDown(window, { key: 'ArrowDown' });
+      fireEvent.keyDown(window, { key: 'ArrowDown' }); // album1
+      fireEvent.keyDown(window, { key: 'ArrowDown' }); // song1.mp3
+      fireEvent.keyDown(window, { key: 'ArrowDown' }); // song2.wav
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('song2.wav');
