@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AudioBrowser } from '../../../src/client/components/AudioBrowser';
 import { audioBrowserAPI } from '../../../src/client/services/api';
+import { ToastProvider } from '../../../src/client/contexts/ToastContext';
 import type { DirectoryTree } from '../../../src/shared/types';
 
 // Mock the API
@@ -11,6 +12,11 @@ vi.mock('../../../src/client/services/api', () => ({
     getAllMetadata: vi.fn(),
   },
 }));
+
+// Helper function to render with ToastProvider
+const renderWithToast = (component: React.ReactElement) => {
+  return render(<ToastProvider>{component}</ToastProvider>);
+};
 
 describe('AudioBrowser', () => {
   const mockTree: DirectoryTree = {

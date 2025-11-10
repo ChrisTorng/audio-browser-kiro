@@ -252,14 +252,14 @@
     - 測試 Database 類別操作
     - _Requirements: 所有後端需求_
   
-  - [ ] 10.2 撰寫伺服器端整合測試
+  - [x] 10.2 撰寫伺服器端整合測試
     - 測試 Fastify API 路由完整流程
     - 測試資料庫操作
     - 測試錯誤處理
     - 測試 Range requests
     - _Requirements: 所有後端需求_
   
-  - [ ] 10.3 撰寫前端單元測試 (tests/client/)
+  - [-] 10.3 撰寫前端單元測試 (tests/client/)
     - 測試 Hooks 邏輯
     - 測試 UI 元件渲染和互動
     - 測試服務層 API 呼叫 (使用 vi.mock)
