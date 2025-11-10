@@ -1,9 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AudioItem } from '../../../src/client/components/AudioItem';
 import type { AudioFile } from '../../../src/shared/types';
 
+// Create mock blob with arrayBuffer method
+const createMockBlob = () => {
+  const blob = new Blob(['audio data'], { type: 'audio/mp3' });
+  // Add arrayBuffer method if not present (for Node.js environment)
+  if (!blob.arrayBuffer) {
+    (blob as any).arrayBuffer = () => Promise.resolve(new ArrayBuffer(8));
+  }
+  return blob;
+};
+
+// Mock API
+vi.mock('../../../src/client/services/api', () => ({
+  audioBrowserAPI: {
+    getAudioFile: vi.fn(() => Promise.resolve(createMockBlob())),
+  },
+}));
+
+// Mock AudioContext
+const mockDecodeAudioData = vi.fn(() =>
+  Promise.resolve({
+    length: 44100,
+    sampleRate: 44100,
+    numberOfChannels: 2,
+    getChannelData: () => new Float32Array(44100),
+  })
+);
+
+global.AudioContext = vi.fn(() => ({
+  decodeAudioData: mockDecodeAudioData,
+})) as any;
+
 // Mock hooks
+const mockGenerateWaveform = vi.fn();
+const mockGenerateSpectrogram = vi.fn();
+
 vi.mock('../../../src/client/hooks', () => ({
   useAudioMetadata: vi.fn(() => ({
     getMetadata: vi.fn(() => ({ rating: 2, description: 'Test description' })),
@@ -18,11 +52,13 @@ vi.mock('../../../src/client/hooks', () => ({
     waveformData: null,
     isLoading: false,
     error: null,
+    generateWaveform: mockGenerateWaveform,
   })),
   useSpectrogram: vi.fn(() => ({
     spectrogramData: null,
     isLoading: false,
     error: null,
+    generateSpectrogram: mockGenerateSpectrogram,
   })),
 }));
 
@@ -43,6 +79,9 @@ describe('AudioItem', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGenerateWaveform.mockClear();
+    mockGenerateSpectrogram.mockClear();
+    mockDecodeAudioData.mockClear();
   });
 
   it('renders audio file information', () => {
@@ -109,5 +148,82 @@ describe('AudioItem', () => {
 
     const description = container.querySelector('.description-field');
     expect(description).toBeInTheDocument();
+  });
+
+  it('loads audio and generates visualizations when selected', async () => {
+    const { rerender } = render(<AudioItem {...defaultProps} isSelected={false} />);
+
+    // Initially not selected, should not load
+    expect(mockGenerateWaveform).not.toHaveBeenCalled();
+    expect(mockGenerateSpectrogram).not.toHaveBeenCalled();
+
+    // Select the item
+    rerender(<AudioItem {...defaultProps} isSelected={true} />);
+
+    // Wait for async operations
+    await waitFor(() => {
+      expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
+      expect(mockGenerateSpectrogram).toHaveBeenCalledTimes(1);
+    });
+
+    // Verify correct parameters
+    expect(mockGenerateWaveform).toHaveBeenCalledWith(
+      expect.objectContaining({
+        length: 44100,
+        sampleRate: 44100,
+      }),
+      200
+    );
+
+    expect(mockGenerateSpectrogram).toHaveBeenCalledWith(
+      expect.objectContaining({
+        length: 44100,
+        sampleRate: 44100,
+      }),
+      200,
+      40
+    );
+  });
+
+  it('does not reload audio when already loaded', async () => {
+    const { rerender } = render(<AudioItem {...defaultProps} isSelected={true} />);
+
+    await waitFor(() => {
+      expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
+    });
+
+    // Rerender with same selection
+    rerender(<AudioItem {...defaultProps} isSelected={true} />);
+
+    // Should not call again
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
+    expect(mockGenerateSpectrogram).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets loaded state when file changes', async () => {
+    const { rerender } = render(<AudioItem {...defaultProps} isSelected={true} />);
+
+    await waitFor(() => {
+      expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
+    });
+
+    // Change file and deselect first
+    const newFile: AudioFile = {
+      name: 'new-song.mp3',
+      path: '/music/new-song.mp3',
+      size: 3145728,
+    };
+
+    rerender(<AudioItem {...defaultProps} file={newFile} isSelected={false} />);
+
+    // Then select again to trigger reload
+    rerender(<AudioItem {...defaultProps} file={newFile} isSelected={true} />);
+
+    // Should load new file
+    await waitFor(() => {
+      expect(mockGenerateWaveform).toHaveBeenCalledTimes(2);
+      expect(mockGenerateSpectrogram).toHaveBeenCalledTimes(2);
+    });
   });
 });

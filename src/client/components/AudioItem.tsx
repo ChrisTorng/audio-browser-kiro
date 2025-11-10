@@ -1,6 +1,7 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { AudioFile } from '../../shared/types';
 import { useAudioMetadata, useWaveform, useSpectrogram, useAudioPlayer } from '../hooks';
+import { audioBrowserAPI } from '../services/api';
 import { StarRating } from './StarRating';
 import { WaveformDisplay } from './WaveformDisplay';
 import { SpectrogramDisplay } from './SpectrogramDisplay';
@@ -35,6 +36,10 @@ export function AudioItem({
   const waveform = useWaveform();
   const spectrogram = useSpectrogram();
 
+  // Track if audio has been loaded for this file
+  const audioLoadedRef = useRef<boolean>(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
   // Get metadata for this file
   const metadata = useMemo(() => {
     return audioMetadata.getMetadata(file.path);
@@ -42,6 +47,51 @@ export function AudioItem({
 
   const rating = metadata?.rating || 0;
   const description = metadata?.description || '';
+
+  /**
+   * Load audio file and generate waveform/spectrogram when selected
+   */
+  useEffect(() => {
+    if (!isSelected || audioLoadedRef.current) {
+      return;
+    }
+
+    const loadAudioAndGenerateVisualizations = async () => {
+      try {
+        // Download audio file
+        const audioBlob = await audioBrowserAPI.getAudioFile(file.path);
+
+        // Create AudioContext if not exists
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioContext();
+        }
+
+        // Convert blob to ArrayBuffer
+        const arrayBuffer = await audioBlob.arrayBuffer();
+
+        // Decode audio data
+        const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+
+        // Generate waveform and spectrogram
+        waveform.generateWaveform(audioBuffer, 200);
+        spectrogram.generateSpectrogram(audioBuffer, 200, 40);
+
+        // Mark as loaded
+        audioLoadedRef.current = true;
+      } catch (error) {
+        console.error('Failed to load audio and generate visualizations:', error);
+      }
+    };
+
+    loadAudioAndGenerateVisualizations();
+  }, [isSelected, file.path, waveform, spectrogram]);
+
+  /**
+   * Reset loaded state when file changes
+   */
+  useEffect(() => {
+    audioLoadedRef.current = false;
+  }, [file.path]);
 
   /**
    * Handle rating change
