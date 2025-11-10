@@ -45,7 +45,7 @@
     - 實作 deleteMetadata 方法
     - _Requirements: 1.6, 1.7_
   
-  - [ ] 3.3 實作 AudioService
+  - [x] 3.3 實作 AudioService
     - 實作 streamAudio 方法使用 fs.createReadStream
     - 實作路徑驗證防止路徑遍歷攻擊
     - 實作 Range requests 支援
