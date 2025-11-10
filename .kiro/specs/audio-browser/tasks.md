@@ -77,7 +77,7 @@
     - DELETE /api/metadata/:filePath 刪除 metadata
     - _Requirements: 1.6, 1.7_
   
-  - [ ] 4.5 設定錯誤處理和日誌
+  - [x] 4.5 設定錯誤處理和日誌
     - 實作全域錯誤處理 hook
     - 實作請求日誌
     - 配置開發/生產環境差異
