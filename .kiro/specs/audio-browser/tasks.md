@@ -31,7 +31,7 @@
     - _Requirements: 1.6, 1.7_
 
 - [ ] 3. 實作伺服器服務層 (src/server/services/)
-  - [ ] 3.1 實作 ScanService
+  - [x] 3.1 實作 ScanService
     - 實作 scanDirectory 方法使用 Node.js fs 模組掃描資料夾
     - 實作檔案格式過濾 (MP3, WAV, FLAC, OGG, M4A, AAC)
     - 實作遞迴建立目錄樹
