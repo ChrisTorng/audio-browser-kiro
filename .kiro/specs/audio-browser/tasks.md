@@ -83,35 +83,35 @@
     - 配置開發/生產環境差異
     - _Requirements: 所有需求_
 
-- [ ] 5. 實作前端核心 Hooks
-  - [ ] 5.1 實作 useAudioPlayer Hook
+- [x] 5. 實作前端核心 Hooks
+  - [x] 5.1 實作 useAudioPlayer Hook
     - 實作 play, stop, toggle 方法
     - 實作循環播放邏輯
     - 實作播放進度追蹤 (progress, currentTime, duration)
     - 實作播放狀態管理
     - _Requirements: 1.5_
   
-  - [ ] 5.2 實作 useWaveform Hook
+  - [x] 5.2 實作 useWaveform Hook
     - 實作從 AudioBuffer 生成波形資料
     - 實作載入狀態和錯誤處理
     - 實作波形資料快取
     - _Requirements: 1.3_
   
-  - [ ] 5.3 實作 useSpectrogram Hook
+  - [x] 5.3 實作 useSpectrogram Hook
     - 實作從 AudioBuffer 生成頻譜資料
     - 使用 FFT 分析音頻頻率
     - 實作載入狀態和錯誤處理
     - 實作頻譜資料快取
     - _Requirements: 1.3_
   
-  - [ ] 5.4 實作 useKeyboardNavigation Hook
+  - [x] 5.4 實作 useKeyboardNavigation Hook
     - 實作上下鍵選擇項目
     - 實作左右鍵展開/收合資料夾
     - 實作空白鍵播放/停止控制
     - 實作選擇索引管理
     - _Requirements: 1.4_
   
-  - [ ] 5.5 實作 useAudioMetadata Hook
+  - [x] 5.5 實作 useAudioMetadata Hook
     - 實作 metadata 狀態管理
     - 實作 updateRating 和 updateDescription 方法
     - 實作 API 呼叫和錯誤處理

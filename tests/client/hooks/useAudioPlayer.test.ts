@@ -1,0 +1,167 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useAudioPlayer } from '../../../src/client/hooks/useAudioPlayer';
+
+// Mock HTMLAudioElement
+class MockAudioElement {
+  src = '';
+  currentTime = 0;
+  duration = 100;
+  loop = false;
+  paused = true;
+  
+  private listeners: Record<string, Function[]> = {};
+
+  play() {
+    this.paused = false;
+    return Promise.resolve();
+  }
+
+  pause() {
+    this.paused = true;
+  }
+
+  addEventListener(event: string, handler: Function) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(handler);
+  }
+
+  removeEventListener(event: string, handler: Function) {
+    if (this.listeners[event]) {
+      this.listeners[event] = this.listeners[event].filter(h => h !== handler);
+    }
+  }
+
+  dispatchEvent(event: string) {
+    if (this.listeners[event]) {
+      this.listeners[event].forEach(handler => handler());
+    }
+  }
+
+  triggerLoadedMetadata() {
+    this.dispatchEvent('loadedmetadata');
+  }
+
+  triggerTimeUpdate() {
+    this.dispatchEvent('timeupdate');
+  }
+}
+
+describe('useAudioPlayer', () => {
+  let mockAudio: MockAudioElement;
+
+  beforeEach(() => {
+    mockAudio = new MockAudioElement();
+    global.Audio = vi.fn(() => mockAudio as any) as any;
+  });
+
+  it('initializes with default state', () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    expect(result.current.isPlaying).toBe(false);
+    expect(result.current.progress).toBe(0);
+    expect(result.current.currentTime).toBe(0);
+    expect(result.current.duration).toBe(0);
+  });
+
+  it('plays audio from URL', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    await act(async () => {
+      result.current.play('test.mp3');
+    });
+
+    expect(mockAudio.src).toBe('test.mp3');
+    expect(mockAudio.paused).toBe(false);
+    expect(result.current.isPlaying).toBe(true);
+  });
+
+  it('stops audio playback', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    await act(async () => {
+      result.current.play('test.mp3');
+    });
+
+    act(() => {
+      result.current.stop();
+    });
+
+    expect(mockAudio.paused).toBe(true);
+    expect(mockAudio.currentTime).toBe(0);
+    expect(result.current.isPlaying).toBe(false);
+    expect(result.current.progress).toBe(0);
+  });
+
+  it('toggles playback state', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    await act(async () => {
+      result.current.play('test.mp3');
+    });
+
+    expect(result.current.isPlaying).toBe(true);
+
+    act(() => {
+      result.current.toggle();
+    });
+
+    expect(result.current.isPlaying).toBe(false);
+  });
+
+  it('enables loop playback', () => {
+    renderHook(() => useAudioPlayer());
+
+    expect(mockAudio.loop).toBe(true);
+  });
+
+  it('updates progress during playback', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    await act(async () => {
+      result.current.play('test.mp3');
+    });
+
+    act(() => {
+      mockAudio.currentTime = 50;
+      mockAudio.triggerTimeUpdate();
+    });
+
+    expect(result.current.currentTime).toBe(50);
+    expect(result.current.progress).toBe(0.5);
+  });
+
+  it('updates duration on metadata load', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    await act(async () => {
+      result.current.play('test.mp3');
+    });
+
+    act(() => {
+      mockAudio.duration = 200;
+      mockAudio.triggerLoadedMetadata();
+    });
+
+    expect(result.current.duration).toBe(200);
+  });
+
+  it('switches to new audio file when playing different URL', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    await act(async () => {
+      result.current.play('test1.mp3');
+    });
+
+    expect(mockAudio.src).toBe('test1.mp3');
+
+    await act(async () => {
+      result.current.play('test2.mp3');
+    });
+
+    expect(mockAudio.src).toBe('test2.mp3');
+    expect(mockAudio.currentTime).toBe(0);
+  });
+});
