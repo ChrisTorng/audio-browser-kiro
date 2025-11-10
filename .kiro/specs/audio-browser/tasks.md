@@ -245,7 +245,7 @@
     - _Requirements: 1.10_
 
 - [ ] 10. 撰寫測試（使用 Vitest）
-  - [ ] 10.1 撰寫伺服器端單元測試 (tests/server/)
+  - [x] 10.1 撰寫伺服器端單元測試 (tests/server/)
     - 測試 ScanService 掃描邏輯
     - 測試 MetadataService CRUD 操作
     - 測試 AudioService 串流邏輯
