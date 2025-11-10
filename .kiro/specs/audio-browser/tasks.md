@@ -132,7 +132,7 @@
     - 實作波形資料降採樣以符合顯示寬度
     - _Requirements: 1.3_
   
-  - [ ] 6.3 實作 SpectrogramGenerator 類別
+  - [x] 6.3 實作 SpectrogramGenerator 類別
     - 實作從 AudioBuffer 生成頻譜圖使用 Web Audio API
     - 實作 FFT 分析（AnalyserNode）
     - 實作頻譜資料正規化和色彩映射
