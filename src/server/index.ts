@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { registerScanRoutes } from './routes/scanRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +19,7 @@ const fastify = Fastify({
 fastify.addContentTypeParser(
   'application/json',
   { parseAs: 'string' },
-  function (req, body, done) {
+  function (_req, body, done) {
     try {
       const json = JSON.parse(body as string);
       done(null, json);
@@ -41,15 +42,17 @@ if (process.env.NODE_ENV === 'production') {
   // Serve index.html for all non-API routes (SPA fallback)
   fastify.setNotFoundHandler((request, reply) => {
     if (!request.url.startsWith('/api')) {
-      reply.sendFile('index.html');
-    } else {
-      reply.code(404).send({ error: 'Not Found' });
+      return reply.sendFile('index.html');
     }
+    return reply.code(404).send({ error: 'Not Found' });
   });
 }
 
+// Register API routes
+await registerScanRoutes(fastify);
+
 // Health check endpoint
-fastify.get('/api/health', async (request, reply) => {
+fastify.get('/api/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
 });
 
