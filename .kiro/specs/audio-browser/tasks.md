@@ -71,7 +71,7 @@
     - 實作 Range requests 支援
     - _Requirements: 1.5_
   
-  - [ ] 4.4 實作 Metadata API
+  - [x] 4.4 實作 Metadata API
     - GET /api/metadata 取得所有 metadata
     - POST /api/metadata 更新 metadata
     - DELETE /api/metadata/:filePath 刪除 metadata
