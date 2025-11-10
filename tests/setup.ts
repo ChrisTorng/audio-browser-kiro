@@ -53,9 +53,41 @@ class MockOfflineAudioContext extends MockAudioContext {
   }
 }
 
+// Mock FileReader for Blob handling
+class MockFileReader {
+  result: ArrayBuffer | string | null = null;
+  error: Error | null = null;
+  onload: ((event: any) => void) | null = null;
+  onerror: ((event: any) => void) | null = null;
+
+  readAsArrayBuffer(blob: Blob) {
+    // Simulate async read
+    setTimeout(() => {
+      if (blob.size > 0) {
+        // Create a mock ArrayBuffer
+        this.result = new ArrayBuffer(blob.size);
+        if (this.onload) {
+          this.onload({ target: this });
+        }
+      } else {
+        this.error = new Error('Empty blob');
+        if (this.onerror) {
+          this.onerror({ target: this });
+        }
+      }
+    }, 0);
+  }
+}
+
+// Mock AudioContext.decodeAudioData
+MockAudioContext.prototype.decodeAudioData = function(arrayBuffer: ArrayBuffer) {
+  return Promise.resolve(this.createBuffer(1, 44100, 44100));
+};
+
 // Set up global mocks
 global.AudioContext = MockAudioContext as any;
 global.OfflineAudioContext = MockOfflineAudioContext as any;
+global.FileReader = MockFileReader as any;
 
 // Cleanup after each test
 afterEach(() => {

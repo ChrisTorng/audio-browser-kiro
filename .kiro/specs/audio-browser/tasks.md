@@ -126,7 +126,7 @@
     - 實作錯誤處理和重試邏輯
     - _Requirements: 1.1, 1.5, 1.6, 1.7_
   
-  - [ ] 6.2 實作 WaveformGenerator 類別
+  - [x] 6.2 實作 WaveformGenerator 類別
     - 實作從 AudioBuffer 生成波形使用 Web Audio API
     - 實作從 Blob 生成波形
     - 實作波形資料降採樣以符合顯示寬度
