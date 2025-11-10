@@ -65,7 +65,7 @@
     - 實作錯誤回應格式
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 4.3 實作音檔串流 API
+  - [x] 4.3 實作音檔串流 API
     - GET /api/audio/* 串流音檔（wildcard route）
     - 實作 Content-Type 和 Content-Length headers
     - 實作 Range requests 支援

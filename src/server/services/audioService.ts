@@ -40,19 +40,18 @@ export class AudioService {
    * @throws Error if path is invalid or outside root directory
    */
   validateAudioFilePath(filePath: string, rootPath: string): void {
+    // Check if path contains suspicious patterns before normalization
+    if (filePath.includes('..') || filePath.startsWith('/')) {
+      throw new Error('Invalid file path: Suspicious path pattern detected');
+    }
+
     // Resolve absolute paths
     const resolvedFilePath = path.resolve(rootPath, filePath);
     const resolvedRootPath = path.resolve(rootPath);
 
     // Check if resolved path is within root directory
-    if (!resolvedFilePath.startsWith(resolvedRootPath)) {
+    if (!resolvedFilePath.startsWith(resolvedRootPath + path.sep) && resolvedFilePath !== resolvedRootPath) {
       throw new Error('Invalid file path: Path traversal detected');
-    }
-
-    // Check if path contains suspicious patterns
-    const normalizedPath = path.normalize(filePath);
-    if (normalizedPath.includes('..') || normalizedPath.startsWith('/')) {
-      throw new Error('Invalid file path: Suspicious path pattern detected');
     }
   }
 

@@ -3,6 +3,7 @@ import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerScanRoutes } from './routes/scanRoutes.js';
+import { registerAudioRoutes } from './routes/audioRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +51,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Register API routes
 await registerScanRoutes(fastify);
+await registerAudioRoutes(fastify);
 
 // Health check endpoint
 fastify.get('/api/health', async () => {
