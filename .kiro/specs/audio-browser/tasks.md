@@ -38,7 +38,7 @@
     - 實作錯誤處理和日誌記錄
     - _Requirements: 1.1_
   
-  - [ ] 3.2 實作 MetadataService
+  - [x] 3.2 實作 MetadataService
     - 整合 Database 類別
     - 實作 getMetadata 和 getAllMetadata 方法
     - 實作 updateMetadata 方法 (upsert 邏輯)
