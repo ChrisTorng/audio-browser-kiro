@@ -53,7 +53,7 @@
     - _Requirements: 1.5_
 
 - [ ] 4. 實作 Fastify API 路由 (src/server/routes/)
-  - [ ] 4.1 建立 Fastify 伺服器實例
+  - [x] 4.1 建立 Fastify 伺服器實例
     - 初始化 Fastify 應用
     - 配置 JSON body parser
     - 設定靜態檔案服務（生產環境）
