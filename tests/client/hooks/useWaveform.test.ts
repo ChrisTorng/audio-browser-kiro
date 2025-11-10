@@ -37,7 +37,7 @@ describe('useWaveform', () => {
     const mockBuffer = createMockAudioBuffer(1000);
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 100);
+      result.current.generateWaveform(mockBuffer, '/test/audio.mp3', 100);
     });
 
     expect(result.current.waveformData).toHaveLength(100);
@@ -50,7 +50,7 @@ describe('useWaveform', () => {
     const mockBuffer = createMockAudioBuffer(1000);
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 100);
+      result.current.generateWaveform(mockBuffer, '/test/audio.mp3', 100);
     });
 
     const allInRange = result.current.waveformData.every(v => v >= 0 && v <= 1);
@@ -62,7 +62,7 @@ describe('useWaveform', () => {
     const mockBuffer = createMockAudioBuffer(10000);
 
     act(() => {
-      result.current.generateWaveform(mockBuffer);
+      result.current.generateWaveform(mockBuffer, '/test/audio.mp3');
     });
 
     expect(result.current.waveformData).toHaveLength(1000);
@@ -73,13 +73,13 @@ describe('useWaveform', () => {
     const mockBuffer = createMockAudioBuffer(1000);
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 100);
+      result.current.generateWaveform(mockBuffer, '/test/audio.mp3', 100);
     });
 
     const firstResult = result.current.waveformData;
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 100);
+      result.current.generateWaveform(mockBuffer, '/test/audio.mp3', 100);
     });
 
     const secondResult = result.current.waveformData;
@@ -93,13 +93,13 @@ describe('useWaveform', () => {
     const mockBuffer = createMockAudioBuffer(1000);
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 50);
+      result.current.generateWaveform(mockBuffer, '/test/audio1.mp3', 50);
     });
 
     const firstResult = result.current.waveformData;
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 100);
+      result.current.generateWaveform(mockBuffer, '/test/audio2.mp3', 100);
     });
 
     const secondResult = result.current.waveformData;
@@ -114,7 +114,7 @@ describe('useWaveform', () => {
     const mockBuffer = createMockAudioBuffer(1000);
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 100);
+      result.current.generateWaveform(mockBuffer, '/test/audio.mp3', 100);
     });
 
     expect(result.current.waveformData).toHaveLength(100);
@@ -130,13 +130,18 @@ describe('useWaveform', () => {
   it('handles errors during generation', () => {
     const { result } = renderHook(() => useWaveform());
     
-    // Create invalid buffer that will cause error
-    const invalidBuffer = {} as AudioBuffer;
+    // Create invalid buffer that will cause error (missing getChannelData method)
+    const invalidBuffer = {
+      length: 1000,
+      sampleRate: 44100,
+      numberOfChannels: 1,
+    } as AudioBuffer;
 
     act(() => {
-      result.current.generateWaveform(invalidBuffer, 100);
+      result.current.generateWaveform(invalidBuffer, '/test/invalid.mp3', 100);
     });
 
+    // Error should be set when generation fails
     expect(result.current.error).not.toBe(null);
     expect(result.current.isLoading).toBe(false);
   });
@@ -146,7 +151,7 @@ describe('useWaveform', () => {
     const mockBuffer = createMockAudioBuffer(1000);
 
     act(() => {
-      result.current.generateWaveform(mockBuffer, 100);
+      result.current.generateWaveform(mockBuffer, '/test/audio.mp3', 100);
     });
 
     // After generation completes, loading should be false

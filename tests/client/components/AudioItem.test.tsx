@@ -35,8 +35,8 @@ global.AudioContext = vi.fn(() => ({
 })) as any;
 
 // Mock hooks
-const mockGenerateWaveform = vi.fn();
-const mockGenerateSpectrogram = vi.fn();
+const mockLoadVisualization = vi.fn();
+const mockClearVisualization = vi.fn();
 
 vi.mock('../../../src/client/hooks', () => ({
   useAudioMetadata: vi.fn(() => ({
@@ -48,17 +48,13 @@ vi.mock('../../../src/client/hooks', () => ({
     isPlaying: false,
     progress: 0,
   })),
-  useWaveform: vi.fn(() => ({
+  useLazyVisualization: vi.fn(() => ({
     waveformData: null,
-    isLoading: false,
-    error: null,
-    generateWaveform: mockGenerateWaveform,
-  })),
-  useSpectrogram: vi.fn(() => ({
     spectrogramData: null,
     isLoading: false,
     error: null,
-    generateSpectrogram: mockGenerateSpectrogram,
+    loadVisualization: mockLoadVisualization,
+    clearVisualization: mockClearVisualization,
   })),
 }));
 
@@ -72,6 +68,7 @@ describe('AudioItem', () => {
   const defaultProps = {
     file: mockFile,
     isSelected: false,
+    isVisible: true,
     level: 1,
     filterText: '',
     onClick: vi.fn(),
@@ -79,8 +76,8 @@ describe('AudioItem', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGenerateWaveform.mockClear();
-    mockGenerateSpectrogram.mockClear();
+    mockLoadVisualization.mockClear();
+    mockClearVisualization.mockClear();
     mockDecodeAudioData.mockClear();
   });
 
@@ -150,80 +147,71 @@ describe('AudioItem', () => {
     expect(description).toBeInTheDocument();
   });
 
-  it('loads audio and generates visualizations when selected', async () => {
-    const { rerender } = render(<AudioItem {...defaultProps} isSelected={false} />);
+  it('loads audio and generates visualizations when visible', async () => {
+    const { rerender } = render(<AudioItem {...defaultProps} isVisible={false} />);
 
-    // Initially not selected, should not load
-    expect(mockGenerateWaveform).not.toHaveBeenCalled();
-    expect(mockGenerateSpectrogram).not.toHaveBeenCalled();
+    // Initially not visible, should not load
+    expect(mockLoadVisualization).not.toHaveBeenCalled();
 
-    // Select the item
-    rerender(<AudioItem {...defaultProps} isSelected={true} />);
+    // Make item visible
+    rerender(<AudioItem {...defaultProps} isVisible={true} />);
 
     // Wait for async operations
     await waitFor(() => {
-      expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
-      expect(mockGenerateSpectrogram).toHaveBeenCalledTimes(1);
+      expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
     });
 
-    // Verify correct parameters
-    expect(mockGenerateWaveform).toHaveBeenCalledWith(
-      expect.objectContaining({
-        length: 44100,
-        sampleRate: 44100,
-      }),
-      200
-    );
-
-    expect(mockGenerateSpectrogram).toHaveBeenCalledWith(
-      expect.objectContaining({
-        length: 44100,
-        sampleRate: 44100,
-      }),
-      200,
-      40
+    // Verify correct parameters (filePath and audioUrl)
+    expect(mockLoadVisualization).toHaveBeenCalledWith(
+      mockFile.path,
+      `/api/audio/${encodeURIComponent(mockFile.path)}`
     );
   });
 
-  it('does not reload audio when already loaded', async () => {
-    const { rerender } = render(<AudioItem {...defaultProps} isSelected={true} />);
+  it('clears visualization when not visible', async () => {
+    const { rerender } = render(<AudioItem {...defaultProps} isVisible={true} />);
 
     await waitFor(() => {
-      expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
+      expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
     });
 
-    // Rerender with same selection
-    rerender(<AudioItem {...defaultProps} isSelected={true} />);
+    // Make item not visible
+    rerender(<AudioItem {...defaultProps} isVisible={false} />);
 
-    // Should not call again
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
-    expect(mockGenerateSpectrogram).toHaveBeenCalledTimes(1);
+    // Should clear visualization
+    await waitFor(() => {
+      expect(mockClearVisualization).toHaveBeenCalled();
+    });
   });
 
   it('resets loaded state when file changes', async () => {
-    const { rerender } = render(<AudioItem {...defaultProps} isSelected={true} />);
+    const { rerender } = render(<AudioItem {...defaultProps} isVisible={true} />);
 
     await waitFor(() => {
-      expect(mockGenerateWaveform).toHaveBeenCalledTimes(1);
+      expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
     });
 
-    // Change file and deselect first
+    // Change file and make not visible first
     const newFile: AudioFile = {
       name: 'new-song.mp3',
       path: '/music/new-song.mp3',
       size: 3145728,
     };
 
-    rerender(<AudioItem {...defaultProps} file={newFile} isSelected={false} />);
+    rerender(<AudioItem {...defaultProps} file={newFile} isVisible={false} />);
 
-    // Then select again to trigger reload
-    rerender(<AudioItem {...defaultProps} file={newFile} isSelected={true} />);
+    // Make visible to trigger load
+    rerender(<AudioItem {...defaultProps} file={newFile} isVisible={true} />);
 
     // Should load new file
     await waitFor(() => {
-      expect(mockGenerateWaveform).toHaveBeenCalledTimes(2);
-      expect(mockGenerateSpectrogram).toHaveBeenCalledTimes(2);
+      expect(mockLoadVisualization).toHaveBeenCalledTimes(2);
     });
+
+    // Verify it loaded the new file
+    expect(mockLoadVisualization).toHaveBeenLastCalledWith(
+      newFile.path,
+      `/api/audio/${encodeURIComponent(newFile.path)}`
+    );
   });
 });

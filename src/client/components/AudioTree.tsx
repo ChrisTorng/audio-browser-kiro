@@ -1,6 +1,8 @@
 import { useRef, useEffect, useCallback } from 'react';
+// @ts-ignore - react-window types issue
 import { FixedSizeList as List } from 'react-window';
 import { AudioFile, DirectoryNode } from '../../shared/types';
+import { useVirtualScrollOptimization } from '../hooks/useVirtualScrollOptimization';
 
 /**
  * Tree item type for rendering
@@ -26,6 +28,7 @@ export interface AudioTreeProps {
   filterText?: string;
   height?: number;
   itemHeight?: number;
+  onVisibleRangeChange?: (startIndex: number, endIndex: number) => void;
 }
 
 /**
@@ -79,8 +82,37 @@ export function AudioTree({
   filterText = '',
   height = 600,
   itemHeight = 40,
+  onVisibleRangeChange,
 }: AudioTreeProps) {
   const listRef = useRef<any>(null);
+
+  // Virtual scroll optimization
+  const virtualScroll = useVirtualScrollOptimization({
+    itemCount: items.length,
+    itemHeight,
+    containerHeight: height,
+    overscanCount: 5,
+  });
+
+  /**
+   * Handle scroll events
+   */
+  const handleScroll = useCallback(
+    ({ scrollOffset }: { scrollOffset: number }) => {
+      virtualScroll.updateScrollPosition(scrollOffset);
+    },
+    [virtualScroll]
+  );
+
+  /**
+   * Notify parent of visible range changes
+   */
+  useEffect(() => {
+    if (onVisibleRangeChange) {
+      const { overscanStartIndex, overscanEndIndex } = virtualScroll.visibleRange;
+      onVisibleRangeChange(overscanStartIndex, overscanEndIndex);
+    }
+  }, [virtualScroll.visibleRange, onVisibleRangeChange]);
 
   /**
    * Scroll to selected item when selection changes
@@ -93,11 +125,18 @@ export function AudioTree({
 
   /**
    * Render a single tree item
+   * Optimized to only render items in visible range
    */
   const renderRow = useCallback(
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const item = items[index];
       const isSelected = index === selectedIndex;
+      const isInOverscan = virtualScroll.isItemInOverscan(index);
+
+      // Skip rendering if not in overscan range (performance optimization)
+      if (!isInOverscan) {
+        return <div style={style} />;
+      }
 
       return (
         <div
@@ -144,7 +183,7 @@ export function AudioTree({
         </div>
       );
     },
-    [items, selectedIndex, onItemClick, onExpandToggle, filterText]
+    [items, selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll]
   );
 
   if (items.length === 0) {
@@ -163,6 +202,8 @@ export function AudioTree({
         itemCount={items.length}
         itemSize={itemHeight}
         width="100%"
+        onScroll={handleScroll}
+        overscanCount={5}
       >
         {renderRow}
       </List>

@@ -1,7 +1,6 @@
-import { useCallback, useMemo, useEffect, useRef } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { AudioFile } from '../../shared/types';
-import { useAudioMetadata, useWaveform, useSpectrogram, useAudioPlayer } from '../hooks';
-import { audioBrowserAPI } from '../services/api';
+import { useAudioMetadata, useAudioPlayer, useLazyVisualization } from '../hooks';
 import { StarRating } from './StarRating';
 import { WaveformDisplay } from './WaveformDisplay';
 import { SpectrogramDisplay } from './SpectrogramDisplay';
@@ -13,6 +12,7 @@ import { DescriptionField } from './DescriptionField';
 export interface AudioItemProps {
   file: AudioFile;
   isSelected: boolean;
+  isVisible: boolean;
   level: number;
   filterText?: string;
   onClick: () => void;
@@ -26,6 +26,7 @@ export interface AudioItemProps {
 export function AudioItem({
   file,
   isSelected,
+  isVisible,
   level,
   filterText = '',
   onClick,
@@ -33,12 +34,14 @@ export function AudioItem({
   // Hooks
   const audioMetadata = useAudioMetadata();
   const audioPlayer = useAudioPlayer();
-  const waveform = useWaveform();
-  const spectrogram = useSpectrogram();
-
-  // Track if audio has been loaded for this file
-  const audioLoadedRef = useRef<boolean>(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  // Use lazy visualization hook for on-demand loading
+  const visualization = useLazyVisualization({
+    waveformWidth: 200,
+    spectrogramWidth: 200,
+    spectrogramHeight: 40,
+    priority: 'both',
+  });
 
   // Get metadata for this file
   const metadata = useMemo(() => {
@@ -49,49 +52,18 @@ export function AudioItem({
   const description = metadata?.description || '';
 
   /**
-   * Load audio file and generate waveform/spectrogram when selected
+   * Load visualizations when item becomes visible
+   * This enables lazy loading and on-demand generation
    */
   useEffect(() => {
-    if (!isSelected || audioLoadedRef.current) {
-      return;
+    if (isVisible) {
+      const audioUrl = `/api/audio/${encodeURIComponent(file.path)}`;
+      visualization.loadVisualization(file.path, audioUrl);
+    } else {
+      // Clear visualization when not visible to save memory
+      visualization.clearVisualization();
     }
-
-    const loadAudioAndGenerateVisualizations = async () => {
-      try {
-        // Download audio file
-        const audioBlob = await audioBrowserAPI.getAudioFile(file.path);
-
-        // Create AudioContext if not exists
-        if (!audioContextRef.current) {
-          audioContextRef.current = new AudioContext();
-        }
-
-        // Convert blob to ArrayBuffer
-        const arrayBuffer = await audioBlob.arrayBuffer();
-
-        // Decode audio data
-        const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-
-        // Generate waveform and spectrogram
-        waveform.generateWaveform(audioBuffer, 200);
-        spectrogram.generateSpectrogram(audioBuffer, 200, 40);
-
-        // Mark as loaded
-        audioLoadedRef.current = true;
-      } catch (error) {
-        console.error('Failed to load audio and generate visualizations:', error);
-      }
-    };
-
-    loadAudioAndGenerateVisualizations();
-  }, [isSelected, file.path, waveform, spectrogram]);
-
-  /**
-   * Reset loaded state when file changes
-   */
-  useEffect(() => {
-    audioLoadedRef.current = false;
-  }, [file.path]);
+  }, [isVisible, file.path, visualization]);
 
   /**
    * Handle rating change
@@ -145,24 +117,24 @@ export function AudioItem({
         {/* Waveform */}
         <div className="audio-item__waveform">
           <WaveformDisplay
-            waveformData={waveform.waveformData}
+            waveformData={visualization.waveformData}
             progress={progress}
             width={200}
             height={40}
-            isLoading={waveform.isLoading}
-            error={waveform.error}
+            isLoading={visualization.isLoading}
+            error={visualization.error}
           />
         </div>
 
         {/* Spectrogram */}
         <div className="audio-item__spectrogram">
           <SpectrogramDisplay
-            spectrogramData={spectrogram.spectrogramData}
+            spectrogramData={visualization.spectrogramData}
             progress={progress}
             width={200}
             height={40}
-            isLoading={spectrogram.isLoading}
-            error={spectrogram.error}
+            isLoading={visualization.isLoading}
+            error={visualization.error}
           />
         </div>
 

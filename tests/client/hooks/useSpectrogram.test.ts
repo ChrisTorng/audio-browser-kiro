@@ -40,7 +40,7 @@ describe('useSpectrogram', () => {
     const mockBuffer = createMockAudioBuffer(10000);
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 50, 64);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     expect(result.current.spectrogramData).toHaveLength(50);
@@ -54,7 +54,7 @@ describe('useSpectrogram', () => {
     const mockBuffer = createMockAudioBuffer(10000);
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 50, 64);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     const allInRange = result.current.spectrogramData.every(timeSlice =>
@@ -68,7 +68,7 @@ describe('useSpectrogram', () => {
     const mockBuffer = createMockAudioBuffer(20000);
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3');
     });
 
     expect(result.current.spectrogramData).toHaveLength(200);
@@ -80,13 +80,13 @@ describe('useSpectrogram', () => {
     const mockBuffer = createMockAudioBuffer(10000);
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 50, 64);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     const firstResult = result.current.spectrogramData;
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 50, 64);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     const secondResult = result.current.spectrogramData;
@@ -100,13 +100,13 @@ describe('useSpectrogram', () => {
     const mockBuffer = createMockAudioBuffer(10000);
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 50, 64);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio1.mp3', 50, 64);
     });
 
     const firstResult = result.current.spectrogramData;
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 100, 128);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio2.mp3', 100, 128);
     });
 
     const secondResult = result.current.spectrogramData;
@@ -123,7 +123,7 @@ describe('useSpectrogram', () => {
     const mockBuffer = createMockAudioBuffer(10000);
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 50, 64);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     expect(result.current.spectrogramData).toHaveLength(50);
@@ -139,13 +139,18 @@ describe('useSpectrogram', () => {
   it('handles errors during generation', () => {
     const { result } = renderHook(() => useSpectrogram());
     
-    // Create invalid buffer that will cause error
-    const invalidBuffer = {} as AudioBuffer;
+    // Create invalid buffer that will cause error (missing getChannelData method)
+    const invalidBuffer = {
+      length: 10000,
+      sampleRate: 44100,
+      numberOfChannels: 1,
+    } as AudioBuffer;
 
     act(() => {
-      result.current.generateSpectrogram(invalidBuffer, 50, 64);
+      result.current.generateSpectrogram(invalidBuffer, '/test/invalid.mp3', 50, 64);
     });
 
+    // Error should be set when generation fails
     expect(result.current.error).not.toBe(null);
     expect(result.current.isLoading).toBe(false);
   });
@@ -156,7 +161,7 @@ describe('useSpectrogram', () => {
     const emptyBuffer = audioContext.createBuffer(1, 0, 44100);
 
     act(() => {
-      result.current.generateSpectrogram(emptyBuffer, 50, 64);
+      result.current.generateSpectrogram(emptyBuffer, '/test/audio.mp3', 50, 64);
     });
 
     // Should handle gracefully
@@ -168,7 +173,7 @@ describe('useSpectrogram', () => {
     const mockBuffer = createMockAudioBuffer(10000);
 
     act(() => {
-      result.current.generateSpectrogram(mockBuffer, 50, 64);
+      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     // After generation completes, loading should be false

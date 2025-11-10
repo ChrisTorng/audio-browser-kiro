@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
+import { visualizationCache } from '../utils/visualizationCache';
 
 /**
  * Spectrogram hook return type
@@ -7,37 +8,29 @@ export interface UseSpectrogramReturn {
   spectrogramData: number[][];
   isLoading: boolean;
   error: Error | null;
-  generateSpectrogram: (audioBuffer: AudioBuffer, width?: number, height?: number) => void;
+  generateSpectrogram: (audioBuffer: AudioBuffer, filePath: string, width?: number, height?: number) => void;
   clearSpectrogram: () => void;
 }
 
 /**
  * Custom hook for generating spectrogram data from AudioBuffer using FFT
- * Includes caching mechanism to avoid regenerating spectrograms
+ * Uses centralized LRU cache for efficient memory management
  */
 export function useSpectrogram(): UseSpectrogramReturn {
   const [spectrogramData, setSpectrogramData] = useState<number[][]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  
-  // Cache to store generated spectrograms
-  const cacheRef = useRef<Map<string, number[][]>>(new Map());
-
-  /**
-   * Generate cache key from AudioBuffer properties
-   */
-  const getCacheKey = useCallback((audioBuffer: AudioBuffer, width: number, height: number): string => {
-    return `${audioBuffer.length}_${audioBuffer.sampleRate}_${audioBuffer.numberOfChannels}_${width}_${height}`;
-  }, []);
 
   /**
    * Generate spectrogram data from AudioBuffer using FFT analysis
    * @param audioBuffer - Web Audio API AudioBuffer
+   * @param filePath - File path for cache key
    * @param width - Number of time slices (default: 200)
    * @param height - Number of frequency bins (default: 128)
    */
   const generateSpectrogram = useCallback((
     audioBuffer: AudioBuffer,
+    filePath: string,
     width: number = 200,
     height: number = 128
   ) => {
@@ -45,10 +38,8 @@ export function useSpectrogram(): UseSpectrogramReturn {
     setError(null);
 
     try {
-      const cacheKey = getCacheKey(audioBuffer, width, height);
-      
       // Check cache first
-      const cached = cacheRef.current.get(cacheKey);
+      const cached = visualizationCache.getSpectrogram(filePath, width, height);
       if (cached) {
         setSpectrogramData(cached);
         setIsLoading(false);
@@ -100,16 +91,8 @@ export function useSpectrogram(): UseSpectrogramReturn {
         spectrogram.push(normalized);
       }
 
-      // Store in cache
-      cacheRef.current.set(cacheKey, spectrogram);
-
-      // Limit cache size to prevent memory issues
-      if (cacheRef.current.size > 50) {
-        const firstKey = cacheRef.current.keys().next().value;
-        if (firstKey !== undefined) {
-          cacheRef.current.delete(firstKey);
-        }
-      }
+      // Store in centralized cache
+      visualizationCache.setSpectrogram(filePath, width, height, spectrogram);
 
       setSpectrogramData(spectrogram);
       setIsLoading(false);
@@ -119,7 +102,7 @@ export function useSpectrogram(): UseSpectrogramReturn {
       setIsLoading(false);
       console.error('Spectrogram generation error:', error);
     }
-  }, [getCacheKey]);
+  }, []);
 
   /**
    * Clear current spectrogram data
