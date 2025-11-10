@@ -1,6 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-// @ts-ignore - react-window types issue
-import { FixedSizeList as List } from 'react-window';
+import { List } from 'react-window';
 import { AudioFile, DirectoryNode } from '../../shared/types';
 import { useVirtualScrollOptimization } from '../hooks/useVirtualScrollOptimization';
 

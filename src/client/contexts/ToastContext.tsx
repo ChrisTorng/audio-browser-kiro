@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useToast } from '../hooks/useToast';
-import { ToastType } from '../components/Toast';
+import { ToastType, ToastContainer } from '../components/Toast';
 
 interface ToastContextValue {
   showToast: (message: string, type?: ToastType, duration?: number) => string;
@@ -37,6 +37,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={value}>
       {children}
+      <ToastContainer toasts={toast.toasts} onClose={toast.closeToast} />
     </ToastContext.Provider>
   );
 }

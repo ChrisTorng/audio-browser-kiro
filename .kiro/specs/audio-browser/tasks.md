@@ -10,7 +10,7 @@
   - 建立 .gitignore 和更新 README
   - _Requirements: 所有需求的基礎_
 
-- [ ] 2. 實作資料模型和資料庫層
+- [x] 2. 實作資料模型和資料庫層
   - [x] 2.1 定義共用型別 (src/shared/types/)
     - 定義 AudioMetadata 介面
     - 定義 AudioFile 和 DirectoryNode 介面
@@ -30,7 +30,7 @@
     - 實作 filePath 格式驗證
     - _Requirements: 1.6, 1.7_
 
-- [ ] 3. 實作伺服器服務層 (src/server/services/)
+- [x] 3. 實作伺服器服務層 (src/server/services/)
   - [x] 3.1 實作 ScanService
     - 實作 scanDirectory 方法使用 Node.js fs 模組掃描資料夾
     - 實作檔案格式過濾 (MP3, WAV, FLAC, OGG, M4A, AAC)
@@ -52,7 +52,7 @@
     - 實作 MIME type 偵測
     - _Requirements: 1.5_
 
-- [ ] 4. 實作 Fastify API 路由 (src/server/routes/)
+- [x] 4. 實作 Fastify API 路由 (src/server/routes/)
   - [x] 4.1 建立 Fastify 伺服器實例
     - 初始化 Fastify 應用
     - 配置 JSON body parser
@@ -117,7 +117,7 @@
     - 實作 API 呼叫和錯誤處理
     - _Requirements: 1.6, 1.7_
 
-- [ ] 6. 實作前端服務層 (src/client/services/)
+- [x] 6. 實作前端服務層 (src/client/services/)
   - [x] 6.1 實作 AudioBrowserAPI 類別
     - 實作 scanDirectory 方法（POST /api/scan）
     - 實作 getAudioFile 方法（GET /api/audio/*）
@@ -138,7 +138,7 @@
     - 實作頻譜資料正規化和色彩映射
     - _Requirements: 1.3_
 
-- [ ] 7. 實作前端 UI 元件
+- [x] 7. 實作前端 UI 元件
   - [x] 7.1 實作 AudioBrowser 主元件
     - 實作全域狀態管理 (音檔樹、篩選條件、當前選擇)
     - 實作鍵盤事件監聽
@@ -199,7 +199,7 @@
     - 整合 useAudioPlayer Hook
     - _Requirements: 1.5_
 
-- [ ] 8. 整合前後端並實作完整流程
+- [x] 8. 整合前後端並實作完整流程
   - [x] 8.1 實作資料夾掃描流程
     - 前端發送掃描請求
     - 後端掃描並返回目錄樹
@@ -224,7 +224,7 @@
     - 實作即時更新顯示
     - _Requirements: 1.8, 1.9_
 
-- [ ] 9. 效能優化和錯誤處理
+- [x] 9. 效能優化和錯誤處理
   - [x] 9.1 實作前端效能優化
     - 實作波形圖和頻譜圖快取 (LRU)
     - 實作延遲載入和按需生成
@@ -259,7 +259,7 @@
     - 測試 Range requests
     - _Requirements: 所有後端需求_
   
-  - [-] 10.3 撰寫前端單元測試 (tests/client/)
+  - [x] 10.3 撰寫前端單元測試 (tests/client/)
     - 測試 Hooks 邏輯
     - 測試 UI 元件渲染和互動
     - 測試服務層 API 呼叫 (使用 vi.mock)
@@ -271,20 +271,20 @@
     - 測試音頻播放邏輯
     - _Requirements: 所有前端需求_
 
-- [ ] 11. 建置配置和啟動腳本
-  - [ ]* 11.1 配置 Vite 建置
+- [x] 11. 建置配置和啟動腳本
+  - [ ] 11.1 配置 Vite 建置
     - 設定前端建置輸出到 dist/client
     - 配置開發環境 proxy 到 Fastify
     - 設定環境變數處理
     - _Requirements: 所有需求_
   
-  - [ ] 11.2 配置 TypeScript 建置
+  - [x] 11.2 配置 TypeScript 建置
     - 設定伺服器端 TypeScript 編譯到 dist/server
     - 配置 source maps
     - 設定 path aliases
     - _Requirements: 所有需求_
   
-  - [ ] 11.3 建立 npm scripts
+  - [x] 11.3 建立 npm scripts
     - dev: 並行啟動 Vite dev server 和 Fastify server
     - build: 建置前後端
     - start: 執行生產版本
@@ -292,7 +292,7 @@
     - test:coverage: 執行測試並生成覆蓋率報告
     - _Requirements: 所有需求_
   
-  - [ ] 11.4 撰寫使用者文件
+  - [x] 11.4 撰寫使用者文件
     - 更新 README 使用說明
     - 記錄鍵盤快捷鍵
     - 記錄支援的音檔格式

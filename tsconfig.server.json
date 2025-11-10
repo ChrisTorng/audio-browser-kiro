@@ -7,7 +7,7 @@
     "lib": ["ES2022"],
     "jsx": "preserve",
     "outDir": "./dist/server",
-    "rootDir": "./src/server"
+    "rootDir": "./src"
   },
   "include": ["src/server/**/*", "src/shared/**/*"],
   "exclude": ["node_modules", "dist", "tests", "src/client"]

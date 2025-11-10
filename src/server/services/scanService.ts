@@ -106,7 +106,9 @@ export class ScanService {
     // Limit cache size to prevent memory issues
     if (this.scanCache.size > 100) {
       const firstKey = this.scanCache.keys().next().value;
-      this.scanCache.delete(firstKey);
+      if (firstKey) {
+        this.scanCache.delete(firstKey);
+      }
     }
   }
 

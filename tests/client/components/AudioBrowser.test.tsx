@@ -58,23 +58,26 @@ describe('AudioBrowser', () => {
   });
 
   it('renders initial state with scan input', () => {
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     expect(screen.getByText('Audio Browser')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter directory path...')).toBeInTheDocument();
     expect(screen.getByText('Scan')).toBeInTheDocument();
   });
 
-  it('displays empty state message when no directory is scanned', () => {
-    render(<AudioBrowser />);
+  it('displays empty state message when no directory is scanned', async () => {
+    renderWithToast(<AudioBrowser />);
 
-    expect(screen.getByText('Enter a directory path and click Scan to begin')).toBeInTheDocument();
+    // Wait for initial metadata load to complete
+    await waitFor(() => {
+      expect(screen.getByText('Enter a directory path and click Scan to begin')).toBeInTheDocument();
+    });
   });
 
   it('scans directory when scan button is clicked', async () => {
     vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
 
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const input = screen.getByPlaceholderText('Enter directory path...');
     const scanButton = screen.getByText('Scan');
@@ -94,7 +97,7 @@ describe('AudioBrowser', () => {
   it('displays directory tree after successful scan', async () => {
     vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
 
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const input = screen.getByPlaceholderText('Enter directory path...');
     const scanButton = screen.getByText('Scan');
@@ -114,7 +117,7 @@ describe('AudioBrowser', () => {
       new Error('Permission denied')
     );
 
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const input = screen.getByPlaceholderText('Enter directory path...');
     const scanButton = screen.getByText('Scan');
@@ -122,15 +125,16 @@ describe('AudioBrowser', () => {
     fireEvent.change(input, { target: { value: '/protected' } });
     fireEvent.click(scanButton);
 
+    // Error is displayed via toast notification, check for toast message
     await waitFor(() => {
-      expect(screen.getByText(/Error:.*Permission denied/)).toBeInTheDocument();
+      expect(screen.getByText(/Scan failed:.*Permission denied/)).toBeInTheDocument();
     });
   });
 
   it('filters items by text', async () => {
     vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
 
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const input = screen.getByPlaceholderText('Enter directory path...');
     const scanButton = screen.getByText('Scan');
@@ -160,7 +164,7 @@ describe('AudioBrowser', () => {
   it('expands and collapses directories', async () => {
     vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
 
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const input = screen.getByPlaceholderText('Enter directory path...');
     const scanButton = screen.getByText('Scan');
@@ -198,7 +202,7 @@ describe('AudioBrowser', () => {
   it('displays item count', async () => {
     vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
 
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const input = screen.getByPlaceholderText('Enter directory path...');
     const scanButton = screen.getByText('Scan');
@@ -213,7 +217,7 @@ describe('AudioBrowser', () => {
   });
 
   it('disables scan button when no path is entered', () => {
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const scanButton = screen.getByText('Scan');
     expect(scanButton).toBeDisabled();
@@ -224,7 +228,7 @@ describe('AudioBrowser', () => {
       () => new Promise((resolve) => setTimeout(() => resolve(mockTree), 100))
     );
 
-    render(<AudioBrowser />);
+    renderWithToast(<AudioBrowser />);
 
     const input = screen.getByPlaceholderText('Enter directory path...');
     const scanButton = screen.getByText('Scan');

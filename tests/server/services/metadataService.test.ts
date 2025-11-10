@@ -7,16 +7,21 @@ import { promises as fs } from 'fs';
 describe('MetadataService', () => {
   let metadataService: MetadataService;
   let db: AudioDatabase;
-  const testDbPath = path.join(__dirname, 'test-metadata.db');
+  let testDbPath: string;
 
   beforeEach(() => {
+    // Use unique database file for each test to avoid conflicts
+    testDbPath = path.join(__dirname, `test-metadata-${Date.now()}-${Math.random()}.db`);
     db = new AudioDatabase(testDbPath);
     metadataService = new MetadataService(db);
   });
 
   afterEach(async () => {
     db.close();
+    // Clean up database files (including WAL and SHM files)
     await fs.unlink(testDbPath).catch(() => {});
+    await fs.unlink(`${testDbPath}-wal`).catch(() => {});
+    await fs.unlink(`${testDbPath}-shm`).catch(() => {});
   });
 
   describe('getMetadata', () => {
