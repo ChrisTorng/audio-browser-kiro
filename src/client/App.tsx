@@ -1,10 +1,10 @@
 import React from 'react';
+import { AudioBrowser } from './components/AudioBrowser';
 
 function App() {
   return (
     <div className="app">
-      <h1>Audio Browser</h1>
-      <p>音頻瀏覽器 - 開發中</p>
+      <AudioBrowser />
     </div>
   );
 }

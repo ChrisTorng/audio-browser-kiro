@@ -1,6 +1,7 @@
 // Vitest setup file for client tests
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 
 // Mock Web Audio API
 class MockAudioContext {

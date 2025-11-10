@@ -1,0 +1,381 @@
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { DirectoryTree, AudioFile, DirectoryNode } from '../../shared/types';
+import { audioBrowserAPI } from '../services/api';
+import {
+  useAudioPlayer,
+  useKeyboardNavigation,
+  useAudioMetadata,
+  NavigationItem,
+} from '../hooks';
+
+/**
+ * Filter criteria for audio files
+ */
+interface FilterCriteria {
+  text: string;
+  rating: number | null; // null = all, 0 = unrated, 1-3 = specific rating
+}
+
+/**
+ * Flattened tree item for rendering
+ */
+interface FlatTreeItem extends NavigationItem {
+  file?: AudioFile;
+  directory?: DirectoryNode;
+  level: number;
+  parentPath?: string;
+}
+
+/**
+ * AudioBrowser main component
+ * Manages global state, keyboard navigation, and integrates all sub-components
+ */
+export function AudioBrowser() {
+  // Global state
+  const [directoryTree, setDirectoryTree] = useState<DirectoryTree | null>(null);
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({
+    text: '',
+    rating: null,
+  });
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [rootPath, setRootPath] = useState<string>('');
+
+  // Hooks
+  const audioPlayer = useAudioPlayer();
+  const audioMetadata = useAudioMetadata();
+
+  /**
+   * Flatten directory tree into a list for rendering and navigation
+   */
+  const flattenTree = useCallback(
+    (node: DirectoryNode, level: number = 0, parentPath?: string): FlatTreeItem[] => {
+      const items: FlatTreeItem[] = [];
+
+      // Add directory itself
+      const isExpanded = expandedPaths.has(node.path);
+      items.push({
+        id: `dir-${node.path}`,
+        type: 'directory',
+        isExpanded,
+        directory: node,
+        level,
+        parentPath,
+      });
+
+      // If expanded, add children
+      if (isExpanded) {
+        // Add subdirectories
+        node.subdirectories.forEach((subdir) => {
+          items.push(...flattenTree(subdir, level + 1, node.path));
+        });
+
+        // Add files
+        node.files.forEach((file) => {
+          items.push({
+            id: `file-${file.path}`,
+            type: 'file',
+            file,
+            level: level + 1,
+            parentPath: node.path,
+          });
+        });
+      }
+
+      return items;
+    },
+    [expandedPaths]
+  );
+
+  /**
+   * Apply filters to flattened items
+   */
+  const applyFilters = useCallback(
+    (items: FlatTreeItem[]): FlatTreeItem[] => {
+      const { text, rating } = filterCriteria;
+
+      // No filters applied
+      if (!text && rating === null) {
+        return items;
+      }
+
+      return items.filter((item) => {
+        // For directories, check if name matches text filter
+        if (item.type === 'directory' && item.directory) {
+          if (text && !item.directory.name.toLowerCase().includes(text.toLowerCase())) {
+            return false;
+          }
+          return true;
+        }
+
+        // For files, check text and rating filters
+        if (item.type === 'file' && item.file) {
+          const file = item.file;
+          const meta = audioMetadata.getMetadata(file.path);
+
+          // Text filter: check file name and description
+          if (text) {
+            const textLower = text.toLowerCase();
+            const nameMatch = file.name.toLowerCase().includes(textLower);
+            const descMatch = meta?.description.toLowerCase().includes(textLower) || false;
+
+            if (!nameMatch && !descMatch) {
+              return false;
+            }
+          }
+
+          // Rating filter
+          if (rating !== null) {
+            const fileRating = meta?.rating || 0;
+            if (fileRating !== rating) {
+              return false;
+            }
+          }
+
+          return true;
+        }
+
+        return true;
+      });
+    },
+    [filterCriteria, audioMetadata]
+  );
+
+  /**
+   * Get flattened and filtered items for display
+   */
+  const displayItems = useMemo(() => {
+    if (!directoryTree) return [];
+
+    const flattened = flattenTree(directoryTree);
+    return applyFilters(flattened);
+  }, [directoryTree, flattenTree, applyFilters]);
+
+  /**
+   * Convert display items to navigation items
+   */
+  const navigationItems: NavigationItem[] = useMemo(() => {
+    return displayItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      isExpanded: item.isExpanded,
+    }));
+  }, [displayItems]);
+
+  /**
+   * Handle item selection
+   */
+  const handleSelect = useCallback(
+    (item: NavigationItem, index: number) => {
+      const displayItem = displayItems[index];
+
+      // If it's a file, start playing
+      if (displayItem.type === 'file' && displayItem.file) {
+        const audioUrl = `/api/audio/${encodeURIComponent(displayItem.file.path)}`;
+        audioPlayer.play(audioUrl);
+      }
+    },
+    [displayItems, audioPlayer]
+  );
+
+  /**
+   * Handle expand directory
+   */
+  const handleExpand = useCallback(
+    (item: NavigationItem, index: number) => {
+      const displayItem = displayItems[index];
+
+      if (displayItem.type === 'directory' && displayItem.directory) {
+        setExpandedPaths((prev) => new Set(prev).add(displayItem.directory!.path));
+      }
+    },
+    [displayItems]
+  );
+
+  /**
+   * Handle collapse directory
+   */
+  const handleCollapse = useCallback(
+    (item: NavigationItem, index: number) => {
+      const displayItem = displayItems[index];
+
+      if (displayItem.type === 'directory' && displayItem.directory) {
+        setExpandedPaths((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(displayItem.directory!.path);
+          return newSet;
+        });
+      }
+    },
+    [displayItems]
+  );
+
+  /**
+   * Handle toggle play/stop
+   */
+  const handleTogglePlay = useCallback(() => {
+    audioPlayer.toggle();
+  }, [audioPlayer]);
+
+  // Keyboard navigation
+  const navigation = useKeyboardNavigation({
+    items: navigationItems,
+    onSelect: handleSelect,
+    onTogglePlay: handleTogglePlay,
+    onExpand: handleExpand,
+    onCollapse: handleCollapse,
+    enabled: true,
+  });
+
+  /**
+   * Scan directory
+   */
+  const handleScan = useCallback(async (path: string) => {
+    setIsScanning(true);
+    setScanError(null);
+
+    try {
+      const tree = await audioBrowserAPI.scanDirectory(path);
+      setDirectoryTree(tree);
+      setRootPath(path);
+      
+      // Expand root by default
+      setExpandedPaths(new Set([tree.path]));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to scan directory';
+      setScanError(errorMessage);
+      console.error('Scan error:', error);
+    } finally {
+      setIsScanning(false);
+    }
+  }, []);
+
+  /**
+   * Update filter criteria
+   */
+  const handleFilterChange = useCallback((criteria: Partial<FilterCriteria>) => {
+    setFilterCriteria((prev) => ({ ...prev, ...criteria }));
+  }, []);
+
+  return (
+    <div className="audio-browser">
+      <div className="audio-browser__header">
+        <h1>Audio Browser</h1>
+        
+        {/* Scan controls */}
+        <div className="audio-browser__scan">
+          <input
+            type="text"
+            placeholder="Enter directory path..."
+            value={rootPath}
+            onChange={(e) => setRootPath(e.target.value)}
+            disabled={isScanning}
+          />
+          <button onClick={() => handleScan(rootPath)} disabled={isScanning || !rootPath}>
+            {isScanning ? 'Scanning...' : 'Scan'}
+          </button>
+        </div>
+
+        {scanError && (
+          <div className="audio-browser__error">
+            Error: {scanError}
+          </div>
+        )}
+      </div>
+
+      {/* Filter bar - placeholder for now */}
+      <div className="audio-browser__filters">
+        <input
+          type="text"
+          placeholder="Filter by name or description..."
+          value={filterCriteria.text}
+          onChange={(e) => handleFilterChange({ text: e.target.value })}
+        />
+        
+        <select
+          value={filterCriteria.rating === null ? 'all' : filterCriteria.rating}
+          onChange={(e) => {
+            const value = e.target.value;
+            handleFilterChange({
+              rating: value === 'all' ? null : parseInt(value, 10),
+            });
+          }}
+        >
+          <option value="all">All Ratings</option>
+          <option value="0">Unrated</option>
+          <option value="1">1 Star</option>
+          <option value="2">2 Stars</option>
+          <option value="3">3 Stars</option>
+        </select>
+
+        <span className="audio-browser__count">
+          {displayItems.length} items
+        </span>
+      </div>
+
+      {/* Audio tree - placeholder for now */}
+      <div className="audio-browser__tree">
+        {audioMetadata.isLoading && <div>Loading metadata...</div>}
+        
+        {displayItems.length === 0 && !isScanning && directoryTree && (
+          <div className="audio-browser__empty">
+            No items match the current filters
+          </div>
+        )}
+
+        {displayItems.length === 0 && !isScanning && !directoryTree && (
+          <div className="audio-browser__empty">
+            Enter a directory path and click Scan to begin
+          </div>
+        )}
+
+        {displayItems.map((item, index) => (
+          <div
+            key={item.id}
+            className={`audio-browser__item ${
+              navigation.selectedIndex === index ? 'audio-browser__item--selected' : ''
+            }`}
+            style={{ paddingLeft: `${item.level * 20}px` }}
+            onClick={() => navigation.selectItem(index)}
+          >
+            {item.type === 'directory' && item.directory && (
+              <div className="audio-browser__directory">
+                <span className="audio-browser__expand-icon">
+                  {item.isExpanded ? '▼' : '▶'}
+                </span>
+                <span className="audio-browser__directory-name">
+                  {item.directory.name}
+                </span>
+                <span className="audio-browser__directory-count">
+                  ({item.directory.files.length} files)
+                </span>
+              </div>
+            )}
+
+            {item.type === 'file' && item.file && (
+              <div className="audio-browser__file">
+                <span className="audio-browser__file-name">
+                  {item.file.name}
+                </span>
+                {audioPlayer.isPlaying && 
+                 navigation.selectedIndex === index && (
+                  <span className="audio-browser__playing-indicator">▶</span>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="audio-browser__debug">
+          <p>Selected: {navigation.selectedIndex}</p>
+          <p>Playing: {audioPlayer.isPlaying ? 'Yes' : 'No'}</p>
+          <p>Progress: {Math.round(audioPlayer.progress * 100)}%</p>
+        </div>
+      )}
+    </div>
+  );
+}
