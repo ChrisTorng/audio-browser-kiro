@@ -1,6 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-// @ts-ignore - react-window exports List but types define FixedSizeList
-import { List } from 'react-window';
+import { FixedSizeList as List } from 'react-window';
 import { AudioFile, DirectoryNode } from '../../shared/types';
 
 /**
@@ -158,15 +157,15 @@ export function AudioTree({
 
   return (
     <div className="audio-tree">
-      {/* @ts-ignore - react-window type mismatch */}
       <List
-        listRef={listRef}
+        ref={listRef}
         height={height}
-        rowCount={items.length}
-        rowHeight={itemHeight}
+        itemCount={items.length}
+        itemSize={itemHeight}
         width="100%"
-        rowComponent={renderRow}
-      />
+      >
+        {renderRow}
+      </List>
     </div>
   );
 }

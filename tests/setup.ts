@@ -6,15 +6,19 @@ import '@testing-library/jest-dom/vitest';
 // Mock react-window for testing
 vi.mock('react-window', () => {
   const React = require('react');
-  const MockList = React.forwardRef(({ rowComponent, rowCount }: any, _ref: any) => {
+  const MockList = React.forwardRef(({ children, rowComponent, itemCount, rowCount }: any, _ref: any) => {
+    // Support both children (render prop) and rowComponent prop
+    const renderFn = children || rowComponent;
+    const count = itemCount || rowCount;
+    
     // Render all items for testing purposes
     const items = [];
-    for (let index = 0; index < rowCount; index++) {
+    for (let index = 0; index < count; index++) {
       items.push(
         React.createElement(
           'div',
           { key: `item-${index}` },
-          rowComponent({
+          renderFn({
             index,
             style: { position: 'absolute', top: index * 40, height: 40, width: '100%' },
           })

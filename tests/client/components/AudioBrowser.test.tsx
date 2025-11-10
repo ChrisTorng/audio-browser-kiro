@@ -133,15 +133,21 @@ describe('AudioBrowser', () => {
     fireEvent.click(scanButton);
 
     await waitFor(() => {
-      expect(screen.getByText('song1.mp3')).toBeInTheDocument();
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === 'song1.mp3';
+      })).toBeInTheDocument();
     });
 
     const filterInput = screen.getByPlaceholderText('Filter by name or description...');
     fireEvent.change(filterInput, { target: { value: 'song1' } });
 
     await waitFor(() => {
-      expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      expect(screen.queryByText('song2.mp3')).not.toBeInTheDocument();
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === 'song1.mp3';
+      })).toBeInTheDocument();
+      expect(screen.queryByText((content, element) => {
+        return element?.textContent === 'song2.mp3';
+      })).not.toBeInTheDocument();
     });
   });
 
@@ -157,21 +163,29 @@ describe('AudioBrowser', () => {
     fireEvent.click(scanButton);
 
     await waitFor(() => {
-      expect(screen.getByText('album1')).toBeInTheDocument();
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === 'album1';
+      })).toBeInTheDocument();
     });
 
     // Initially subdirectory is collapsed
-    expect(screen.queryByText('track1.mp3')).not.toBeInTheDocument();
+    expect(screen.queryByText((content, element) => {
+      return element?.textContent === 'track1.mp3';
+    })).not.toBeInTheDocument();
 
     // Select the album directory using keyboard navigation
-    const albumItem = screen.getByText('album1').closest('.audio-browser__item');
+    const albumItem = screen.getByText((content, element) => {
+      return element?.textContent === 'album1';
+    }).closest('.audio-tree__item');
     fireEvent.click(albumItem!);
 
     // Simulate right arrow key to expand
     fireEvent.keyDown(window, { key: 'ArrowRight' });
 
     await waitFor(() => {
-      expect(screen.getByText('track1.mp3')).toBeInTheDocument();
+      expect(screen.getByText((content, element) => {
+        return element?.textContent === 'track1.mp3';
+      })).toBeInTheDocument();
     });
   });
 
