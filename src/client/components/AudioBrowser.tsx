@@ -309,6 +309,8 @@ export function AudioBrowser() {
             onItemClick={(index) => navigation.selectItem(index)}
             onExpandToggle={(index) => {
               const item = displayItems[index];
+              if (!item) return; // Guard against undefined items
+              
               if (item.isExpanded) {
                 handleCollapse(navigationItems[index], index);
               } else {

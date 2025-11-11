@@ -129,6 +129,12 @@ export function AudioTree({
   const renderRow = useCallback(
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const item = items[index];
+      
+      // Guard: Return empty div if item doesn't exist
+      if (!item) {
+        return <div style={style} />;
+      }
+
       const isSelected = index === selectedIndex;
       const isInOverscan = virtualScroll.isItemInOverscan(index);
 
