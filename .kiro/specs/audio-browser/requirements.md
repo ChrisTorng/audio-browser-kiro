@@ -45,10 +45,11 @@
 2. THE Frontend SHALL 以樹狀結構顯示資料夾和音檔的階層關係
 3. THE Frontend SHALL 只顯示包含音檔的資料夾
 4. THE Frontend SHALL 在單行高度內依序顯示：星級、音檔名稱、波形圖、頻譜圖、描述
-5. THE Frontend SHALL 顯示每個資料夾的名稱和包含的音檔數量
+5. THE Frontend SHALL 顯示每個資料夾的名稱和包含的音檔數量（僅顯示數字，不顯示 "files" 文字及括弧）
 6. WHEN 使用者點擊資料夾，THE Frontend SHALL 展開或收合該資料夾的內容
 7. THE Frontend SHALL 使用緊湊的 UI 設計以最大化可見的音檔數量
 8. THE Frontend SHALL 將篩選功能放置在網站標題右側以節省空間
+9. THE Frontend SHALL 縮減資料夾和音檔的行高以顯示更多項目
 
 ### Requirement 3
 
@@ -71,9 +72,14 @@
 1. WHEN 使用者按下向上鍵，THE Frontend SHALL 選擇上一個項目並立即開始播放（若為音檔）
 2. WHEN 使用者按下向下鍵，THE Frontend SHALL 選擇下一個項目並立即開始播放（若為音檔）
 3. WHEN 使用者按下空白鍵，THE Frontend SHALL 停止當前播放或重新開始播放當前音檔
-4. WHEN 當前選中項目為資料夾且使用者按下左鍵，THE Frontend SHALL 收合該資料夾
-5. WHEN 當前選中項目為資料夾且使用者按下右鍵，THE Frontend SHALL 展開該資料夾
-6. THE Frontend SHALL 視覺化標示當前選中的項目
+4. WHEN 當前選中項目為音檔且使用者按下左鍵，THE Frontend SHALL 收合該音檔所屬的資料夾並選擇該資料夾
+5. WHEN 當前選中項目為資料夾且使用者按下左鍵，THE Frontend SHALL 收合該資料夾
+6. WHEN 當前選中項目為已收合的資料夾且使用者按下左鍵，THE Frontend SHALL 收合該資料夾的上層資料夾並選擇上層資料夾
+7. WHEN 當前選中項目為資料夾且使用者按下右鍵，THE Frontend SHALL 展開該資料夾
+8. WHEN 使用者按上下鍵移動選取項目超出可見區域，THE Frontend SHALL 自動捲動畫面以顯示當前選取項目
+9. WHEN 使用者點擊資料夾項目，THE Frontend SHALL 展開或收合該資料夾
+10. THE Frontend SHALL 視覺化標示當前選中的項目（使用高亮背景色）
+11. WHEN 當前選取項目從音檔移動到資料夾，THE Frontend SHALL 停止音檔播放
 
 ### Requirement 5
 
@@ -118,10 +124,11 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 在網站標題右側提供篩選輸入欄位
-2. WHEN 使用者輸入文字，THE Frontend SHALL 逐字即時過濾顯示的音檔列表
+2. WHEN 使用者輸入文字，THE Frontend SHALL 從所有項目中篩選，不限於目前展開顯示的項目
 3. THE Frontend SHALL 篩選音檔名稱、資料夾名稱和描述欄位
-4. THE Frontend SHALL 高亮顯示符合篩選條件的文字部分
-5. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
+4. WHEN 篩選文字符合資料夾名稱，THE Frontend SHALL 顯示該資料夾下所有項目（包括子資料夾和音檔）
+5. THE Frontend SHALL 高亮顯示符合篩選條件的文字部分
+6. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
 
 ### Requirement 9
 
@@ -130,9 +137,10 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 在網站標題右側提供星級篩選選項（全部、未評分、1 星、2 星、3 星）
-2. WHEN 使用者選擇星級篩選，THE Frontend SHALL 即時更新並只顯示符合該星級的音檔
-3. THE Frontend SHALL 允許同時使用文字篩選和星級篩選
-4. THE Frontend SHALL 在 100 毫秒內完成篩選更新
+2. WHEN 使用者選擇星級篩選，THE Frontend SHALL 從所有項目中篩選，不限於目前展開顯示的項目
+3. WHEN 使用者選擇星級篩選，THE Frontend SHALL 即時更新並只顯示符合該星級的音檔
+4. THE Frontend SHALL 允許同時使用文字篩選和星級篩選
+5. THE Frontend SHALL 在 100 毫秒內完成篩選更新
 
 ### Requirement 10
 
@@ -157,3 +165,16 @@
 3. THE Audio Browser System SHALL 支援至少 10000 個音檔的管理
 4. THE Frontend SHALL 在載入時顯示載入指示器
 5. THE Waveform Generator SHALL 在背景執行，不阻塞使用者操作
+6. THE Frontend SHALL 避免不必要的畫面更新以防止滑鼠懸停時的閃爍現象
+7. THE Frontend SHALL 優化渲染效能以確保流暢的使用者體驗
+
+### Requirement 12
+
+**User Story:** 作為使用者，我想要系統正確處理音檔播放中斷，以便避免播放錯誤
+
+#### Acceptance Criteria
+
+1. WHEN 使用者快速切換音檔，THE Frontend SHALL 正確取消前一個音檔的播放請求
+2. THE Frontend SHALL 處理 AbortError 並避免顯示錯誤訊息
+3. THE Frontend SHALL 確保同一時間只有一個音檔在播放
+4. WHEN 播放請求被中斷，THE Frontend SHALL 清理相關資源並準備下一次播放
