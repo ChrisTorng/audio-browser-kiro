@@ -295,7 +295,7 @@
     - _Requirements: 所有前端需求_
 
 - [ ] 11. 建置配置和啟動腳本
-  - [ ] 11.1 配置 Vite 建置
+  - [x] 11.1 配置 Vite 建置
     - 設定前端建置輸出到 dist/client
     - 配置開發環境 proxy 到 Fastify
     - 設定環境變數處理
