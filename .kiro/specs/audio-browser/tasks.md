@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. 建立專案結構和基礎配置
+- [x] 1. 建立專案結構和基礎配置
   - 建立整合式專案結構 (src/server, src/client, src/shared)
   - 初始化 Node.js 專案並設定 TypeScript
   - 安裝核心依賴 (Fastify, React, Vite, better-sqlite3, Vitest)
