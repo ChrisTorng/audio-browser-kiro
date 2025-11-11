@@ -2,7 +2,7 @@
 
 ## Introduction
 
-音頻瀏覽器 (Audio Browser) 是一個網頁應用程式，用於管理和瀏覽大量音頻檔案。系統能夠掃描指定資料夾中的所有音檔，以階層結構顯示，並提供波形圖視覺化、鍵盤導航、即時播放、評分標記及搜尋篩選功能。
+音頻瀏覽器 (Audio Browser) 是一個網頁應用程式，用於管理和瀏覽大量音頻檔案。系統在啟動時自動掃描設定檔指定的資料夾（預設為 "../music-player"），只保留包含音檔的資料夾，並以階層結構顯示。網頁載入時直接取得已掃描的音檔資料，提供波形圖視覺化、鍵盤導航、即時播放、評分標記及搜尋篩選功能。UI 設計以最大化音檔項目顯示為優先，將篩選功能置於標題右側，移除不必要的狀態顯示資訊。
 
 ## Glossary
 
@@ -16,32 +16,39 @@
 - **Database**: SQLite 本地資料庫
 - **Application**: Node.js + Fastify + TypeScript 整合式應用
 - **Frontend**: React + TypeScript 前端（整合在同一服務）
+- **Configuration File**: 設定檔，指定音檔資料夾路徑
+- **Audio Directory**: 包含至少一個音檔的資料夾
 
 ## Requirements
 
 ### Requirement 1
 
-**User Story:** 作為使用者，我想要掃描指定資料夾及其子資料夾中的所有音檔，以便查看我的音頻檔案集合
+**User Story:** 作為使用者，我想要系統在啟動時自動掃描設定檔指定的資料夾，以便網頁載入時直接查看音檔集合
 
 #### Acceptance Criteria
 
-1. WHEN 使用者指定一個資料夾路徑，THE Audio Browser System SHALL 掃描該資料夾及所有子資料夾
-2. THE Scan Service SHALL 識別所有支援的音頻檔案格式（MP3、WAV、FLAC、OGG、M4A、AAC）
-3. THE Audio Browser System SHALL 保留原始資料夾的階層結構
-4. THE Scan Service SHALL 在 5 秒內完成包含 1000 個檔案的資料夾掃描
-5. IF 掃描過程中發生錯誤，THEN THE Audio Browser System SHALL 記錄錯誤並繼續掃描其他檔案
+1. THE Configuration File SHALL 指定音檔資料夾路徑，預設值為 "../music-player"
+2. WHEN THE Application 啟動時，THE Scan Service SHALL 自動掃描設定檔指定的資料夾及所有子資料夾
+3. THE Scan Service SHALL 識別所有支援的音頻檔案格式（MP3、WAV、FLAC、OGG、M4A、AAC）
+4. THE Scan Service SHALL 只保留包含至少一個音檔的資料夾到階層結構中
+5. THE Scan Service SHALL 排除不包含任何音檔的資料夾
+6. THE Scan Service SHALL 在 5 秒內完成包含 1000 個檔案的資料夾掃描
+7. IF 掃描過程中發生錯誤，THEN THE Audio Browser System SHALL 記錄錯誤並繼續掃描其他檔案
 
 ### Requirement 2
 
-**User Story:** 作為使用者，我想要在網頁上以階層結構查看所有音檔，以便了解檔案的組織方式
+**User Story:** 作為使用者，我想要在網頁載入時直接查看已掃描的音檔階層結構，以便快速瀏覽檔案
 
 #### Acceptance Criteria
 
-1. THE Frontend SHALL 以樹狀結構顯示資料夾和音檔的階層關係
-2. THE Frontend SHALL 在單行高度內依序顯示：星級、音檔名稱、波形圖、頻譜圖、描述
-3. THE Frontend SHALL 顯示每個資料夾的名稱和包含的音檔數量
-4. WHEN 使用者點擊資料夾，THE Frontend SHALL 展開或收合該資料夾的內容
-5. THE Frontend SHALL 使用緊湊的 UI 設計以最大化可見的音檔數量
+1. WHEN THE Frontend 載入時，THE Frontend SHALL 從 Backend 取得已掃描完成的音檔資料
+2. THE Frontend SHALL 以樹狀結構顯示資料夾和音檔的階層關係
+3. THE Frontend SHALL 只顯示包含音檔的資料夾
+4. THE Frontend SHALL 在單行高度內依序顯示：星級、音檔名稱、波形圖、頻譜圖、描述
+5. THE Frontend SHALL 顯示每個資料夾的名稱和包含的音檔數量
+6. WHEN 使用者點擊資料夾，THE Frontend SHALL 展開或收合該資料夾的內容
+7. THE Frontend SHALL 使用緊湊的 UI 設計以最大化可見的音檔數量
+8. THE Frontend SHALL 將篩選功能放置在網站標題右側以節省空間
 
 ### Requirement 3
 
@@ -110,7 +117,7 @@
 
 #### Acceptance Criteria
 
-1. THE Frontend SHALL 提供篩選輸入欄位
+1. THE Frontend SHALL 在網站標題右側提供篩選輸入欄位
 2. WHEN 使用者輸入文字，THE Frontend SHALL 逐字即時過濾顯示的音檔列表
 3. THE Frontend SHALL 篩選音檔名稱、資料夾名稱和描述欄位
 4. THE Frontend SHALL 高亮顯示符合篩選條件的文字部分
@@ -122,13 +129,24 @@
 
 #### Acceptance Criteria
 
-1. THE Frontend SHALL 提供星級篩選選項（全部、未評分、1 星、2 星、3 星）
+1. THE Frontend SHALL 在網站標題右側提供星級篩選選項（全部、未評分、1 星、2 星、3 星）
 2. WHEN 使用者選擇星級篩選，THE Frontend SHALL 即時更新並只顯示符合該星級的音檔
 3. THE Frontend SHALL 允許同時使用文字篩選和星級篩選
-4. THE Frontend SHALL 顯示當前篩選條件下的音檔數量
-5. THE Frontend SHALL 在 100 毫秒內完成篩選更新
+4. THE Frontend SHALL 在 100 毫秒內完成篩選更新
 
 ### Requirement 10
+
+**User Story:** 作為使用者，我想要最大化音檔項目的顯示空間，以便在畫面內看到更多音檔
+
+#### Acceptance Criteria
+
+1. THE Frontend SHALL 將篩選功能移至網站標題右側
+2. THE Frontend SHALL 移除 Selected/Playing/Progress 等狀態顯示資訊
+3. THE Frontend SHALL 將音檔項目內容儘可能加大以填滿畫面
+4. THE Frontend SHALL 最小化其他螢幕元素的空間佔用
+5. THE Frontend SHALL 優先顯示音檔列表和視覺化內容
+
+### Requirement 11
 
 **User Story:** 作為使用者，我想要系統保持良好的效能，以便流暢地瀏覽大量音檔
 
