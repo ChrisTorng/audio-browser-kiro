@@ -118,26 +118,35 @@ export function AudioTree({
    */
   useEffect(() => {
     if (listRef.current && selectedIndex >= 0 && selectedIndex < items.length) {
-      listRef.current.scrollToItem(selectedIndex, 'smart');
+      listRef.current.scrollToRow({ index: selectedIndex, align: 'smart' });
     }
   }, [selectedIndex, items.length]);
 
   /**
-   * Render a single tree item
-   * Optimized to only render items in visible range
+   * Row component for react-window v2
    */
-  const renderRow = useCallback(
-    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+  interface RowComponentProps {
+    index: number;
+    style: React.CSSProperties;
+    ariaAttributes: {
+      'aria-posinset': number;
+      'aria-setsize': number;
+      role: 'listitem';
+    };
+  }
+
+  const RowComponent = useCallback(
+    ({ index, style, ariaAttributes }: RowComponentProps) => {
       // Guard: Return empty div if style is invalid or index out of bounds
       if (!style || index < 0 || index >= items.length) {
-        return <div style={style || {}} />;
+        return <div style={style || {}} {...ariaAttributes} />;
       }
 
       const item = items[index];
       
       // Guard: Return empty div if item doesn't exist
       if (!item) {
-        return <div style={style} />;
+        return <div style={style} {...ariaAttributes} />;
       }
 
       const isSelected = index === selectedIndex;
@@ -145,7 +154,7 @@ export function AudioTree({
 
       // Skip rendering if not in overscan range (performance optimization)
       if (!isInOverscan) {
-        return <div style={style} />;
+        return <div style={style} {...ariaAttributes} />;
       }
 
       return (
@@ -153,6 +162,7 @@ export function AudioTree({
           style={style}
           className={`audio-tree__item ${isSelected ? 'audio-tree__item--selected' : ''}`}
           onClick={() => onItemClick(index)}
+          {...ariaAttributes}
         >
           <div
             className="audio-tree__item-content"
@@ -207,16 +217,14 @@ export function AudioTree({
   return (
     <div className="audio-tree">
       <List
-        ref={listRef}
-        height={height}
-        itemCount={items.length}
-        itemSize={itemHeight}
-        width="100%"
-        onScroll={handleScroll}
+        listRef={listRef}
+        style={{ height, width: '100%' }}
+        rowComponent={RowComponent}
+        rowCount={items.length}
+        rowHeight={itemHeight}
+        rowProps={{}}
         overscanCount={5}
-      >
-        {renderRow}
-      </List>
+      />
     </div>
   );
 }

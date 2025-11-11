@@ -1,4 +1,4 @@
-# React Window itemData 錯誤修復
+# React Window v2 API 升級修復
 
 ## 問題描述
 
@@ -15,15 +15,23 @@ TypeError: Cannot convert undefined or null to object
 
 ## 根本原因
 
-在 `AudioTree.tsx` 中，`List` 元件接收了 `itemData={items}` prop。這個 prop 會在每次 render 時建立新的陣列參考，導致 `react-window` 的 `useMemoizedObject` hook 嘗試記憶化這個物件。
+專案使用了 `react-window` v2.2.3，但程式碼仍使用 v1 的 API：
+- v1 使用 `children` 函式和 `itemData` prop
+- v2 使用 `rowComponent` 和 `rowProps` prop
 
-當 items 陣列頻繁變化時，可能會在某個時刻傳遞 undefined 或 null 值，導致 `Object.values()` 錯誤。
+API 不匹配導致內部的 `useMemoizedObject` 無法正確處理 props，觸發 `Object.values()` 錯誤。
 
 ## 解決方案
 
-移除 `itemData` prop，改為在 `renderRow` 回呼函式中直接使用閉包訪問 `items` 陣列。
+將 `AudioTree.tsx` 升級為使用 react-window v2 API：
 
-### 修改前
+1. 將 `renderRow` 函式改為 `RowComponent` 元件
+2. 使用 `rowComponent` prop 而非 `children`
+3. 使用 `rowProps` prop 而非 `itemData`
+4. 使用 `listRef` prop 而非 `ref`
+5. 使用 `scrollToRow()` 方法而非 `scrollToItem()`
+
+### 修改前 (v1 API)
 
 ```typescript
 const renderRow = useCallback(
@@ -36,55 +44,127 @@ const renderRow = useCallback(
 
 return (
   <List
-    itemData={items}  // 問題所在
+    ref={listRef}
+    height={height}
+    itemCount={items.length}
+    itemSize={itemHeight}
+    width="100%"
+    itemData={items}
   >
     {renderRow}
   </List>
 );
+
+// Scroll method
+listRef.current.scrollToItem(selectedIndex, 'smart');
 ```
 
-### 修改後
+### 修改後 (v2 API)
 
 ```typescript
-const renderRow = useCallback(
-  ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    // 直接從閉包訪問 items
+interface RowComponentProps {
+  index: number;
+  style: React.CSSProperties;
+  ariaAttributes: {
+    'aria-posinset': number;
+    'aria-setsize': number;
+    role: 'listitem';
+  };
+}
+
+const RowComponent = useCallback(
+  ({ index, style, ariaAttributes }: RowComponentProps) => {
     if (!style || index < 0 || index >= items.length) {
-      return <div style={style || {}} />;
+      return <div style={style || {}} {...ariaAttributes} />;
     }
     const item = items[index];
     // ...
+    return <div style={style} {...ariaAttributes}>...</div>;
   },
   [items, selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll]
 );
 
 return (
   <List
-    // 移除 itemData prop
-  >
-    {renderRow}
-  </List>
+    listRef={listRef}
+    style={{ height, width: '100%' }}
+    rowComponent={RowComponent}
+    rowCount={items.length}
+    rowHeight={itemHeight}
+    rowProps={{}}
+    overscanCount={5}
+  />
 );
+
+// Scroll method
+listRef.current.scrollToRow({ index: selectedIndex, align: 'smart' });
 ```
+
+## 主要變更
+
+### API 變更
+
+| v1 API | v2 API | 說明 |
+|--------|--------|------|
+| `children` (function) | `rowComponent` | 渲染函式改為元件 |
+| `itemData` | `rowProps` | 傳遞給每個 row 的額外 props |
+| `ref` | `listRef` | ref prop 名稱變更 |
+| `height`, `width` (props) | `style` (object) | 尺寸改為 style 物件 |
+| `itemCount` | `rowCount` | 項目數量 prop 名稱變更 |
+| `itemSize` | `rowHeight` | 項目高度 prop 名稱變更 |
+| `scrollToItem()` | `scrollToRow()` | 滾動方法名稱和參數格式變更 |
+
+### 新增功能
+
+1. **ARIA 屬性自動注入**：v2 會自動為每個 row 提供 `ariaAttributes`，改善無障礙支援
+2. **更好的型別安全**：v2 的 TypeScript 定義更完整
+3. **效能改善**：v2 的內部實作更高效
 
 ## 優點
 
-1. **避免 undefined/null 錯誤**：不再依賴 `itemData` prop，避免了 `useMemoizedObject` 的問題
-2. **更簡潔的程式碼**：減少了不必要的 prop 傳遞
-3. **效能相同**：`renderRow` 已經在 `useCallback` 的依賴陣列中包含 `items`，效能沒有損失
-4. **更好的型別安全**：不需要處理 `data` 可能為 undefined 的情況
+1. **修復錯誤**：解決了 `Object.values()` 錯誤
+2. **符合最新 API**：使用 react-window v2 的正確 API
+3. **更好的無障礙支援**：自動處理 ARIA 屬性
+4. **更好的型別安全**：完整的 TypeScript 支援
 
 ## 測試驗證
 
-建立了以下測試來驗證修復：
+### 單元測試
 
-1. `AudioTree-empty-data.test.tsx` - 測試空資料處理
-2. `AudioTree-react-window-fix.test.tsx` - 測試 itemData 移除後的行為
-3. `AudioBrowser-initialization.test.tsx` - 測試實際 API 資料的初始化
+更新了 `tests/setup.ts` 中的 react-window mock 以支援 v2 API：
+- 使用 `rowComponent` 和 `rowProps`
+- 提供 `ariaAttributes`
+- 實作 `scrollToRow()` 方法
 
-所有測試都通過，確認修復有效且沒有破壞現有功能。
+所有 AudioTree 相關測試通過（19 個測試）：
+1. `AudioTree.test.tsx` - 基本功能測試
+2. `AudioTree-empty-data.test.tsx` - 空資料處理測試
+3. `AudioTree-react-window-fix.test.tsx` - API 變更測試
+4. `AudioTree-bug.test.tsx` - 錯誤修復測試
+
+### E2E 測試
+
+建立了 Playwright 測試來驗證實際瀏覽器行為：
+1. `tests/e2e/homepage-load.spec.ts` - 首頁載入測試
+2. `tests/e2e/debug-error.spec.ts` - 錯誤偵測測試
+
+所有 E2E 測試通過，確認：
+- 頁面正常載入
+- 沒有 `Object.values()` 錯誤
+- ErrorBoundary 沒有捕獲錯誤
+- AudioTree 正常顯示
 
 ## 相關檔案
 
-- `src/client/components/AudioTree.tsx` - 主要修改檔案
-- `tests/client/components/AudioTree-*.test.tsx` - 相關測試檔案
+### 主要修改
+- `src/client/components/AudioTree.tsx` - 升級為 v2 API
+- `tests/setup.ts` - 更新 react-window mock
+
+### 測試檔案
+- `tests/client/components/AudioTree-*.test.tsx` - 單元測試
+- `tests/e2e/homepage-load.spec.ts` - E2E 測試
+- `tests/e2e/debug-error.spec.ts` - 錯誤偵測測試
+
+### 配置檔案
+- `playwright.config.ts` - Playwright 配置
+- `package.json` - 新增 @playwright/test 依賴

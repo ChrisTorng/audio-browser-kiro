@@ -3,34 +3,56 @@ import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
-// Mock react-window for testing
+// Mock react-window for testing (v2 API)
 vi.mock('react-window', () => {
   const React = require('react');
-  const MockList = React.forwardRef(({ children, itemCount, itemData }: any, ref: any) => {
+  
+  const MockList = React.forwardRef(({ rowComponent: RowComponent, rowCount, rowProps, rowHeight, listRef }: any, ref: any) => {
     // Render all items for testing purposes
-    const items = [];
-    for (let index = 0; index < itemCount; index++) {
+    const items: React.ReactElement[] = [];
+    const height = typeof rowHeight === 'number' ? rowHeight : 40;
+    
+    for (let index = 0; index < rowCount; index++) {
+      const itemStyle = {
+        position: 'absolute' as const,
+        top: index * height,
+        height,
+        width: '100%',
+      };
+
+      const ariaAttributes = {
+        'aria-posinset': index + 1,
+        'aria-setsize': rowCount,
+        role: 'listitem' as const,
+      };
+
       items.push(
-        React.createElement(
-          'div',
-          { key: `item-${index}` },
-          children({
-            index,
-            style: { position: 'absolute', top: index * 40, height: 40, width: '100%' },
-            data: itemData,
-          })
-        )
+        React.createElement(RowComponent, {
+          key: `item-${index}`,
+          index,
+          style: itemStyle,
+          ariaAttributes,
+          ...rowProps,
+        })
       );
     }
     
-    // Expose scrollToItem method for ref
+    // Expose scrollToRow method for ref
+    const api = {
+      scrollToRow: vi.fn(),
+      get element() {
+        return null;
+      },
+    };
+    
+    if (listRef && typeof listRef === 'object') {
+      listRef.current = api;
+    }
     if (ref && typeof ref === 'object') {
-      ref.current = {
-        scrollToItem: vi.fn(),
-      };
+      ref.current = api;
     }
     
-    return React.createElement('div', null, items);
+    return React.createElement('div', { 'data-testid': 'react-window-list' }, items);
   });
   
   return {
@@ -47,7 +69,7 @@ class MockAudioContext {
       sampleRate,
       numberOfChannels: channels,
       duration: length / sampleRate,
-      getChannelData: (channel: number) => {
+      getChannelData: (_channel: number) => {
         const data = new Float32Array(length);
         // Fill with sample data
         for (let i = 0; i < length; i++) {
@@ -57,6 +79,10 @@ class MockAudioContext {
       },
     };
     return buffer as AudioBuffer;
+  }
+
+  decodeAudioData(_arrayBuffer: ArrayBuffer) {
+    return Promise.resolve(this.createBuffer(1, 44100, 44100));
   }
 }
 
@@ -115,11 +141,6 @@ class MockFileReader {
     }, 0);
   }
 }
-
-// Mock AudioContext.decodeAudioData
-MockAudioContext.prototype.decodeAudioData = function(arrayBuffer: ArrayBuffer) {
-  return Promise.resolve(this.createBuffer(1, 44100, 44100));
-};
 
 // Set up global mocks
 global.AudioContext = MockAudioContext as any;
