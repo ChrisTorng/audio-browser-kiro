@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { DirectoryTree, AudioFile, DirectoryNode } from '../../shared/types';
+import { DirectoryTree, DirectoryNode } from '../../shared/types';
 import { audioBrowserAPI } from '../services/api';
 import {
   useAudioPlayer,
@@ -7,7 +7,8 @@ import {
   useAudioMetadata,
   NavigationItem,
 } from '../hooks';
-import { FilterBar, FilterCriteria } from './FilterBar';
+import { FilterCriteria } from './FilterBar';
+import { Header } from './Header';
 import { AudioTree, TreeItem } from './AudioTree';
 import { LoadingSpinner } from './LoadingSpinner';
 import { useToastContext } from '../contexts/ToastContext';
@@ -267,15 +268,13 @@ export function AudioBrowser() {
   return (
     <div className="audio-browser">
       {/* Header with title and filter bar */}
-      <div className="audio-browser__header">
-        <h1 className="audio-browser__title">Audio Browser</h1>
-        
-        <FilterBar
-          filterCriteria={filterCriteria}
-          onFilterChange={handleFilterChange}
-          resultCount={displayItems.length}
-        />
-      </div>
+      <Header
+        filterBarProps={{
+          filterCriteria,
+          onFilterChange: handleFilterChange,
+          resultCount: displayItems.length,
+        }}
+      />
 
       {/* Audio tree */}
       <div className="audio-browser__tree">

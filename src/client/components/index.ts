@@ -5,6 +5,7 @@
 export * from './AudioBrowser';
 export * from './AudioTree';
 export * from './FilterBar';
+export * from './Header';
 export * from './AudioItem';
 export * from './StarRating';
 export * from './WaveformDisplay';
