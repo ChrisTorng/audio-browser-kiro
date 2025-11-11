@@ -229,11 +229,19 @@ export function AudioBrowser() {
 
     try {
       const tree = await audioBrowserAPI.scanDirectory(path);
+      
+      // Validate tree structure
+      if (!tree || typeof tree !== 'object') {
+        throw new Error('Invalid scan result: tree is null or not an object');
+      }
+      
       setDirectoryTree(tree);
       setRootPath(path);
       
       // Expand root by default
-      setExpandedPaths(new Set([tree.path]));
+      if (tree.path) {
+        setExpandedPaths(new Set([tree.path]));
+      }
       
       // Show success message
       toast.success(`Successfully scanned directory: ${path}`);

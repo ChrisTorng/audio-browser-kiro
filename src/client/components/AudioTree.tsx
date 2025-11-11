@@ -130,9 +130,9 @@ export function AudioTree({
     ({ index, style, data }: { index: number; style: React.CSSProperties; data?: TreeItem[] }) => {
       const item = (data || items)[index];
       
-      // Guard: Return empty div if item doesn't exist
-      if (!item) {
-        return <div style={style} />;
+      // Guard: Return empty div if item doesn't exist or style is invalid
+      if (!item || !style) {
+        return <div style={style || {}} />;
       }
 
       const isSelected = index === selectedIndex;
@@ -188,7 +188,7 @@ export function AudioTree({
         </div>
       );
     },
-    [selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll]
+    [items, selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll]
   );
 
   if (items.length === 0) {
