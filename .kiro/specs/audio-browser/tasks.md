@@ -1,12 +1,13 @@
 # Implementation Plan
 
-- [x] 1. 建立專案結構和基礎配置
+- [ ] 1. 建立專案結構和基礎配置
   - 建立整合式專案結構 (src/server, src/client, src/shared)
   - 初始化 Node.js 專案並設定 TypeScript
   - 安裝核心依賴 (Fastify, React, Vite, better-sqlite3, Vitest)
   - 配置 TypeScript (tsconfig.json for server and client)
   - 配置 ESLint 和 Prettier
   - 設定 Vite 建置配置
+  - 建立預設 config.json（audioDirectory: "../music-player"）
   - 建立 .gitignore 和更新 README
   - _Requirements: 所有需求的基礎_
 
@@ -30,38 +31,46 @@
     - 實作 filePath 格式驗證
     - _Requirements: 1.6, 1.7_
 
-- [x] 3. 實作伺服器服務層 (src/server/services/)
-  - [x] 3.1 實作 ScanService
-    - 實作 scanDirectory 方法使用 Node.js fs 模組掃描資料夾
+- [ ] 3. 實作伺服器服務層 (src/server/services/)
+  - [ ] 3.1 實作 ConfigService
+    - 實作 loadConfig 方法讀取 config.json
+    - 實作設定檔驗證（必須存在且格式正確）
+    - 實作 getAudioDirectory 方法
+    - 如果 config.json 不存在則拋出錯誤
+    - _Requirements: 1.1, 1.2_
+  
+  - [ ] 3.2 實作 ScanService
+    - 實作 initialize 方法在啟動時掃描資料夾
+    - 實作 getTree 方法返回快取的目錄樹
     - 實作檔案格式過濾 (MP3, WAV, FLAC, OGG, M4A, AAC)
     - 實作遞迴建立目錄樹
+    - 實作 hasAudioFiles 方法過濾空資料夾
     - 實作錯誤處理和日誌記錄
-    - _Requirements: 1.1_
+    - _Requirements: 1.1, 1.2_
   
-  - [x] 3.2 實作 MetadataService
+  - [x] 3.3 實作 MetadataService
     - 整合 Database 類別
     - 實作 getMetadata 和 getAllMetadata 方法
     - 實作 updateMetadata 方法 (upsert 邏輯)
     - 實作 deleteMetadata 方法
     - _Requirements: 1.6, 1.7_
   
-  - [x] 3.3 實作 AudioService
+  - [x] 3.4 實作 AudioService
     - 實作 streamAudio 方法使用 fs.createReadStream
     - 實作路徑驗證防止路徑遍歷攻擊
     - 實作 Range requests 支援
     - 實作 MIME type 偵測
     - _Requirements: 1.5_
 
-- [x] 4. 實作 Fastify API 路由 (src/server/routes/)
+- [ ] 4. 實作 Fastify API 路由 (src/server/routes/)
   - [x] 4.1 建立 Fastify 伺服器實例
     - 初始化 Fastify 應用
     - 配置 JSON body parser
     - 設定靜態檔案服務（生產環境）
     - _Requirements: 所有需求_
   
-  - [x] 4.2 實作掃描 API
-    - POST /api/scan 接收資料夾路徑並返回目錄樹
-    - 實作請求 schema 驗證
+  - [ ] 4.2 實作音檔樹 API
+    - GET /api/tree 返回已掃描的目錄樹（從快取讀取）
     - 實作錯誤回應格式
     - _Requirements: 1.1, 1.2_
   
@@ -82,6 +91,13 @@
     - 實作請求日誌
     - 配置開發/生產環境差異
     - _Requirements: 所有需求_
+  
+  - [ ] 4.6 實作應用啟動初始化
+    - 載入 ConfigService 並驗證 config.json
+    - 初始化 ScanService 並執行掃描
+    - 如果設定檔或音檔資料夾有問題則終止啟動
+    - 記錄啟動資訊（掃描的音檔數量等）
+    - _Requirements: 1.1, 1.2_
 
 - [x] 5. 實作前端核心 Hooks
   - [x] 5.1 實作 useAudioPlayer Hook
@@ -117,14 +133,14 @@
     - 實作 API 呼叫和錯誤處理
     - _Requirements: 1.6, 1.7_
 
-- [x] 6. 實作前端服務層 (src/client/services/)
-  - [x] 6.1 實作 AudioBrowserAPI 類別
-    - 實作 scanDirectory 方法（POST /api/scan）
+- [ ] 6. 實作前端服務層 (src/client/services/)
+  - [ ] 6.1 實作 AudioBrowserAPI 類別
+    - 實作 getTree 方法（GET /api/tree）
     - 實作 getAudioFile 方法（GET /api/audio/*）
     - 實作 getAllMetadata 方法（GET /api/metadata）
     - 實作 updateMetadata 和 deleteMetadata 方法
     - 實作錯誤處理和重試邏輯
-    - _Requirements: 1.1, 1.5, 1.6, 1.7_
+    - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7_
   
   - [x] 6.2 實作 WaveformGenerator 類別
     - 實作從 AudioBuffer 生成波形使用 Web Audio API
@@ -138,72 +154,79 @@
     - 實作頻譜資料正規化和色彩映射
     - _Requirements: 1.3_
 
-- [x] 7. 實作前端 UI 元件
-  - [x] 7.1 實作 AudioBrowser 主元件
+- [ ] 7. 實作前端 UI 元件
+  - [ ] 7.1 實作 AudioBrowser 主元件
     - 實作全域狀態管理 (音檔樹、篩選條件、當前選擇)
     - 實作鍵盤事件監聽
     - 整合所有子元件
     - _Requirements: 所有需求_
   
-  - [x] 7.2 實作 FilterBar 元件
+  - [ ] 7.2 實作 Header 元件
+    - 實作網站標題顯示
+    - 整合 FilterBar 於右側
+    - 使用緊湊設計以節省空間
+    - _Requirements: 1.10_
+  
+  - [ ] 7.3 實作 FilterBar 元件
     - 實作文字篩選輸入框
     - 實作星級篩選下拉選單
-    - 實作篩選結果數量顯示
+    - 位於標題右側的緊湊佈局
     - 實作即時篩選邏輯 (debounce 100ms)
-    - _Requirements: 1.8, 1.9_
+    - _Requirements: 1.8, 1.9, 1.10_
   
-  - [x] 7.3 實作 AudioTree 元件
+  - [x] 7.4 實作 AudioTree 元件
     - 實作樹狀結構顯示
     - 實作虛擬滾動 (使用 react-window 或 react-virtual)
     - 實作展開/收合狀態管理
     - 實作篩選和高亮顯示
     - _Requirements: 1.2, 1.8, 1.10_
   
-  - [x] 7.4 實作 AudioItem 元件
+  - [ ] 7.5 實作 AudioItem 元件
     - 實作單行佈局：星級/檔名/波形圖/頻譜圖/描述
-    - 實作選擇狀態視覺化
+    - 實作選擇狀態視覺化（簡單背景色或邊框）
+    - 不顯示額外的播放狀態資訊
     - 整合 StarRating, WaveformDisplay, SpectrogramDisplay, DescriptionField
-    - _Requirements: 1.2, 1.3, 1.6, 1.7_
+    - _Requirements: 1.2, 1.3, 1.6, 1.7, 1.10_
   
-  - [x] 7.5 實作 StarRating 元件
+  - [x] 7.6 實作 StarRating 元件
     - 實作三星評分 UI (0-3 星)
     - 實作點擊互動更新評分
     - 實作立即儲存邏輯
     - 實作視覺化顯示當前評分
     - _Requirements: 1.6_
   
-  - [x] 7.6 實作 WaveformDisplay 元件
+  - [x] 7.7 實作 WaveformDisplay 元件
     - 實作波形圖繪製 (Canvas)
     - 實作播放進度條覆蓋層
     - 實作載入和錯誤狀態顯示
     - _Requirements: 1.3, 1.5_
   
-  - [x] 7.7 實作 SpectrogramDisplay 元件
+  - [x] 7.8 實作 SpectrogramDisplay 元件
     - 實作頻譜圖繪製 (Canvas)
     - 實作播放進度條覆蓋層
     - 實作色彩映射 (頻率強度視覺化)
     - 實作載入和錯誤狀態顯示
     - _Requirements: 1.3, 1.5_
   
-  - [x] 7.8 實作 DescriptionField 元件
+  - [x] 7.9 實作 DescriptionField 元件
     - 實作可點擊的描述欄位
     - 實作編輯模式切換和插入點設定
     - 實作 Esc 取消編輯
     - 實作 Enter 或失焦自動儲存
     - _Requirements: 1.7_
   
-  - [x] 7.9 實作 AudioPlayer 元件
+  - [x] 7.10 實作 AudioPlayer 元件
     - 實作音頻播放控制邏輯 (無 UI)
     - 實作循環播放
     - 實作播放狀態和進度管理
     - 整合 useAudioPlayer Hook
     - _Requirements: 1.5_
 
-- [x] 8. 整合前後端並實作完整流程
-  - [x] 8.1 實作資料夾掃描流程
-    - 前端發送掃描請求
-    - 後端掃描並返回目錄樹
-    - 前端顯示樹狀結構
+- [ ] 8. 整合前後端並實作完整流程
+  - [ ] 8.1 實作應用初始化流程
+    - 後端啟動時自動掃描音檔資料夾
+    - 前端載入時取得已掃描的目錄樹
+    - 前端顯示樹狀結構（只顯示有音檔的資料夾）
     - _Requirements: 1.1, 1.2_
   
   - [x] 8.2 實作音檔播放流程
@@ -271,7 +294,7 @@
     - 測試音頻播放邏輯
     - _Requirements: 所有前端需求_
 
-- [x] 11. 建置配置和啟動腳本
+- [ ] 11. 建置配置和啟動腳本
   - [ ] 11.1 配置 Vite 建置
     - 設定前端建置輸出到 dist/client
     - 配置開發環境 proxy 到 Fastify
@@ -292,8 +315,9 @@
     - test:coverage: 執行測試並生成覆蓋率報告
     - _Requirements: 所有需求_
   
-  - [x] 11.4 撰寫使用者文件
+  - [ ] 11.4 撰寫使用者文件
     - 更新 README 使用說明
+    - 說明 config.json 的必要性和設定方式
     - 記錄鍵盤快捷鍵
     - 記錄支援的音檔格式
     - 記錄跨平台執行方式
