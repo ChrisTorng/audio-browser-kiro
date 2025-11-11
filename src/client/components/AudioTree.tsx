@@ -97,8 +97,8 @@ export function AudioTree({
    * Handle scroll events
    */
   const handleScroll = useCallback(
-    ({ scrollOffset }: { scrollOffset: number }) => {
-      virtualScroll.updateScrollPosition(scrollOffset);
+    (props: { scrollOffset: number; scrollUpdateWasRequested: boolean }) => {
+      virtualScroll.updateScrollPosition(props.scrollOffset);
     },
     [virtualScroll]
   );
@@ -127,8 +127,8 @@ export function AudioTree({
    * Optimized to only render items in visible range
    */
   const renderRow = useCallback(
-    ({ index, style }: { index: number; style: React.CSSProperties }) => {
-      const item = items[index];
+    ({ index, style, data }: { index: number; style: React.CSSProperties; data?: TreeItem[] }) => {
+      const item = (data || items)[index];
       
       // Guard: Return empty div if item doesn't exist
       if (!item) {
@@ -188,7 +188,7 @@ export function AudioTree({
         </div>
       );
     },
-    [items, selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll]
+    [selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll]
   );
 
   if (items.length === 0) {
@@ -209,6 +209,7 @@ export function AudioTree({
         width="100%"
         onScroll={handleScroll}
         overscanCount={5}
+        itemData={items}
       >
         {renderRow}
       </List>
