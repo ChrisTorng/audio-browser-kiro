@@ -39,7 +39,7 @@
     - 如果 config.json 不存在則拋出錯誤
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 3.2 實作 ScanService
+  - [x] 3.2 實作 ScanService
     - 實作 initialize 方法在啟動時掃描資料夾
     - 實作 getTree 方法返回快取的目錄樹
     - 實作檔案格式過濾 (MP3, WAV, FLAC, OGG, M4A, AAC)

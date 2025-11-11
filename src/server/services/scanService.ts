@@ -1,224 +1,254 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { DirectoryTree, DirectoryNode, AudioFile } from '../../shared/types/index.js';
-
-interface CacheEntry {
-  tree: DirectoryTree;
-  timestamp: number;
-  mtime: number; // Directory modification time
-}
+import { DirectoryTree, DirectoryNode, AudioFile } from '../../shared/types/audio';
 
 /**
- * Service for scanning directories and building audio file trees
- * Includes caching and optimized async operations
+ * Supported audio file formats
+ */
+const SUPPORTED_AUDIO_FORMATS = [
+  '.mp3',
+  '.wav',
+  '.flac',
+  '.ogg',
+  '.m4a',
+  '.aac',
+];
+
+/**
+ * Service for scanning audio files and building directory tree
+ * Caches the scanned tree structure for quick access
  */
 export class ScanService {
-  private readonly supportedFormats = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac'];
-  private readonly scanCache = new Map<string, CacheEntry>();
-  private readonly cacheTTL = 60000; // 60 seconds cache TTL
-  private readonly maxConcurrency = 10; // Limit concurrent directory scans
+  private cachedTree: DirectoryTree | null = null;
+  private rootPath: string = '';
+
+  /**
+   * Initialize the scan service by scanning the audio directory
+   * @param audioDirectory - Root directory to scan for audio files
+   * @throws Error if directory doesn't exist or cannot be accessed
+   */
+  async initialize(audioDirectory: string): Promise<void> {
+    try {
+      console.log(`Starting scan of audio directory: ${audioDirectory}`);
+      const startTime = Date.now();
+
+      // Scan and build tree (this will also cache the result)
+      const tree = await this.scanDirectory(audioDirectory, false);
+
+      const duration = Date.now() - startTime;
+      const fileCount = this.countFiles(tree);
+      console.log(
+        `Scan completed in ${duration}ms. Found ${fileCount} audio files.`
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(
+          `Audio directory not found: ${audioDirectory}. ` +
+          `Please check the path in config.json.`
+        );
+      }
+
+      if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+        console.warn(
+          `Permission denied accessing directory: ${audioDirectory}. ` +
+          `Continuing with available files.`
+        );
+        throw error;
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Get the cached directory tree
+   * @throws Error if tree is not initialized
+   * @returns Cached directory tree
+   */
+  getTree(): DirectoryTree {
+    if (!this.cachedTree) {
+      throw new Error(
+        'Directory tree not initialized. Call initialize() first.'
+      );
+    }
+
+    return this.cachedTree;
+  }
 
   /**
    * Get list of supported audio formats
    * @returns Array of supported file extensions
    */
   getSupportedFormats(): string[] {
-    return [...this.supportedFormats];
+    return [...SUPPORTED_AUDIO_FORMATS];
   }
 
   /**
-   * Scan a directory and return a tree structure of audio files
-   * Uses caching to avoid redundant scans
-   * @param rootPath - Root directory path to scan
-   * @param useCache - Whether to use cached results (default: true)
+   * Scan directory and build tree structure recursively
+   * @param dirPath - Directory path to scan
+   * @param useCache - Whether to use cached result (default: true)
    * @returns Directory tree structure
    */
-  async scanDirectory(rootPath: string, useCache = true): Promise<DirectoryTree> {
-    try {
-      // Validate that the path exists
-      const stats = await fs.stat(rootPath);
-      if (!stats.isDirectory()) {
-        throw new Error(`Path is not a directory: ${rootPath}`);
-      }
+  async scanDirectory(dirPath: string, useCache: boolean = true): Promise<DirectoryTree> {
+    // Resolve to absolute path
+    const absolutePath = path.resolve(dirPath);
 
-      // Check cache if enabled
-      if (useCache) {
-        const cached = this.getCachedScan(rootPath, stats.mtimeMs);
-        if (cached) {
-          console.log(`Using cached scan for directory: ${rootPath}`);
-          return cached;
-        }
-      }
-
-      console.log(`Starting scan of directory: ${rootPath}`);
-      const startTime = Date.now();
-      const tree = await this.buildTree(rootPath, rootPath);
-      const duration = Date.now() - startTime;
-      console.log(`Scan completed successfully in ${duration}ms`);
-      
-      // Cache the result
-      this.cacheScan(rootPath, tree, stats.mtimeMs);
-      
-      return tree;
-    } catch (error) {
-      console.error(`Error scanning directory ${rootPath}:`, error);
-      throw error;
+    // Check if we can use cached result
+    if (useCache && this.cachedTree && this.rootPath === absolutePath) {
+      return this.cachedTree;
     }
+
+    // Update root path
+    this.rootPath = absolutePath;
+
+    // Check if directory exists
+    const stats = await fs.stat(absolutePath);
+    if (!stats.isDirectory()) {
+      throw new Error(`Path is not a directory: ${absolutePath}`);
+    }
+
+    const node = await this.buildTree(absolutePath);
+
+    // Filter out directories without audio files
+    this.filterEmptyDirectories(node);
+
+    // Cache the result
+    this.cachedTree = node;
+
+    return node;
   }
 
   /**
-   * Get cached scan result if valid
-   * @param rootPath - Directory path
-   * @param currentMtime - Current modification time of directory
-   * @returns Cached tree or null if invalid/expired
-   */
-  private getCachedScan(rootPath: string, currentMtime: number): DirectoryTree | null {
-    const cached = this.scanCache.get(rootPath);
-    if (!cached) {
-      return null;
-    }
-
-    const now = Date.now();
-    const isExpired = now - cached.timestamp > this.cacheTTL;
-    const isModified = cached.mtime !== currentMtime;
-
-    if (isExpired || isModified) {
-      this.scanCache.delete(rootPath);
-      return null;
-    }
-
-    return cached.tree;
-  }
-
-  /**
-   * Cache scan result
-   * @param rootPath - Directory path
-   * @param tree - Directory tree to cache
-   * @param mtime - Modification time of directory
-   */
-  private cacheScan(rootPath: string, tree: DirectoryTree, mtime: number): void {
-    this.scanCache.set(rootPath, {
-      tree,
-      timestamp: Date.now(),
-      mtime,
-    });
-
-    // Limit cache size to prevent memory issues
-    if (this.scanCache.size > 100) {
-      const firstKey = this.scanCache.keys().next().value;
-      if (firstKey) {
-        this.scanCache.delete(firstKey);
-      }
-    }
-  }
-
-  /**
-   * Clear scan cache
+   * Clear the cached directory tree
    */
   clearCache(): void {
-    this.scanCache.clear();
+    this.cachedTree = null;
   }
 
   /**
-   * Recursively build directory tree structure with optimized concurrency
-   * @param currentPath - Current directory path being scanned
-   * @param rootPath - Root directory path for calculating relative paths
-   * @returns Directory node with files and subdirectories
+   * Build directory tree recursively
+   * @param dirPath - Directory path to process
+   * @returns Directory node
    */
-  private async buildTree(currentPath: string, rootPath: string): Promise<DirectoryNode> {
-    const files: AudioFile[] = [];
-    const subdirectories: DirectoryNode[] = [];
-    const relativePath = path.relative(rootPath, currentPath) || '.';
-    const dirName = path.basename(currentPath);
+  private async buildTree(dirPath: string): Promise<DirectoryNode> {
+    const relativePath = path.relative(this.rootPath, dirPath);
+    const name = path.basename(dirPath) || path.basename(this.rootPath);
+
+    const node: DirectoryNode = {
+      name,
+      path: relativePath || '.',
+      files: [],
+      subdirectories: [],
+    };
 
     try {
-      const entries = await fs.readdir(currentPath, { withFileTypes: true });
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
-      // Separate directories and files for optimized processing
-      const directories: string[] = [];
-      const audioFiles: Array<{ name: string; fullPath: string }> = [];
+      // Process all entries in parallel
+      const promises = entries.map(async (entry) => {
+        const fullPath = path.join(dirPath, entry.name);
 
-      for (const entry of entries) {
-        const fullPath = path.join(currentPath, entry.name);
-        
-        if (entry.isDirectory()) {
-          directories.push(fullPath);
-        } else if (entry.isFile()) {
-          const ext = path.extname(entry.name).toLowerCase();
-          if (this.supportedFormats.includes(ext)) {
-            audioFiles.push({ name: entry.name, fullPath });
-          }
-        }
-      }
-
-      // Process files in parallel (fast operation)
-      const filePromises = audioFiles.map(async ({ name, fullPath }) => {
         try {
-          const stats = await fs.stat(fullPath);
-          const relativeFilePath = path.relative(rootPath, fullPath);
-          return {
-            name,
-            path: relativeFilePath,
-            size: stats.size,
-          };
+          if (entry.isDirectory()) {
+            // Recursively process subdirectory
+            const subNode = await this.buildTree(fullPath);
+            node.subdirectories.push(subNode);
+          } else if (entry.isFile()) {
+            // Check if it's a supported audio file
+            if (this.isAudioFile(entry.name)) {
+              const stats = await fs.stat(fullPath);
+              const audioFile: AudioFile = {
+                name: entry.name,
+                path: path.relative(this.rootPath, fullPath),
+                size: stats.size,
+              };
+              node.files.push(audioFile);
+            }
+          }
         } catch (error) {
-          console.error(`Error processing file ${fullPath}:`, error);
-          return null;
+          // Log error but continue processing other files
+          console.error(
+            `Error processing ${fullPath}: ${(error as Error).message}`
+          );
         }
       });
 
-      const fileResults = await Promise.all(filePromises);
-      files.push(...fileResults.filter((f): f is AudioFile => f !== null));
-
-      // Process subdirectories with controlled concurrency
-      subdirectories.push(...await this.processDirectoriesWithConcurrency(directories, rootPath));
+      await Promise.all(promises);
 
       // Sort files and subdirectories alphabetically
-      files.sort((a, b) => a.name.localeCompare(b.name));
-      subdirectories.sort((a, b) => a.name.localeCompare(b.name));
-
+      node.files.sort((a, b) => a.name.localeCompare(b.name));
+      node.subdirectories.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
-      console.error(`Error reading directory ${currentPath}:`, error);
-      // Return partial results even if there's an error
+      console.error(
+        `Error reading directory ${dirPath}: ${(error as Error).message}`
+      );
     }
 
-    return {
-      name: dirName,
-      path: relativePath,
-      files,
-      subdirectories,
-    };
+    return node;
   }
 
   /**
-   * Process directories with controlled concurrency to avoid overwhelming the system
-   * @param directories - Array of directory paths to process
-   * @param rootPath - Root directory path
-   * @returns Array of directory nodes
+   * Check if a file is a supported audio file
+   * @param filename - File name to check
+   * @returns true if file is a supported audio format
    */
-  private async processDirectoriesWithConcurrency(
-    directories: string[],
-    rootPath: string
-  ): Promise<DirectoryNode[]> {
-    const results: DirectoryNode[] = [];
-    
-    // Process directories in batches to control concurrency
-    for (let i = 0; i < directories.length; i += this.maxConcurrency) {
-      const batch = directories.slice(i, i + this.maxConcurrency);
-      const batchPromises = batch.map(async (dir) => {
-        try {
-          return await this.buildTree(dir, rootPath);
-        } catch (error) {
-          console.error(`Error processing directory ${dir}:`, error);
-          return null;
-        }
-      });
-      
-      const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults.filter((r): r is DirectoryNode => r !== null));
+  private isAudioFile(filename: string): boolean {
+    const ext = path.extname(filename).toLowerCase();
+    return SUPPORTED_AUDIO_FORMATS.includes(ext);
+  }
+
+  /**
+   * Filter out directories that don't contain any audio files
+   * Modifies the tree in place
+   * @param node - Directory node to filter
+   * @returns true if node has audio files (directly or in subdirectories)
+   */
+  private filterEmptyDirectories(node: DirectoryNode): boolean {
+    // First, recursively filter subdirectories
+    node.subdirectories = node.subdirectories.filter((subNode) =>
+      this.filterEmptyDirectories(subNode)
+    );
+
+    // Check if this node has audio files
+    return this.hasAudioFiles(node);
+  }
+
+  /**
+   * Check if a directory node contains audio files
+   * Checks both direct files and files in subdirectories
+   * @param node - Directory node to check
+   * @returns true if node contains audio files
+   */
+  private hasAudioFiles(node: DirectoryNode): boolean {
+    // Has direct audio files
+    if (node.files.length > 0) {
+      return true;
     }
-    
-    return results;
+
+    // Has audio files in subdirectories
+    return node.subdirectories.some((subNode) => this.hasAudioFiles(subNode));
+  }
+
+  /**
+   * Count total number of audio files in tree
+   * @param node - Directory node to count
+   * @returns Total number of audio files
+   */
+  private countFiles(node: DirectoryNode): number {
+    let count = node.files.length;
+
+    for (const subNode of node.subdirectories) {
+      count += this.countFiles(subNode);
+    }
+
+    return count;
+  }
+
+  /**
+   * Check if scan service is initialized
+   * @returns true if initialized
+   */
+  isInitialized(): boolean {
+    return this.cachedTree !== null;
   }
 }
-
