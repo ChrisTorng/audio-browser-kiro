@@ -6,25 +6,30 @@ import '@testing-library/jest-dom/vitest';
 // Mock react-window for testing
 vi.mock('react-window', () => {
   const React = require('react');
-  const MockList = React.forwardRef(({ children, rowComponent, itemCount, rowCount }: any, _ref: any) => {
-    // Support both children (render prop) and rowComponent prop
-    const renderFn = children || rowComponent;
-    const count = itemCount || rowCount;
-    
+  const MockList = React.forwardRef(({ children, itemCount, itemData }: any, ref: any) => {
     // Render all items for testing purposes
     const items = [];
-    for (let index = 0; index < count; index++) {
+    for (let index = 0; index < itemCount; index++) {
       items.push(
         React.createElement(
           'div',
           { key: `item-${index}` },
-          renderFn({
+          children({
             index,
             style: { position: 'absolute', top: index * 40, height: 40, width: '100%' },
+            data: itemData,
           })
         )
       );
     }
+    
+    // Expose scrollToItem method for ref
+    if (ref && typeof ref === 'object') {
+      ref.current = {
+        scrollToItem: vi.fn(),
+      };
+    }
+    
     return React.createElement('div', null, items);
   });
   
