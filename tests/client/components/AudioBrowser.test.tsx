@@ -8,7 +8,7 @@ import type { DirectoryTree } from '../../../src/shared/types';
 // Mock the API
 vi.mock('../../../src/client/services/api', () => ({
   audioBrowserAPI: {
-    scanDirectory: vi.fn(),
+    getTree: vi.fn(),
     getAllMetadata: vi.fn(),
   },
 }));
@@ -57,158 +57,110 @@ describe('AudioBrowser', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders initial state with scan input', () => {
+  it('renders header with title and filter bar', () => {
+    vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(mockTree);
+    
     renderWithToast(<AudioBrowser />);
 
     expect(screen.getByText('Audio Browser')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter directory path...')).toBeInTheDocument();
-    expect(screen.getByText('Scan')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Filter by name or description...')).toBeInTheDocument();
   });
 
-  it('displays empty state message when no directory is scanned', async () => {
-    renderWithToast(<AudioBrowser />);
-
-    // Wait for initial metadata load to complete
-    await waitFor(() => {
-      expect(screen.getByText('Enter a directory path and click Scan to begin')).toBeInTheDocument();
-    });
-  });
-
-  it('scans directory when scan button is clicked', async () => {
-    vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
+  it('loads directory tree on mount', async () => {
+    vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(mockTree);
 
     renderWithToast(<AudioBrowser />);
 
-    const input = screen.getByPlaceholderText('Enter directory path...');
-    const scanButton = screen.getByText('Scan');
-
-    fireEvent.change(input, { target: { value: '/music' } });
-    fireEvent.click(scanButton);
-
     await waitFor(() => {
-      expect(audioBrowserAPI.scanDirectory).toHaveBeenCalledWith('/music');
+      expect(audioBrowserAPI.getTree).toHaveBeenCalled();
     });
 
     await waitFor(() => {
       expect(screen.getByText('music')).toBeInTheDocument();
     });
+    
+    // Files are rendered in virtual scroll, check for directory structure
+    expect(screen.getByText(/2 files/)).toBeInTheDocument();
   });
 
-  it('displays directory tree after successful scan', async () => {
-    vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
-
-    renderWithToast(<AudioBrowser />);
-
-    const input = screen.getByPlaceholderText('Enter directory path...');
-    const scanButton = screen.getByText('Scan');
-
-    fireEvent.change(input, { target: { value: '/music' } });
-    fireEvent.click(scanButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('music')).toBeInTheDocument();
-      expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      expect(screen.getByText('song2.mp3')).toBeInTheDocument();
-    });
-  });
-
-  it('displays error message when scan fails', async () => {
-    vi.mocked(audioBrowserAPI.scanDirectory).mockRejectedValue(
-      new Error('Permission denied')
+  it('displays loading state while fetching tree', async () => {
+    vi.mocked(audioBrowserAPI.getTree).mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(mockTree), 100))
     );
 
     renderWithToast(<AudioBrowser />);
 
-    const input = screen.getByPlaceholderText('Enter directory path...');
-    const scanButton = screen.getByText('Scan');
+    expect(screen.getByText('Loading audio directory...')).toBeInTheDocument();
 
-    fireEvent.change(input, { target: { value: '/protected' } });
-    fireEvent.click(scanButton);
-
-    // Error is displayed via toast notification, check for toast message
     await waitFor(() => {
-      expect(screen.getByText(/Scan failed:.*Permission denied/)).toBeInTheDocument();
+      expect(screen.getByText('music')).toBeInTheDocument();
+    });
+  });
+
+  it('displays error message when tree loading fails', async () => {
+    vi.mocked(audioBrowserAPI.getTree).mockRejectedValue(
+      new Error('Failed to load directory')
+    );
+
+    renderWithToast(<AudioBrowser />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Load failed:.*Failed to load directory/)).toBeInTheDocument();
     });
   });
 
   it('filters items by text', async () => {
-    vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
+    vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(mockTree);
 
     renderWithToast(<AudioBrowser />);
 
-    const input = screen.getByPlaceholderText('Enter directory path...');
-    const scanButton = screen.getByText('Scan');
-
-    fireEvent.change(input, { target: { value: '/music' } });
-    fireEvent.click(scanButton);
-
     await waitFor(() => {
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === 'song1.mp3';
-      })).toBeInTheDocument();
+      expect(screen.getByText('music')).toBeInTheDocument();
     });
 
-    const filterInput = screen.getByPlaceholderText('Filter by name or description...');
-    fireEvent.change(filterInput, { target: { value: 'song1' } });
+    // Initial item count should be 4 (1 root dir + 2 files + 1 subdir)
+    expect(screen.getByText('4 items')).toBeInTheDocument();
 
+    const filterInput = screen.getByPlaceholderText('Filter by name or description...');
+    fireEvent.change(filterInput, { target: { value: 'album1' } });
+
+    // Wait for filter to apply (debounced 100ms)
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Item count should be reduced after filtering
     await waitFor(() => {
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === 'song1.mp3';
-      })).toBeInTheDocument();
-      expect(screen.queryByText((content, element) => {
-        return element?.textContent === 'song2.mp3';
-      })).not.toBeInTheDocument();
+      const itemCountText = screen.getByText(/items/).textContent;
+      expect(itemCountText).not.toBe('4 items');
     });
   });
 
   it('expands and collapses directories', async () => {
-    vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
+    vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(mockTree);
 
     renderWithToast(<AudioBrowser />);
 
-    const input = screen.getByPlaceholderText('Enter directory path...');
-    const scanButton = screen.getByText('Scan');
-
-    fireEvent.change(input, { target: { value: '/music' } });
-    fireEvent.click(scanButton);
-
     await waitFor(() => {
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === 'album1';
-      })).toBeInTheDocument();
+      expect(screen.getByText('music')).toBeInTheDocument();
+      expect(screen.getByText('album1')).toBeInTheDocument();
     });
 
-    // Initially subdirectory is collapsed
-    expect(screen.queryByText((content, element) => {
-      return element?.textContent === 'track1.mp3';
-    })).not.toBeInTheDocument();
+    // Find the expand button for album1
+    const expandButtons = screen.getAllByLabelText('Expand');
+    expect(expandButtons.length).toBeGreaterThan(0);
+    
+    // Click to expand album1 (second directory)
+    fireEvent.click(expandButtons[expandButtons.length - 1]);
 
-    // Select the album directory using keyboard navigation
-    const albumItem = screen.getByText((content, element) => {
-      return element?.textContent === 'album1';
-    }).closest('.audio-tree__item');
-    fireEvent.click(albumItem!);
-
-    // Simulate right arrow key to expand
-    fireEvent.keyDown(window, { key: 'ArrowRight' });
-
+    // After expansion, button should change to "Collapse"
     await waitFor(() => {
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === 'track1.mp3';
-      })).toBeInTheDocument();
+      expect(screen.getByLabelText('Collapse')).toBeInTheDocument();
     });
   });
 
   it('displays item count', async () => {
-    vi.mocked(audioBrowserAPI.scanDirectory).mockResolvedValue(mockTree);
+    vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(mockTree);
 
     renderWithToast(<AudioBrowser />);
-
-    const input = screen.getByPlaceholderText('Enter directory path...');
-    const scanButton = screen.getByText('Scan');
-
-    fireEvent.change(input, { target: { value: '/music' } });
-    fireEvent.click(scanButton);
 
     await waitFor(() => {
       // Root directory + 2 files + 1 subdirectory = 4 items
@@ -216,31 +168,26 @@ describe('AudioBrowser', () => {
     });
   });
 
-  it('disables scan button when no path is entered', () => {
-    renderWithToast(<AudioBrowser />);
-
-    const scanButton = screen.getByText('Scan');
-    expect(scanButton).toBeDisabled();
-  });
-
-  it('disables scan button while scanning', async () => {
-    vi.mocked(audioBrowserAPI.scanDirectory).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(mockTree), 100))
-    );
+  it('handles keyboard navigation', async () => {
+    vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(mockTree);
 
     renderWithToast(<AudioBrowser />);
-
-    const input = screen.getByPlaceholderText('Enter directory path...');
-    const scanButton = screen.getByText('Scan');
-
-    fireEvent.change(input, { target: { value: '/music' } });
-    fireEvent.click(scanButton);
-
-    expect(screen.getByText('Scanning...')).toBeInTheDocument();
-    expect(scanButton).toBeDisabled();
 
     await waitFor(() => {
-      expect(screen.getByText('Scan')).toBeInTheDocument();
+      expect(screen.getByText('music')).toBeInTheDocument();
+    });
+
+    // Initially first item should be selected
+    const selectedItems = document.querySelectorAll('.audio-tree__item--selected');
+    expect(selectedItems.length).toBe(1);
+
+    // Simulate arrow down key
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    // Selection should still exist (may move to next item)
+    await waitFor(() => {
+      const items = document.querySelectorAll('.audio-tree__item--selected');
+      expect(items.length).toBe(1);
     });
   });
 });

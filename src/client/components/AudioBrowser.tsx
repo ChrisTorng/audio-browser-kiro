@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { DirectoryTree, AudioFile, DirectoryNode } from '../../shared/types';
 import { audioBrowserAPI } from '../services/api';
 import {
@@ -31,8 +31,7 @@ export function AudioBrowser() {
     rating: null,
   });
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [isScanning, setIsScanning] = useState(false);
-  const [rootPath, setRootPath] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Hooks
   const audioPlayer = useAudioPlayer();
@@ -222,36 +221,39 @@ export function AudioBrowser() {
   });
 
   /**
-   * Scan directory
+   * Load directory tree on mount
+   * The backend scans the directory on startup, we just fetch the cached result
    */
-  const handleScan = useCallback(async (path: string) => {
-    setIsScanning(true);
+  useEffect(() => {
+    const loadTree = async () => {
+      setIsLoading(true);
 
-    try {
-      const tree = await audioBrowserAPI.scanDirectory(path);
-      
-      // Validate tree structure
-      if (!tree || typeof tree !== 'object') {
-        throw new Error('Invalid scan result: tree is null or not an object');
+      try {
+        const tree = await audioBrowserAPI.getTree();
+        
+        // Validate tree structure
+        if (!tree || typeof tree !== 'object') {
+          throw new Error('Invalid tree structure received from server');
+        }
+        
+        setDirectoryTree(tree);
+        
+        // Expand root by default
+        if (tree.path) {
+          setExpandedPaths(new Set([tree.path]));
+        }
+        
+        toast.success('Audio directory loaded successfully');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load audio directory';
+        toast.error(`Load failed: ${errorMessage}`);
+        console.error('Load error:', error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setDirectoryTree(tree);
-      setRootPath(path);
-      
-      // Expand root by default
-      if (tree.path) {
-        setExpandedPaths(new Set([tree.path]));
-      }
-      
-      // Show success message
-      toast.success(`Successfully scanned directory: ${path}`);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to scan directory';
-      toast.error(`Scan failed: ${errorMessage}`);
-      console.error('Scan error:', error);
-    } finally {
-      setIsScanning(false);
-    }
+    };
+
+    loadTree();
   }, [toast]);
 
   /**
@@ -263,54 +265,40 @@ export function AudioBrowser() {
 
   return (
     <div className="audio-browser">
+      {/* Header with title and filter bar */}
       <div className="audio-browser__header">
-        <h1>Audio Browser</h1>
+        <h1 className="audio-browser__title">Audio Browser</h1>
         
-        {/* Scan controls */}
-        <div className="audio-browser__scan">
-          <input
-            type="text"
-            placeholder="Enter directory path..."
-            value={rootPath}
-            onChange={(e) => setRootPath(e.target.value)}
-            disabled={isScanning}
-          />
-          <button onClick={() => handleScan(rootPath)} disabled={isScanning || !rootPath}>
-            {isScanning ? 'Scanning...' : 'Scan'}
-          </button>
-        </div>
+        <FilterBar
+          filterCriteria={filterCriteria}
+          onFilterChange={handleFilterChange}
+          resultCount={displayItems.length}
+        />
       </div>
-
-      {/* Filter bar */}
-      <FilterBar
-        filterCriteria={filterCriteria}
-        onFilterChange={handleFilterChange}
-        resultCount={displayItems.length}
-      />
 
       {/* Audio tree */}
       <div className="audio-browser__tree">
-        {isScanning && (
-          <LoadingSpinner size="large" message="Scanning directory..." />
+        {isLoading && (
+          <LoadingSpinner size="large" message="Loading audio directory..." />
         )}
         
-        {audioMetadata.isLoading && !isScanning && (
+        {audioMetadata.isLoading && !isLoading && (
           <LoadingSpinner size="medium" message="Loading metadata..." />
         )}
         
-        {displayItems.length === 0 && !isScanning && !audioMetadata.isLoading && directoryTree && (
+        {displayItems.length === 0 && !isLoading && !audioMetadata.isLoading && directoryTree && (
           <div className="audio-browser__empty">
             No items match the current filters
           </div>
         )}
 
-        {displayItems.length === 0 && !isScanning && !audioMetadata.isLoading && !directoryTree && (
+        {displayItems.length === 0 && !isLoading && !audioMetadata.isLoading && !directoryTree && (
           <div className="audio-browser__empty">
-            Enter a directory path and click Scan to begin
+            Failed to load audio directory. Please check server configuration.
           </div>
         )}
 
-        {displayItems.length > 0 && !isScanning && (
+        {displayItems.length > 0 && !isLoading && (
           <AudioTree
             items={displayItems}
             selectedIndex={navigation.selectedIndex}
