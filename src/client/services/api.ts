@@ -29,21 +29,15 @@ export class AudioBrowserAPI {
   }
 
   /**
-   * Scan directory for audio files
-   * @param path - Directory path to scan
+   * Get the cached audio file tree structure
+   * Returns the tree that was scanned during application startup
    * @returns Directory tree structure
    */
-  async scanDirectory(path: string): Promise<DirectoryTree> {
-    const request: ScanDirectoryRequest = { path };
-
+  async getTree(): Promise<DirectoryTree> {
     const response = await this.fetchWithRetry<ScanDirectoryResponse>(
-      `${this.baseUrl}/scan`,
+      `${this.baseUrl}/tree`,
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
+        method: 'GET',
       }
     );
 
@@ -56,8 +50,9 @@ export class AudioBrowserAPI {
    * @returns Audio file as Blob
    */
   async getAudioFile(filePath: string): Promise<Blob> {
-    // Encode the file path for URL
-    const encodedPath = encodeURIComponent(filePath);
+    // Remove leading slash if present and encode the file path for URL
+    const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+    const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
 
     const response = await this.fetchWithRetry<Response>(
       `${this.baseUrl}/audio/${encodedPath}`,

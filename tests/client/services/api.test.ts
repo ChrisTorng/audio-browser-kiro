@@ -18,8 +18,8 @@ describe('AudioBrowserAPI', () => {
     vi.clearAllMocks();
   });
 
-  describe('scanDirectory', () => {
-    it('should scan directory and return tree structure', async () => {
+  describe('getTree', () => {
+    it('should get cached tree structure', async () => {
       const mockTree: DirectoryTree = {
         name: 'music',
         path: '/music',
@@ -36,24 +36,22 @@ describe('AudioBrowserAPI', () => {
         json: async () => mockResponse,
       });
 
-      const result = await api.scanDirectory('/music');
+      const result = await api.getTree();
 
       expect(result).toEqual(mockTree);
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/scan',
+        '/api/tree',
         expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: '/music' }),
+          method: 'GET',
         })
       );
     });
 
-    it('should handle scan errors', async () => {
+    it('should handle tree retrieval errors', async () => {
       const mockError: ApiErrorResponse = {
         error: {
-          code: 'SCAN_FAILED',
-          message: 'Directory not found',
+          code: 'TREE_RETRIEVAL_FAILED',
+          message: 'Failed to retrieve directory tree',
         },
       };
 
@@ -62,8 +60,8 @@ describe('AudioBrowserAPI', () => {
         json: async () => mockError,
       });
 
-      await expect(api.scanDirectory('/invalid')).rejects.toThrow(
-        'API Error: Directory not found (SCAN_FAILED)'
+      await expect(api.getTree()).rejects.toThrow(
+        'API Error: Failed to retrieve directory tree (TREE_RETRIEVAL_FAILED)'
       );
     });
   });
@@ -81,7 +79,26 @@ describe('AudioBrowserAPI', () => {
 
       expect(result).toEqual(mockBlob);
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/audio/%2Fmusic%2Fsong.mp3',
+        '/api/audio/music/song.mp3',
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should handle paths with special characters', async () => {
+      const mockBlob = new Blob(['audio data'], { type: 'audio/mpeg' });
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        blob: async () => mockBlob,
+      });
+
+      const result = await api.getAudioFile('/music/folder with spaces/song #1.mp3');
+
+      expect(result).toEqual(mockBlob);
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/audio/music/folder%20with%20spaces/song%20%231.mp3',
         expect.objectContaining({
           method: 'GET',
         })
@@ -235,7 +252,7 @@ describe('AudioBrowserAPI', () => {
           json: async () => mockResponse,
         });
 
-      const result = await api.scanDirectory('/music');
+      const result = await api.getTree();
 
       expect(result).toEqual(mockTree);
       expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -244,8 +261,8 @@ describe('AudioBrowserAPI', () => {
     it('should not retry on client errors', async () => {
       const mockError: ApiErrorResponse = {
         error: {
-          code: 'INVALID_PATH',
-          message: 'Invalid directory path',
+          code: 'SERVICE_NOT_INITIALIZED',
+          message: 'Scan service not initialized',
         },
       };
 
@@ -254,8 +271,8 @@ describe('AudioBrowserAPI', () => {
         json: async () => mockError,
       });
 
-      await expect(api.scanDirectory('/invalid')).rejects.toThrow(
-        'API Error: Invalid directory path (INVALID_PATH)'
+      await expect(api.getTree()).rejects.toThrow(
+        'API Error: Scan service not initialized (SERVICE_NOT_INITIALIZED)'
       );
 
       // Should only be called once (no retry on 4xx errors)
@@ -265,7 +282,7 @@ describe('AudioBrowserAPI', () => {
     it('should fail after max retries', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      await expect(api.scanDirectory('/music')).rejects.toThrow(
+      await expect(api.getTree()).rejects.toThrow(
         'Request failed after 2 attempts'
       );
 
