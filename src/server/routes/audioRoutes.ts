@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AudioService } from '../services/audioService.js';
+import { ConfigService } from '../services/configService.js';
 import { ApiErrorResponse } from '../../shared/types/api.js';
 
 /**
@@ -8,9 +9,19 @@ import { ApiErrorResponse } from '../../shared/types/api.js';
  */
 export async function registerAudioRoutes(fastify: FastifyInstance) {
   const audioService = new AudioService();
-
-  // Default root path for audio files (can be configured via environment variable)
-  const audioRootPath = process.env.AUDIO_ROOT_PATH || process.cwd();
+  
+  // Determine audio root path:
+  // 1. Use AUDIO_ROOT_PATH environment variable if set (for testing)
+  // 2. Otherwise, use ConfigService to get audio directory from config.json
+  let audioRootPath: string;
+  
+  if (process.env.AUDIO_ROOT_PATH) {
+    audioRootPath = process.env.AUDIO_ROOT_PATH;
+  } else {
+    const configService = new ConfigService();
+    await configService.loadConfig();
+    audioRootPath = configService.getAudioDirectoryAbsolutePath();
+  }
 
   /**
    * GET /api/audio/*
