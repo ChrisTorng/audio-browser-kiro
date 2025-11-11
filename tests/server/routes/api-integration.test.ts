@@ -7,6 +7,7 @@ import { registerScanRoutes } from '../../../src/server/routes/scanRoutes.js';
 import { registerAudioRoutes } from '../../../src/server/routes/audioRoutes.js';
 import { registerMetadataRoutes } from '../../../src/server/routes/metadataRoutes.js';
 import { AudioDatabase } from '../../../src/server/db/database.js';
+import { ScanService } from '../../../src/server/services/scanService.js';
 
 /**
  * Integration tests for Fastify API routes
@@ -17,6 +18,7 @@ describe('API Routes Integration', () => {
   let testDir: string;
   let testDbPath: string;
   let database: AudioDatabase;
+  let scanService: ScanService;
 
   beforeAll(async () => {
     // Create temporary test directory structure
@@ -45,13 +47,17 @@ describe('API Routes Integration', () => {
     // Set AUDIO_ROOT_PATH before registering routes
     process.env.AUDIO_ROOT_PATH = musicDir;
 
+    // Initialize scan service
+    scanService = new ScanService();
+    await scanService.initialize(musicDir);
+
     // Create Fastify server instance
     server = Fastify({
       logger: false,
     });
 
     // Register all routes
-    await registerScanRoutes(server);
+    await registerScanRoutes(server, scanService);
     await registerAudioRoutes(server);
     await registerMetadataRoutes(server, database);
 
@@ -73,6 +79,43 @@ describe('API Routes Integration', () => {
     } catch (error) {
       // Database might be closed, ignore error
     }
+  });
+
+  describe('GET /api/tree', () => {
+    it('should return cached directory tree', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/api/tree',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      
+      expect(body).toHaveProperty('tree');
+      expect(body.tree.name).toBe('music');
+      expect(body.tree.files).toHaveLength(2);
+      expect(body.tree.subdirectories).toHaveLength(1);
+    });
+
+    it('should return same tree on multiple calls', async () => {
+      const response1 = await server.inject({
+        method: 'GET',
+        url: '/api/tree',
+      });
+
+      const response2 = await server.inject({
+        method: 'GET',
+        url: '/api/tree',
+      });
+
+      expect(response1.statusCode).toBe(200);
+      expect(response2.statusCode).toBe(200);
+      
+      const body1 = JSON.parse(response1.body);
+      const body2 = JSON.parse(response2.body);
+      
+      expect(body1.tree).toEqual(body2.tree);
+    });
   });
 
   describe('POST /api/scan', () => {
@@ -646,7 +689,7 @@ describe('API Routes Integration', () => {
     });
 
     it('should handle concurrent requests', async () => {
-      const promises = [];
+      const promises: Promise<any>[] = [];
       
       for (let i = 0; i < 10; i++) {
         promises.push(

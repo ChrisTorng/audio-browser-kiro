@@ -75,11 +75,48 @@ const scanDirectorySchema = {
 };
 
 /**
+ * Schema for get tree response
+ */
+const getTreeSchema = {
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        tree: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            path: { type: 'string' },
+            files: { type: 'array' },
+            subdirectories: { type: 'array' },
+          },
+        },
+      },
+    },
+    500: {
+      type: 'object',
+      required: ['error'],
+      properties: {
+        error: {
+          type: 'object',
+          required: ['code', 'message'],
+          properties: {
+            code: { type: 'string' },
+            message: { type: 'string' },
+            details: { type: 'string' },
+          },
+        },
+      },
+    },
+  },
+};
+
+/**
  * Register scan routes
  * @param fastify - Fastify instance
+ * @param scanService - Initialized scan service instance
  */
-export async function registerScanRoutes(fastify: FastifyInstance) {
-  const scanService = new ScanService();
+export async function registerScanRoutes(fastify: FastifyInstance, scanService: ScanService) {
 
   /**
    * POST /api/scan
@@ -169,6 +206,59 @@ export async function registerScanRoutes(fastify: FastifyInstance) {
 
         // Unknown error type
         fastify.log.error({ err: error }, 'Unknown error scanning directory');
+        return reply.code(500).send({
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'An unexpected error occurred',
+            details: String(error),
+          },
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/tree
+   * Get the cached audio file tree structure
+   * Returns the tree that was scanned during application startup
+   */
+  fastify.get<{
+    Reply: ScanDirectoryResponse | ApiErrorResponse;
+  }>(
+    '/api/tree',
+    { schema: getTreeSchema },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        // Check if scan service is initialized
+        if (!scanService.isInitialized()) {
+          return reply.code(500).send({
+            error: {
+              code: 'SERVICE_NOT_INITIALIZED',
+              message: 'Scan service not initialized',
+              details: 'The audio directory has not been scanned yet. Please check server startup logs.',
+            },
+          });
+        }
+
+        // Get cached tree
+        const tree = scanService.getTree();
+
+        return reply.code(200).send({ tree });
+      } catch (error) {
+        // Handle errors
+        if (error instanceof Error) {
+          fastify.log.error({ err: error }, 'Error retrieving directory tree');
+          return reply.code(500).send({
+            error: {
+              code: 'TREE_RETRIEVAL_FAILED',
+              message: 'Failed to retrieve directory tree',
+              details: error.message,
+            },
+          });
+        }
+
+        // Unknown error type
+        fastify.log.error({ err: error }, 'Unknown error retrieving directory tree');
         return reply.code(500).send({
           error: {
             code: 'INTERNAL_ERROR',

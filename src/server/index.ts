@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import { registerScanRoutes } from './routes/scanRoutes.js';
 import { registerAudioRoutes } from './routes/audioRoutes.js';
 import { registerMetadataRoutes } from './routes/metadataRoutes.js';
+import { ConfigService } from './services/configService.js';
+import { ScanService } from './services/scanService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -149,6 +151,28 @@ fastify.addContentTypeParser(
   }
 );
 
+// Initialize services
+const configService = new ConfigService();
+const scanService = new ScanService();
+
+// Load configuration and initialize scan service
+try {
+  console.log('Loading configuration...');
+  await configService.loadConfig();
+  
+  const audioDirectory = configService.getAudioDirectory();
+  console.log(`Audio directory: ${audioDirectory}`);
+  
+  console.log('Initializing scan service...');
+  await scanService.initialize(audioDirectory);
+  console.log('Scan service initialized successfully');
+} catch (error) {
+  const err = error instanceof Error ? error : new Error(String(error));
+  console.error('❌ Failed to initialize application:', err.message);
+  fastify.log.fatal({ err }, 'Application initialization failed');
+  process.exit(1);
+}
+
 // Serve static files in production
 if (isProduction) {
   const clientDistPath = path.join(__dirname, '..', 'client');
@@ -161,7 +185,7 @@ if (isProduction) {
 }
 
 // Register API routes
-await registerScanRoutes(fastify);
+await registerScanRoutes(fastify, scanService);
 await registerAudioRoutes(fastify);
 await registerMetadataRoutes(fastify);
 
