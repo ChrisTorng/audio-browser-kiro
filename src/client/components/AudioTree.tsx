@@ -127,12 +127,17 @@ export function AudioTree({
    * Optimized to only render items in visible range
    */
   const renderRow = useCallback(
-    ({ index, style, data }: { index: number; style: React.CSSProperties; data?: TreeItem[] }) => {
-      const item = (data || items)[index];
-      
-      // Guard: Return empty div if item doesn't exist or style is invalid
-      if (!item || !style) {
+    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+      // Guard: Return empty div if style is invalid or index out of bounds
+      if (!style || index < 0 || index >= items.length) {
         return <div style={style || {}} />;
+      }
+
+      const item = items[index];
+      
+      // Guard: Return empty div if item doesn't exist
+      if (!item) {
+        return <div style={style} />;
       }
 
       const isSelected = index === selectedIndex;
@@ -209,7 +214,6 @@ export function AudioTree({
         width="100%"
         onScroll={handleScroll}
         overscanCount={5}
-        itemData={items}
       >
         {renderRow}
       </List>

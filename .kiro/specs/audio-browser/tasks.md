@@ -1,324 +1,108 @@
 # Implementation Plan
 
-- [x] 1. 建立專案結構和基礎配置
-  - 建立整合式專案結構 (src/server, src/client, src/shared)
-  - 初始化 Node.js 專案並設定 TypeScript
-  - 安裝核心依賴 (Fastify, React, Vite, better-sqlite3, Vitest)
-  - 配置 TypeScript (tsconfig.json for server and client)
-  - 配置 ESLint 和 Prettier
-  - 設定 Vite 建置配置
-  - 建立預設 config.json（audioDirectory: "../music-player"）
-  - 建立 .gitignore 和更新 README
-  - _Requirements: 所有需求的基礎_
+## 已完成的核心功能
 
-- [x] 2. 實作資料模型和資料庫層
-  - [x] 2.1 定義共用型別 (src/shared/types/)
-    - 定義 AudioMetadata 介面
-    - 定義 AudioFile 和 DirectoryNode 介面
-    - 定義 API 請求/回應型別
-    - _Requirements: 1.1, 1.2, 1.6, 1.7_
-  
-  - [x] 2.2 實作資料庫層 (src/server/db/)
-    - 使用 better-sqlite3 建立 Database 類別
-    - 實作 SQLite schema 初始化
-    - 實作 CRUD 方法 (getMetadata, getAllMetadata, upsertMetadata, deleteMetadata)
-    - 建立索引 (file_path, rating)
-    - _Requirements: 1.6, 1.7_
-  
-  - [x] 2.3 實作資料驗證
-    - 實作 rating 範圍驗證 (0-3)
-    - 實作 description 長度限制
-    - 實作 filePath 格式驗證
-    - _Requirements: 1.6, 1.7_
+所有核心功能已經完成實作和測試，包括：
 
-- [ ] 3. 實作伺服器服務層 (src/server/services/)
-  - [x] 3.1 實作 ConfigService
-    - 實作 loadConfig 方法讀取 config.json
-    - 實作設定檔驗證（必須存在且格式正確）
-    - 實作 getAudioDirectory 方法
-    - 如果 config.json 不存在則拋出錯誤
+- ✅ 專案結構和基礎配置
+- ✅ 資料模型和資料庫層
+- ✅ 伺服器服務層（ConfigService, ScanService, MetadataService, AudioService）
+- ✅ Fastify API 路由（音檔樹、音檔串流、Metadata API）
+- ✅ 前端核心 Hooks（useAudioPlayer, useWaveform, useSpectrogram, useKeyboardNavigation, useAudioMetadata）
+- ✅ 前端服務層（AudioBrowserAPI, WaveformGenerator, SpectrogramGenerator）
+- ✅ 前端 UI 元件（AudioBrowser, Header, FilterBar, AudioTree, AudioItem, StarRating, WaveformDisplay, SpectrogramDisplay, DescriptionField, AudioPlayer）
+- ✅ 前後端整合流程（初始化、播放、Metadata 同步、篩選搜尋）
+- ✅ 效能優化和錯誤處理
+- ✅ 測試（單元測試、整合測試）
+- ✅ 建置配置和啟動腳本
+- ✅ 使用者文件
+
+## 未來擴展功能（Phase 1-5）
+
+以下是設計文件中規劃的未來擴展功能，目前尚未實作：
+
+- [ ] 12. Phase 1: 智慧預載與自動生成
+  - [ ] 12.1 實作智慧預載機制
+    - 當前選取音檔下載完畢後自動播放並同步生成波形圖和頻譜圖
+    - 自動預載下一個音檔
+    - 持續下載直到螢幕可見範圍內的所有音檔都已下載並生成視覺化
+    - _Requirements: 1.3, 1.5, 1.10_
+
+- [ ] 13. Phase 2: 壓縮檔支援
+  - [ ] 13.1 實作壓縮檔偵測和解壓縮
+    - 偵測特定副檔名的壓縮檔（如 .zip）
+    - 自動解壓縮並掃描內部音檔
+    - 解壓內容快取到專案子資料夾
     - _Requirements: 1.1, 1.2_
   
-  - [x] 3.2 實作 ScanService
-    - 實作 initialize 方法在啟動時掃描資料夾
-    - 實作 getTree 方法返回快取的目錄樹
-    - 實作檔案格式過濾 (MP3, WAV, FLAC, OGG, M4A, AAC)
-    - 實作遞迴建立目錄樹
-    - 實作 hasAudioFiles 方法過濾空資料夾
-    - 實作錯誤處理和日誌記錄
-    - _Requirements: 1.1, 1.2_
-  
-  - [x] 3.3 實作 MetadataService
-    - 整合 Database 類別
-    - 實作 getMetadata 和 getAllMetadata 方法
-    - 實作 updateMetadata 方法 (upsert 邏輯)
-    - 實作 deleteMetadata 方法
-    - _Requirements: 1.6, 1.7_
-  
-  - [x] 3.4 實作 AudioService
-    - 實作 streamAudio 方法使用 fs.createReadStream
-    - 實作路徑驗證防止路徑遍歷攻擊
-    - 實作 Range requests 支援
-    - 實作 MIME type 偵測
+  - [ ] 13.2 實作壓縮檔虛擬資料夾顯示
+    - 壓縮檔顯示為虛擬資料夾，可展開瀏覽內部音檔
+    - 支援壓縮檔內音檔的播放、評分和描述功能
+    - _Requirements: 1.2, 1.5, 1.6, 1.7_
+
+- [ ] 14. Phase 3: 附加音檔功能
+  - [ ] 14.1 實作附加音檔儲存機制
+    - 每個音檔可附加額外的音檔版本
+    - 附加音檔儲存於專案子資料夾
     - _Requirements: 1.5_
+  
+  - [ ] 14.2 實作附加音檔播放控制
+    - 顯示附加音檔播放圖示
+    - 使用 → 鍵切換到附加音檔播放
+    - 使用 ← 鍵切換回原始音檔播放
+    - 空白鍵控制播放/停止，重新播放從頭開始
+    - 附加音檔不生成波形圖和頻譜圖
+    - 播放附加音檔時在圖示上顯示播放狀態
+    - _Requirements: 1.4, 1.5_
 
-- [ ] 4. 實作 Fastify API 路由 (src/server/routes/)
-  - [x] 4.1 建立 Fastify 伺服器實例
-    - 初始化 Fastify 應用
-    - 配置 JSON body parser
-    - 設定靜態檔案服務（生產環境）
+- [ ] 15. Phase 4: Electron 桌面應用
+  - [ ] 15.1 配置 Electron 建置環境
+    - 安裝 electron 和 electron-builder
+    - 配置 Electron main process（使用現有 server 程式碼）
+    - 配置 Electron renderer process（使用現有 client 程式碼）
     - _Requirements: 所有需求_
   
-  - [x] 4.2 實作音檔樹 API
-    - GET /api/tree 返回已掃描的目錄樹（從快取讀取）
-    - 實作錯誤回應格式
-    - _Requirements: 1.1, 1.2_
-  
-  - [x] 4.3 實作音檔串流 API
-    - GET /api/audio/* 串流音檔（wildcard route）
-    - 實作 Content-Type 和 Content-Length headers
-    - 實作 Range requests 支援
-    - _Requirements: 1.5_
-  
-  - [x] 4.4 實作 Metadata API
-    - GET /api/metadata 取得所有 metadata
-    - POST /api/metadata 更新 metadata
-    - DELETE /api/metadata/:filePath 刪除 metadata
-    - _Requirements: 1.6, 1.7_
-  
-  - [x] 4.5 設定錯誤處理和日誌
-    - 實作全域錯誤處理 hook
-    - 實作請求日誌
-    - 配置開發/生產環境差異
+  - [ ] 15.2 實作 Electron 特定功能
+    - 原生檔案系統存取
+    - 系統托盤整合
+    - 自動更新機制
+    - 打包為 Windows、Linux、macOS 應用程式
     - _Requirements: 所有需求_
-  
-  - [x] 4.6 實作應用啟動初始化
-    - 載入 ConfigService 並驗證 config.json
-    - 初始化 ScanService 並執行掃描
-    - 如果設定檔或音檔資料夾有問題則終止啟動
-    - 記錄啟動資訊（掃描的音檔數量等）
-    - _Requirements: 1.1, 1.2_
 
-- [x] 5. 實作前端核心 Hooks
-  - [x] 5.1 實作 useAudioPlayer Hook
-    - 實作 play, stop, toggle 方法
-    - 實作循環播放邏輯
-    - 實作播放進度追蹤 (progress, currentTime, duration)
-    - 實作播放狀態管理
+- [ ] 16. Phase 5: 進階功能
+  - [ ] 16.1 實作播放清單管理
+    - 建立、編輯、刪除播放清單
+    - 將音檔加入播放清單
+    - 播放清單順序播放
     - _Requirements: 1.5_
   
-  - [x] 5.2 實作 useWaveform Hook
-    - 實作從 AudioBuffer 生成波形資料
-    - 實作載入狀態和錯誤處理
-    - 實作波形資料快取
-    - _Requirements: 1.3_
-  
-  - [x] 5.3 實作 useSpectrogram Hook
-    - 實作從 AudioBuffer 生成頻譜資料
-    - 使用 FFT 分析音頻頻率
-    - 實作載入狀態和錯誤處理
-    - 實作頻譜資料快取
-    - _Requirements: 1.3_
-  
-  - [x] 5.4 實作 useKeyboardNavigation Hook
-    - 實作上下鍵選擇項目
-    - 實作左右鍵展開/收合資料夾
-    - 實作空白鍵播放/停止控制
-    - 實作選擇索引管理
-    - _Requirements: 1.4_
-  
-  - [x] 5.5 實作 useAudioMetadata Hook
-    - 實作 metadata 狀態管理
-    - 實作 updateRating 和 updateDescription 方法
-    - 實作 API 呼叫和錯誤處理
-    - _Requirements: 1.6, 1.7_
-
-- [ ] 6. 實作前端服務層 (src/client/services/)
-  - [x] 6.1 實作 AudioBrowserAPI 類別
-    - 實作 getTree 方法（GET /api/tree）
-    - 實作 getAudioFile 方法（GET /api/audio/*）
-    - 實作 getAllMetadata 方法（GET /api/metadata）
-    - 實作 updateMetadata 和 deleteMetadata 方法
-    - 實作錯誤處理和重試邏輯
-    - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7_
-  
-  - [x] 6.2 實作 WaveformGenerator 類別
-    - 實作從 AudioBuffer 生成波形使用 Web Audio API
-    - 實作從 Blob 生成波形
-    - 實作波形資料降採樣以符合顯示寬度
-    - _Requirements: 1.3_
-  
-  - [x] 6.3 實作 SpectrogramGenerator 類別
-    - 實作從 AudioBuffer 生成頻譜圖使用 Web Audio API
-    - 實作 FFT 分析（AnalyserNode）
-    - 實作頻譜資料正規化和色彩映射
-    - _Requirements: 1.3_
-
-- [ ] 7. 實作前端 UI 元件
-  - [x] 7.1 實作 AudioBrowser 主元件
-    - 實作全域狀態管理 (音檔樹、篩選條件、當前選擇)
-    - 實作鍵盤事件監聽
-    - 整合所有子元件
-    - _Requirements: 所有需求_
-  
-  - [x] 7.2 實作 Header 元件
-    - 實作網站標題顯示
-    - 整合 FilterBar 於右側
-    - 使用緊湊設計以節省空間
-    - _Requirements: 1.10_
-  
-  - [x] 7.3 實作 FilterBar 元件
-    - 實作文字篩選輸入框
-    - 實作星級篩選下拉選單
-    - 位於標題右側的緊湊佈局
-    - 實作即時篩選邏輯 (debounce 100ms)
-    - _Requirements: 1.8, 1.9, 1.10_
-  
-  - [x] 7.4 實作 AudioTree 元件
-    - 實作樹狀結構顯示
-    - 實作虛擬滾動 (使用 react-window 或 react-virtual)
-    - 實作展開/收合狀態管理
-    - 實作篩選和高亮顯示
-    - _Requirements: 1.2, 1.8, 1.10_
-  
-  - [x] 7.5 實作 AudioItem 元件
-    - 實作單行佈局：星級/檔名/波形圖/頻譜圖/描述
-    - 實作選擇狀態視覺化（簡單背景色或邊框）
-    - 不顯示額外的播放狀態資訊
-    - 整合 StarRating, WaveformDisplay, SpectrogramDisplay, DescriptionField
-    - _Requirements: 1.2, 1.3, 1.6, 1.7, 1.10_
-  
-  - [x] 7.6 實作 StarRating 元件
-    - 實作三星評分 UI (0-3 星)
-    - 實作點擊互動更新評分
-    - 實作立即儲存邏輯
-    - 實作視覺化顯示當前評分
-    - _Requirements: 1.6_
-  
-  - [x] 7.7 實作 WaveformDisplay 元件
-    - 實作波形圖繪製 (Canvas)
-    - 實作播放進度條覆蓋層
-    - 實作載入和錯誤狀態顯示
-    - _Requirements: 1.3, 1.5_
-  
-  - [x] 7.8 實作 SpectrogramDisplay 元件
-    - 實作頻譜圖繪製 (Canvas)
-    - 實作播放進度條覆蓋層
-    - 實作色彩映射 (頻率強度視覺化)
-    - 實作載入和錯誤狀態顯示
-    - _Requirements: 1.3, 1.5_
-  
-  - [x] 7.9 實作 DescriptionField 元件
-    - 實作可點擊的描述欄位
-    - 實作編輯模式切換和插入點設定
-    - 實作 Esc 取消編輯
-    - 實作 Enter 或失焦自動儲存
-    - _Requirements: 1.7_
-  
-  - [x] 7.10 實作 AudioPlayer 元件
-    - 實作音頻播放控制邏輯 (無 UI)
-    - 實作循環播放
-    - 實作播放狀態和進度管理
-    - 整合 useAudioPlayer Hook
-    - _Requirements: 1.5_
-
-- [ ] 8. 整合前後端並實作完整流程
-  - [x] 8.1 實作應用初始化流程
-    - 後端啟動時自動掃描音檔資料夾
-    - 前端載入時取得已掃描的目錄樹
-    - 前端顯示樹狀結構（只顯示有音檔的資料夾）
-    - _Requirements: 1.1, 1.2_
-  
-  - [x] 8.2 實作音檔播放流程
-    - 前端下載音檔
-    - 生成波形圖和頻譜圖
-    - 開始播放並顯示進度
-    - _Requirements: 1.3, 1.5_
-  
-  - [x] 8.3 實作 Metadata 同步流程
-    - 前端載入所有 metadata
-    - 更新評分或描述時同步到後端
-    - 實作樂觀更新和錯誤回滾
-    - _Requirements: 1.6, 1.7_
-  
-  - [x] 8.4 實作篩選和搜尋流程
-    - 整合文字篩選和星級篩選
-    - 實作高亮顯示符合條件的文字
-    - 實作即時更新顯示
+  - [ ] 16.2 實作音檔標籤系統
+    - 為音檔添加自訂標籤
+    - 依標籤篩選音檔
+    - 標籤管理介面
     - _Requirements: 1.8, 1.9_
+  
+  - [ ] 16.3 實作匯出/匯入 metadata
+    - 匯出 metadata 為 JSON 或 CSV
+    - 從檔案匯入 metadata
+    - 備份和還原功能
+    - _Requirements: 1.6, 1.7_
+  
+  - [ ] 16.4 實作音檔分析和統計
+    - 顯示音檔統計資訊（總數、評分分布等）
+    - 音檔時長分析
+    - 格式分布統計
+    - _Requirements: 1.1, 1.2_
+  
+  - [ ] 16.5 實作批次操作功能
+    - 批次更新評分
+    - 批次更新描述
+    - 批次刪除 metadata
+    - _Requirements: 1.6, 1.7_
 
-- [x] 9. 效能優化和錯誤處理
-  - [x] 9.1 實作前端效能優化
-    - 實作波形圖和頻譜圖快取 (LRU)
-    - 實作延遲載入和按需生成
-    - 優化虛擬滾動效能
-    - _Requirements: 1.10_
-  
-  - [x] 9.2 實作錯誤處理和使用者回饋
-    - 實作錯誤訊息 toast 通知
-    - 實作載入指示器
-    - 實作重試機制
-    - 實作錯誤邊界元件
-    - _Requirements: 所有需求_
-  
-  - [x] 9.3 實作後端效能優化
-    - 實作非同步檔案掃描
-    - 優化資料庫查詢
-    - 實作適當的快取策略
-    - _Requirements: 1.10_
+## 注意事項
 
-- [ ] 10. 撰寫測試（使用 Vitest）
-  - [x] 10.1 撰寫伺服器端單元測試 (tests/server/)
-    - 測試 ScanService 掃描邏輯
-    - 測試 MetadataService CRUD 操作
-    - 測試 AudioService 串流邏輯
-    - 測試 Database 類別操作
-    - _Requirements: 所有後端需求_
-  
-  - [x] 10.2 撰寫伺服器端整合測試
-    - 測試 Fastify API 路由完整流程
-    - 測試資料庫操作
-    - 測試錯誤處理
-    - 測試 Range requests
-    - _Requirements: 所有後端需求_
-  
-  - [x] 10.3 撰寫前端單元測試 (tests/client/)
-    - 測試 Hooks 邏輯
-    - 測試 UI 元件渲染和互動
-    - 測試服務層 API 呼叫 (使用 vi.mock)
-    - _Requirements: 所有前端需求_
-  
-  - [x] 10.4 撰寫前端整合測試
-    - 測試完整使用者流程
-    - 測試鍵盤導航
-    - 測試音頻播放邏輯
-    - _Requirements: 所有前端需求_
-
-- [ ] 11. 建置配置和啟動腳本
-  - [x] 11.1 配置 Vite 建置
-    - 設定前端建置輸出到 dist/client
-    - 配置開發環境 proxy 到 Fastify
-    - 設定環境變數處理
-    - _Requirements: 所有需求_
-  
-  - [x] 11.2 配置 TypeScript 建置
-    - 設定伺服器端 TypeScript 編譯到 dist/server
-    - 配置 source maps
-    - 設定 path aliases
-    - _Requirements: 所有需求_
-  
-  - [x] 11.3 建立 npm scripts
-    - dev: 並行啟動 Vite dev server 和 Fastify server
-    - build: 建置前後端
-    - start: 執行生產版本
-    - test: 執行所有測試
-    - test:coverage: 執行測試並生成覆蓋率報告
-    - _Requirements: 所有需求_
-  
-  - [x] 11.4 撰寫使用者文件
-    - 更新 README 使用說明
-    - 說明 config.json 的必要性和設定方式
-    - 記錄鍵盤快捷鍵
-    - 記錄支援的音檔格式
-    - 記錄跨平台執行方式
-    - _Requirements: 所有需求_
+- 核心功能（任務 1-11）已全部完成，系統可正常運作
+- 未來擴展功能（任務 12-16）為可選功能，可根據需求逐步實作
+- 所有新功能應遵循 TDD 開發流程：先寫測試，再寫實作
+- 每個新功能都應更新相關文件和測試
