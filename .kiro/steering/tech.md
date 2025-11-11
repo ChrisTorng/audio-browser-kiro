@@ -30,6 +30,7 @@
 
 3. **任務完成後**：
    - 讀取 `USER_PROMPT.md` 的內容
+   - **刪除 `USER_PROMPT.md` 檔案**（確保不會被加入 commit）
    - 建立 git commit 訊息，格式如下：
      ```
      [使用者原始 prompt 內容]
@@ -37,7 +38,6 @@
      [此次 commit 的具體異動說明]
      ```
    - 執行 git commit
-   - 刪除 `USER_PROMPT.md` 檔案
    - 此時任務才算全部完成
 
 4. **Commit 訊息規範**：
