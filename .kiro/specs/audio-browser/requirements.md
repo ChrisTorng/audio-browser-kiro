@@ -46,10 +46,12 @@
 3. THE Frontend SHALL 只顯示包含音檔的資料夾
 4. THE Frontend SHALL 在單行高度內依序顯示：星級、音檔名稱、波形圖、頻譜圖、描述
 5. THE Frontend SHALL 顯示每個資料夾的名稱和包含的音檔數量（僅顯示數字，不顯示 "files" 文字及括弧）
-6. WHEN 使用者點擊資料夾，THE Frontend SHALL 展開或收合該資料夾的內容
-7. THE Frontend SHALL 使用緊湊的 UI 設計以最大化可見的音檔數量
-8. THE Frontend SHALL 將篩選功能放置在網站標題右側以節省空間
-9. THE Frontend SHALL 縮減資料夾和音檔的行高以顯示更多項目
+6. THE Frontend SHALL 遞迴計算資料夾下所有音檔數量（包括子資料夾內的音檔），不論是否展開顯示
+7. WHEN 使用者點擊資料夾，THE Frontend SHALL 展開或收合該資料夾的內容
+8. THE Frontend SHALL 使用緊湊的 UI 設計以最大化可見的音檔數量
+9. THE Frontend SHALL 將篩選功能放置在網站標題右側以節省空間
+10. THE Frontend SHALL 縮減資料夾和音檔的行高以顯示更多項目
+11. THE Frontend SHALL 只在發生錯誤時顯示訊息，成功載入時不顯示任何訊息
 
 ### Requirement 3
 
@@ -104,6 +106,7 @@
 3. THE Frontend SHALL 不允許使用者直接設定 0 星（0 星僅表示未評分狀態）
 4. WHEN 評分被更新，THE Backend SHALL 將評分儲存到 Database 中
 5. THE Frontend SHALL 視覺化顯示當前的評分狀態（0 星顯示為空星）
+6. WHEN 使用者在選取的音檔項目上按下數字鍵 1/2/3，THE Frontend SHALL 直接設定該音檔的星級評分
 
 ### Requirement 7
 
@@ -116,6 +119,7 @@
 3. WHEN 使用者按下 Esc 鍵，THE Frontend SHALL 取消編輯並恢復原值
 4. WHEN 使用者按下 Enter 鍵或輸入焦點離開，THE Frontend SHALL 自動儲存描述到 Backend
 5. WHEN 描述被更新，THE Backend SHALL 將描述儲存到 Database 中
+6. WHEN 使用者在選取的音檔項目上按下 Enter 鍵，THE Frontend SHALL 直接開始編輯該音檔的描述
 
 ### Requirement 8
 
@@ -128,7 +132,9 @@
 3. THE Frontend SHALL 篩選音檔名稱、資料夾名稱和描述欄位
 4. WHEN 篩選文字符合資料夾名稱，THE Frontend SHALL 顯示該資料夾下所有項目（包括子資料夾和音檔）
 5. THE Frontend SHALL 高亮顯示符合篩選條件的文字部分
-6. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
+6. THE Frontend SHALL 確保高亮顯示不會改變文字或字母的寬度
+7. THE Frontend SHALL 顯示被篩選出來的總音檔數量（不包含資料夾數量）
+8. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
 
 ### Requirement 9
 
