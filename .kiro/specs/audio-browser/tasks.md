@@ -32,7 +32,7 @@
     - _Requirements: 1.6, 1.7_
 
 - [ ] 3. 實作伺服器服務層 (src/server/services/)
-  - [ ] 3.1 實作 ConfigService
+  - [x] 3.1 實作 ConfigService
     - 實作 loadConfig 方法讀取 config.json
     - 實作設定檔驗證（必須存在且格式正確）
     - 實作 getAudioDirectory 方法
