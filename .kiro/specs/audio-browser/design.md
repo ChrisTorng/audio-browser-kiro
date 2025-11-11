@@ -2,7 +2,7 @@
 
 ## Overview
 
-音頻瀏覽器採用整合式架構，使用 Node.js + Fastify + TypeScript 建構單一服務，同時處理 API 和前端靜態檔案。前端使用 React + TypeScript 實現互動式使用者介面。系統設計重點在於高效能的音檔管理、即時波形圖生成、流暢的鍵盤導航體驗、緊湊的 UI 設計，以及未來可輕鬆轉換為 Electron 桌面應用的架構。
+音頻瀏覽器採用整合式架構，使用 Node.js + Fastify + TypeScript 建構單一服務，同時處理 API 和前端靜態檔案。前端使用 React + TypeScript 實現互動式使用者介面。系統在啟動時自動掃描設定檔指定的音檔資料夾（預設 "../music-player"），只保留包含音檔的資料夾，並快取掃描結果供前端使用。設計重點在於高效能的音檔管理、即時波形圖生成、流暢的鍵盤導航體驗、最大化音檔項目顯示的 UI 設計，以及未來可輕鬆轉換為 Electron 桌面應用的架構。
 
 ## Architecture
 
@@ -71,6 +71,44 @@
 - Server 程式碼可直接作為 Electron main process
 - React 前端可直接作為 renderer process
 
+## Application Startup Flow
+
+### Backend Initialization Sequence
+
+1. **載入設定檔**
+   - 讀取 `config.json`
+   - 如果設定檔不存在，拋出錯誤並終止啟動
+   - 驗證設定檔格式和必要欄位
+
+2. **初始化資料庫**
+   - 建立或開啟 SQLite 資料庫
+   - 執行 schema 初始化
+
+3. **掃描音檔資料夾**
+   - 掃描設定檔指定的資料夾
+   - 建立完整的目錄樹結構
+   - 過濾掉不含音檔的資料夾
+   - 快取結果於記憶體中
+
+4. **啟動 Fastify 伺服器**
+   - 註冊路由
+   - 開始監聽請求
+
+### Frontend Initialization Sequence
+
+1. **載入應用程式**
+   - React 應用初始化
+
+2. **取得音檔樹**
+   - 呼叫 `GET /api/tree` 取得已掃描的目錄結構
+
+3. **載入 Metadata**
+   - 呼叫 `GET /api/metadata` 取得所有評分和描述
+
+4. **渲染 UI**
+   - 顯示音檔樹狀結構
+   - 準備好接受使用者互動
+
 ## Components and Interfaces
 
 ### Backend Components
@@ -78,7 +116,7 @@
 #### 1. API Layer (`src/server/routes/`)
 
 **`audioRoutes.ts`**
-- `POST /api/scan`: 掃描指定資料夾並返回音檔樹狀結構
+- `GET /api/tree`: 取得已掃描的音檔樹狀結構（啟動時已完成掃描）
 - `GET /api/audio/*`: 串流音檔內容（支援 Range requests）
 - `GET /api/metadata`: 取得所有已儲存的 metadata
 - `POST /api/metadata`: 更新音檔的評分或描述
@@ -86,12 +124,29 @@
 
 #### 2. Service Layer (`src/server/services/`)
 
+**`configService.ts`**
+```typescript
+class ConfigService {
+  getAudioDirectory(): string;
+  loadConfig(): Config;  // 如果 config.json 不存在則拋出錯誤
+}
+
+interface Config {
+  audioDirectory: string;
+}
+```
+
 **`scanService.ts`**
 ```typescript
 class ScanService {
-  async scanDirectory(rootPath: string): Promise<DirectoryTree>;
+  private cachedTree: DirectoryTree | null;
+  
+  async initialize(): Promise<void>;  // 啟動時呼叫，掃描並快取結果
+  getTree(): DirectoryTree;  // 返回快取的樹狀結構
   getSupportedFormats(): string[];
+  private async scanDirectory(rootPath: string): Promise<DirectoryTree>;
   private async buildTree(path: string): Promise<DirectoryNode>;
+  private hasAudioFiles(node: DirectoryNode): boolean;  // 檢查是否包含音檔
 }
 ```
 
@@ -163,27 +218,65 @@ class Database {
 
 ### Frontend Components
 
+#### UI Layout Design
+
+整體佈局採用最大化內容顯示的設計原則：
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Header: 網站標題              [篩選] [星級篩選]        │ ← 緊湊的標題列
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌─ 資料夾 1 (5 files)                                 │
+│  │  ├─ ⭐⭐⭐ song1.mp3  [波形圖] [頻譜圖] 描述...      │
+│  │  └─ ☆☆☆ song2.mp3  [波形圖] [頻譜圖] 描述...      │
+│  │                                                      │
+│  ┌─ 資料夾 2 (3 files)                                 │
+│  │  ├─ ⭐☆☆ track1.mp3 [波形圖] [頻譜圖] 描述...      │
+│  │  ...                                                 │
+│                                                         │
+│                                                         │ ← 主要內容區域
+│                                                         │   佔據絕大部分空間
+│                                                         │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+移除的元素：
+- Selected 狀態顯示（改用項目背景色）
+- Playing 狀態顯示（改用波形圖上的進度條）
+- Progress 資訊顯示（整合在波形圖中）
+- 獨立的篩選區塊（移至標題右側）
+
 #### 1. Core Components (`frontend/src/components/`)
 
 **`AudioBrowser.tsx`**
 - 主要容器元件
 - 管理全域狀態（音檔樹、篩選條件、當前選擇）
 - 處理鍵盤事件
+- 包含標題列和篩選功能
+
+**`Header.tsx`**
+- 網站標題
+- 整合 FilterBar 於右側
+- 緊湊設計以節省空間
 
 **`FilterBar.tsx`**
 - 文字篩選輸入框
 - 星級篩選下拉選單
-- 顯示篩選結果數量
+- 位於標題右側
 
 **`AudioTree.tsx`**
 - 顯示音檔樹狀結構
 - 虛擬滾動實作（處理大量項目）
 - 管理展開/收合狀態
+- 佔據主要畫面空間
 
 **`AudioItem.tsx`**
 - 單一音檔項目（單行顯示）
 - 包含：星級、檔名、波形圖、頻譜圖、描述
-- 處理選擇狀態視覺化
+- 處理選擇狀態視覺化（簡單的背景色或邊框）
+- 不顯示額外的播放狀態資訊
 
 **`StarRating.tsx`**
 - 三星評分元件
@@ -270,7 +363,7 @@ interface UseAudioMetadataReturn {
 **`api.ts`**
 ```typescript
 class AudioBrowserAPI {
-  async scanDirectory(path: string): Promise<DirectoryTree>;
+  async getTree(): Promise<DirectoryTree>;  // 取得已掃描的樹狀結構
   async getAudioFile(filePath: string): Promise<Blob>;
   async getAllMetadata(): Promise<Record<string, AudioMetadata>>;
   async updateMetadata(filePath: string, data: MetadataUpdate): Promise<AudioMetadata>;
@@ -296,6 +389,17 @@ class SpectrogramGenerator {
 
 ## Data Models
 
+### Configuration File
+
+**`config.json`** (必須位於專案根目錄)
+```json
+{
+  "audioDirectory": "../music-player"
+}
+```
+
+此設定檔為必要檔案，如果不存在，應用程式將無法啟動並顯示錯誤訊息。預設內容中 `audioDirectory` 設定為 "../music-player"。
+
 ### Database Schema
 
 ```sql
@@ -314,7 +418,7 @@ CREATE INDEX idx_rating ON audio_metadata(rating);
 
 ### API Data Transfer Objects
 
-**DirectoryTree Response**
+**DirectoryTree Response (GET /api/tree)**
 ```json
 {
   "name": "root",
@@ -330,12 +434,20 @@ CREATE INDEX idx_rating ON audio_metadata(rating);
     {
       "name": "album1",
       "path": "/music/album1",
-      "files": [],
+      "files": [
+        {
+          "name": "track.mp3",
+          "path": "/music/album1/track.mp3",
+          "size": 3145728
+        }
+      ],
       "subdirectories": []
     }
   ]
 }
 ```
+
+注意：只包含有音檔的資料夾。空資料夾（不含音檔）會被過濾掉。
 
 **Metadata Response**
 ```json
@@ -361,17 +473,22 @@ CREATE INDEX idx_rating ON audio_metadata(rating);
 
 ### Backend Error Handling
 
-1. **檔案系統錯誤**
-   - 資料夾不存在：返回 404
-   - 權限不足：返回 403
+1. **設定檔錯誤**
+   - config.json 不存在：終止啟動並顯示錯誤訊息
+   - config.json 格式錯誤：終止啟動並顯示錯誤訊息
+   - audioDirectory 欄位缺失：終止啟動並顯示錯誤訊息
+
+2. **檔案系統錯誤**
+   - 音檔資料夾不存在：終止啟動並顯示錯誤訊息
+   - 權限不足：記錄警告並繼續
    - 檔案讀取失敗：記錄錯誤並繼續處理其他檔案
 
-2. **資料庫錯誤**
+3. **資料庫錯誤**
    - 連線失敗：返回 500 並記錄錯誤
    - 資料驗證失敗：返回 400 並提供詳細訊息
    - 唯一性衝突：使用 upsert 邏輯
 
-3. **API 錯誤回應格式**
+4. **API 錯誤回應格式**
 ```json
 {
   "error": {
@@ -492,9 +609,11 @@ describe('AudioItem', () => {
 ### Backend Optimization
 
 1. **檔案掃描**
+   - 啟動時執行一次完整掃描
    - 使用非同步 I/O
    - 平行處理子資料夾
-   - 快取掃描結果（可選）
+   - 快取掃描結果於記憶體中
+   - 過濾不含音檔的資料夾以減少資料量
 
 2. **音檔串流**
    - 使用 Range requests 支援
@@ -523,15 +642,29 @@ describe('AudioItem', () => {
 
 ### Development
 - 使用 `npm run dev` 啟動整合開發環境
+- 伺服器啟動時自動掃描設定檔指定的音檔資料夾
 - Vite 開發伺服器處理前端熱更新（port 5173）
 - Fastify 伺服器處理 API 請求（port 3000）
 - Vite 自動 proxy API 請求到 Fastify
 
 ### Production
 - 使用 `npm run build` 建置前端靜態檔案
+- 使用 `npm start` 啟動生產版本
+- 伺服器啟動時自動掃描音檔資料夾（可能需要幾秒鐘）
 - Fastify 同時服務 API 和靜態檔案
 - 單一 port 部署（預設 3000）
 - 跨平台執行（Windows/Linux/macOS）
+
+### Configuration
+- 必須在專案根目錄建立 `config.json`
+- 如果設定檔不存在，應用程式將無法啟動
+- 預設設定檔內容（audioDirectory 為 "../music-player"）：
+  ```json
+  {
+    "audioDirectory": "../music-player"
+  }
+  ```
+- 使用者可修改 `audioDirectory` 來指定自己的音檔資料夾路徑
 
 ### 未來 Electron 轉換
 - 最小化改動即可打包為桌面應用
