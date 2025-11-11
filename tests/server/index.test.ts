@@ -1,6 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { ConfigService } from '../../src/server/services/configService';
+import { ScanService } from '../../src/server/services/scanService';
 
 describe('Fastify Server Instance', () => {
   let server: FastifyInstance;
@@ -310,6 +314,145 @@ describe('Error Handling and Logging', () => {
 
       expect(serverWithReqId).toBeDefined();
       serverWithReqId.close();
+    });
+  });
+});
+
+describe('Application Initialization', () => {
+  const testDir = path.join(__dirname, 'test-init');
+  const testConfigPath = path.join(testDir, 'config.json');
+  const testAudioDir = path.join(testDir, 'audio');
+
+  beforeEach(async () => {
+    // Create test directories
+    await fs.mkdir(testDir, { recursive: true });
+    await fs.mkdir(testAudioDir, { recursive: true });
+
+    // Create test audio files
+    await fs.writeFile(path.join(testAudioDir, 'song1.mp3'), 'fake audio');
+    await fs.writeFile(path.join(testAudioDir, 'song2.wav'), 'fake audio');
+  });
+
+  afterEach(async () => {
+    // Clean up test directory
+    await fs.rm(testDir, { recursive: true, force: true });
+  });
+
+  describe('ConfigService and ScanService Integration', () => {
+    it('should load config and initialize scan service successfully', async () => {
+      // Create valid config file
+      const config = {
+        audioDirectory: testAudioDir,
+      };
+      await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
+
+      // Initialize services
+      const configService = new ConfigService(testConfigPath);
+      const scanService = new ScanService();
+
+      // Load configuration
+      await configService.loadConfig();
+      const audioDirectory = configService.getAudioDirectory();
+      expect(audioDirectory).toBe(testAudioDir);
+
+      // Initialize scan service
+      await scanService.initialize(audioDirectory);
+      expect(scanService.isInitialized()).toBe(true);
+
+      // Get scan results
+      const tree = scanService.getTree();
+      expect(tree).toBeDefined();
+      expect(tree.files).toHaveLength(2);
+    });
+
+    it('should fail initialization if config file does not exist', async () => {
+      const nonExistentConfig = path.join(testDir, 'non-existent.json');
+      const configService = new ConfigService(nonExistentConfig);
+
+      await expect(configService.loadConfig()).rejects.toThrow(
+        /Configuration file not found/
+      );
+    });
+
+    it('should fail initialization if audio directory does not exist', async () => {
+      // Create config with non-existent audio directory
+      const config = {
+        audioDirectory: path.join(testDir, 'non-existent-audio'),
+      };
+      await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
+
+      const configService = new ConfigService(testConfigPath);
+      const scanService = new ScanService();
+
+      await configService.loadConfig();
+      const audioDirectory = configService.getAudioDirectory();
+
+      await expect(scanService.initialize(audioDirectory)).rejects.toThrow(
+        /Audio directory not found/
+      );
+    });
+
+    it('should log scan statistics after initialization', async () => {
+      // Create config file
+      const config = {
+        audioDirectory: testAudioDir,
+      };
+      await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
+
+      // Initialize services
+      const configService = new ConfigService(testConfigPath);
+      const scanService = new ScanService();
+
+      await configService.loadConfig();
+      const audioDirectory = configService.getAudioDirectory();
+      await scanService.initialize(audioDirectory);
+
+      // Verify scan results
+      const tree = scanService.getTree();
+      expect(tree.files).toHaveLength(2);
+
+      // Verify supported formats
+      const formats = scanService.getSupportedFormats();
+      expect(formats).toContain('.mp3');
+      expect(formats).toContain('.wav');
+    });
+
+    it('should handle empty audio directory', async () => {
+      const emptyDir = path.join(testDir, 'empty-audio');
+      await fs.mkdir(emptyDir, { recursive: true });
+
+      // Create config file
+      const config = {
+        audioDirectory: emptyDir,
+      };
+      await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
+
+      // Initialize services
+      const configService = new ConfigService(testConfigPath);
+      const scanService = new ScanService();
+
+      await configService.loadConfig();
+      const audioDirectory = configService.getAudioDirectory();
+      await scanService.initialize(audioDirectory);
+
+      // Verify scan results
+      const tree = scanService.getTree();
+      expect(tree.files).toHaveLength(0);
+      expect(tree.subdirectories).toHaveLength(0);
+    });
+
+    it('should provide absolute path for audio directory', async () => {
+      // Create config with relative path
+      const config = {
+        audioDirectory: './audio',
+      };
+      await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
+
+      const configService = new ConfigService(testConfigPath);
+      await configService.loadConfig();
+
+      const absolutePath = configService.getAudioDirectoryAbsolutePath();
+      expect(path.isAbsolute(absolutePath)).toBe(true);
     });
   });
 });

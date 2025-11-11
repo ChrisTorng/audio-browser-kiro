@@ -157,20 +157,70 @@ const scanService = new ScanService();
 
 // Load configuration and initialize scan service
 try {
-  console.log('Loading configuration...');
+  console.log('🔧 Loading configuration...');
   await configService.loadConfig();
   
   const audioDirectory = configService.getAudioDirectory();
-  console.log(`Audio directory: ${audioDirectory}`);
+  const absolutePath = configService.getAudioDirectoryAbsolutePath();
+  console.log(`📁 Audio directory: ${audioDirectory}`);
+  console.log(`📂 Absolute path: ${absolutePath}`);
   
-  console.log('Initializing scan service...');
+  console.log('🔍 Initializing scan service...');
+  const scanStartTime = Date.now();
   await scanService.initialize(audioDirectory);
-  console.log('Scan service initialized successfully');
+  const scanDuration = Date.now() - scanStartTime;
+  
+  // Get scan statistics
+  const tree = scanService.getTree();
+  const fileCount = countAudioFiles(tree);
+  const dirCount = countDirectories(tree);
+  
+  console.log('✅ Scan service initialized successfully');
+  console.log(`📊 Scan statistics:`);
+  console.log(`   - Audio files found: ${fileCount}`);
+  console.log(`   - Directories with audio: ${dirCount}`);
+  console.log(`   - Scan duration: ${scanDuration}ms`);
+  console.log(`   - Supported formats: ${scanService.getSupportedFormats().join(', ')}`);
+  
+  fastify.log.info({
+    audioDirectory,
+    absolutePath,
+    fileCount,
+    dirCount,
+    scanDuration,
+    supportedFormats: scanService.getSupportedFormats(),
+  }, 'Application initialized successfully');
 } catch (error) {
   const err = error instanceof Error ? error : new Error(String(error));
   console.error('❌ Failed to initialize application:', err.message);
+  console.error('💡 Please check:');
+  console.error('   1. config.json exists in the project root');
+  console.error('   2. audioDirectory path in config.json is correct');
+  console.error('   3. The audio directory exists and is accessible');
   fastify.log.fatal({ err }, 'Application initialization failed');
   process.exit(1);
+}
+
+/**
+ * Count total number of audio files in directory tree
+ */
+function countAudioFiles(node: { files: unknown[]; subdirectories: unknown[] }): number {
+  let count = node.files.length;
+  for (const subNode of node.subdirectories as { files: unknown[]; subdirectories: unknown[] }[]) {
+    count += countAudioFiles(subNode);
+  }
+  return count;
+}
+
+/**
+ * Count total number of directories in tree
+ */
+function countDirectories(node: { subdirectories: unknown[] }): number {
+  let count = 1; // Count current directory
+  for (const subNode of node.subdirectories as { subdirectories: unknown[] }[]) {
+    count += countDirectories(subNode);
+  }
+  return count;
 }
 
 // Serve static files in production

@@ -92,7 +92,7 @@
     - 配置開發/生產環境差異
     - _Requirements: 所有需求_
   
-  - [ ] 4.6 實作應用啟動初始化
+  - [x] 4.6 實作應用啟動初始化
     - 載入 ConfigService 並驗證 config.json
     - 初始化 ScanService 並執行掃描
     - 如果設定檔或音檔資料夾有問題則終止啟動
