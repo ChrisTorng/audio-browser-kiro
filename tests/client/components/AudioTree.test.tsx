@@ -17,6 +17,7 @@ describe('AudioTree', () => {
           { name: 'song2.mp3', path: '/music/song2.mp3', size: 2048 },
         ],
         subdirectories: [],
+        totalFileCount: 2,
       },
     },
     {
@@ -56,7 +57,7 @@ describe('AudioTree', () => {
 
     // Check directory is rendered
     expect(screen.getByText('Music')).toBeInTheDocument();
-    expect(screen.getByText('(2 files)')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
 
     // Check files are rendered
     expect(screen.getByText('song1.mp3')).toBeInTheDocument();

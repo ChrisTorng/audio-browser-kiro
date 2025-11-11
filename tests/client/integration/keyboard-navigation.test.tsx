@@ -102,6 +102,7 @@ describe('Keyboard Navigation Integration Tests', () => {
           { name: 'rock2.mp3', path: 'rock/rock2.mp3', size: 5500000 },
         ],
         subdirectories: [],
+        totalFileCount: 2,
       },
       {
         name: 'jazz',
@@ -117,10 +118,13 @@ describe('Keyboard Navigation Integration Tests', () => {
               { name: 'classic1.wav', path: 'jazz/classic/classic1.wav', size: 8000000 },
             ],
             subdirectories: [],
+            totalFileCount: 1,
           },
         ],
+        totalFileCount: 2,
       },
     ],
+    totalFileCount: 6,
   };
 
   const setupScannedTree = async () => {

@@ -18,6 +18,7 @@ describe('AudioTree - React Window itemData Fix', () => {
           path: 'root',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
     ];
@@ -47,6 +48,7 @@ describe('AudioTree - React Window itemData Fix', () => {
           path: 'dir1',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
     ];
@@ -62,6 +64,7 @@ describe('AudioTree - React Window itemData Fix', () => {
           path: 'dir1',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
       {
@@ -124,6 +127,7 @@ describe('AudioTree - React Window itemData Fix', () => {
           path: `dir${idx}`,
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       }));
 

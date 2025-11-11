@@ -34,8 +34,10 @@ describe('AudioBrowser', () => {
           { name: 'track1.mp3', path: '/music/album1/track1.mp3', size: 3072 },
         ],
         subdirectories: [],
+        totalFileCount: 1,
       },
     ],
+    totalFileCount: 3,
   };
 
   beforeEach(() => {

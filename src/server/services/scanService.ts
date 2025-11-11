@@ -112,6 +112,9 @@ export class ScanService {
     // Filter out directories without audio files
     this.filterEmptyDirectories(node);
 
+    // Calculate total file count for all nodes
+    this.calculateTotalFileCount(node);
+
     // Cache the result
     this.cachedTree = node;
 
@@ -139,6 +142,7 @@ export class ScanService {
       path: relativePath || '.',
       files: [],
       subdirectories: [],
+      totalFileCount: 0, // Will be calculated later
     };
 
     try {
@@ -242,6 +246,27 @@ export class ScanService {
     }
 
     return count;
+  }
+
+  /**
+   * Calculate total file count for all nodes recursively
+   * Modifies the tree in place
+   * @param node - Directory node to calculate
+   * @returns Total number of audio files in this node and all subdirectories
+   */
+  private calculateTotalFileCount(node: DirectoryNode): number {
+    // Start with direct files
+    let total = node.files.length;
+
+    // Add files from all subdirectories
+    for (const subNode of node.subdirectories) {
+      total += this.calculateTotalFileCount(subNode);
+    }
+
+    // Update the node's totalFileCount
+    node.totalFileCount = total;
+
+    return total;
   }
 
   /**

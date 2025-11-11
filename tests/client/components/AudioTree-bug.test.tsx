@@ -36,6 +36,7 @@ describe('AudioTree - Bug Reproduction', () => {
           path: 'test',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
     ];
@@ -67,6 +68,7 @@ describe('AudioTree - Bug Reproduction', () => {
           path: 'test',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
     ];
@@ -111,8 +113,10 @@ describe('AudioTree - Bug Reproduction', () => {
                 },
               ],
               subdirectories: [],
+              totalFileCount: 1,
             },
           ],
+          totalFileCount: 1,
         },
       },
     ];

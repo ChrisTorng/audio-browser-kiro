@@ -133,8 +133,10 @@ describe('User Flow Integration Tests', () => {
           { name: 'track1.flac', path: 'album1/track1.flac', size: 12000000 },
         ],
         subdirectories: [],
+        totalFileCount: 1,
       },
     ],
+    totalFileCount: 3,
   };
 
   describe('Complete User Flow: Scan → Display → Select → Play', () => {

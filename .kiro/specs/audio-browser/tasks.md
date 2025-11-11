@@ -21,14 +21,14 @@
 
 根據最新的需求文件，以下功能需要優化或新增：
 
-- [ ] 1. 資料夾音檔數量計算優化
-  - [ ] 1.1 更新 ScanService 以遞迴計算資料夾內所有音檔數量
+- [x] 1. 資料夾音檔數量計算優化
+  - [x] 1.1 更新 ScanService 以遞迴計算資料夾內所有音檔數量
     - 實作 `countTotalAudioFiles` 方法遞迴計算所有子資料夾內的音檔
     - 在 `DirectoryNode` 介面新增 `totalFileCount` 欄位
     - 更新 API 回應以包含 `totalFileCount` 資訊
     - _Requirements: 2.6_
   
-  - [ ] 1.2 更新前端顯示資料夾音檔數量
+  - [x] 1.2 更新前端顯示資料夾音檔數量
     - 修改 AudioTree 元件以顯示遞迴計算的音檔總數
     - 移除 "files" 文字和括弧，僅顯示數字
     - 確保數量計算包含所有子資料夾，不論是否展開

@@ -186,7 +186,7 @@ export function AudioTree({
                   {highlightText(item.directory.name, filterText)}
                 </span>
                 <span className="audio-tree__directory-count">
-                  ({item.directory.files.length} files)
+                  {item.directory.totalFileCount}
                 </span>
               </div>
             )}

@@ -39,6 +39,7 @@ describe('AudioBrowser - Initialization with Real API Data', () => {
       name: 'music-player',
       path: '.',
       files: [],
+      totalFileCount: 1,
       subdirectories: [
         {
           name: 'Liszt-Liebesträume-No.3',
@@ -66,12 +67,16 @@ describe('AudioBrowser - Initialization with Real API Data', () => {
                         },
                       ],
                       subdirectories: [],
+                      totalFileCount: 1,
                     },
                   ],
+                  totalFileCount: 1,
                 },
               ],
+              totalFileCount: 1,
             },
           ],
+          totalFileCount: 1,
         },
         {
           name: 'test',
@@ -83,8 +88,10 @@ describe('AudioBrowser - Initialization with Real API Data', () => {
               path: 'test/test',
               files: [],
               subdirectories: [],
+              totalFileCount: 0,
             },
           ],
+          totalFileCount: 0,
         },
       ],
     };
@@ -118,6 +125,7 @@ describe('AudioBrowser - Initialization with Real API Data', () => {
       path: '.',
       files: [],
       subdirectories: [],
+      totalFileCount: 0,
     };
 
     vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(mockTree);

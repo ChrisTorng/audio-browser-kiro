@@ -33,6 +33,7 @@ describe('AudioTree - Empty Data Handling', () => {
           path: 'root',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
     ];
@@ -49,7 +50,7 @@ describe('AudioTree - Empty Data Handling', () => {
     // Should render the directory item
     expect(container.querySelector('.audio-tree__directory')).toBeInTheDocument();
     expect(screen.getByText('Root')).toBeInTheDocument();
-    expect(screen.getByText('(0 files)')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   it('should handle nested directories with empty arrays', () => {
@@ -69,8 +70,10 @@ describe('AudioTree - Empty Data Handling', () => {
               path: 'root/subdir',
               files: [],
               subdirectories: [],
+              totalFileCount: 0,
             },
           ],
+          totalFileCount: 0,
         },
       },
       {
@@ -83,6 +86,7 @@ describe('AudioTree - Empty Data Handling', () => {
           path: 'root/subdir',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
     ];
@@ -119,8 +123,10 @@ describe('AudioTree - Empty Data Handling', () => {
               path: 'test',
               files: [],
               subdirectories: [],
+              totalFileCount: 0,
             },
           ],
+          totalFileCount: 0,
         },
       },
       {
@@ -133,6 +139,7 @@ describe('AudioTree - Empty Data Handling', () => {
           path: 'test',
           files: [],
           subdirectories: [],
+          totalFileCount: 0,
         },
       },
     ];

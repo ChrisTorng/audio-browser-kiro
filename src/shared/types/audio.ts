@@ -27,6 +27,7 @@ export interface DirectoryNode {
   path: string;
   files: AudioFile[];
   subdirectories: DirectoryNode[];
+  totalFileCount: number; // Total number of audio files including all subdirectories
 }
 
 /**

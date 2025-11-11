@@ -146,6 +146,7 @@ describe('Audio Playback Integration Tests', () => {
       { name: 'track3.flac', path: 'track3.flac', size: 12000000 },
     ],
     subdirectories: [],
+    totalFileCount: 3,
   };
 
   const setupScannedTree = async () => {

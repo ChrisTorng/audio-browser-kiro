@@ -59,6 +59,7 @@ describe('ScanService', () => {
       expect(tree.path).toBe('.');
       expect(tree.files).toHaveLength(2);
       expect(tree.subdirectories).toHaveLength(2);
+      expect(tree.totalFileCount).toBe(7); // 2 root + 2 album1 + 1 disc1 + 2 album2
     });
 
     it('should include all audio files in root directory', async () => {
@@ -83,10 +84,12 @@ describe('ScanService', () => {
       expect(album1).toBeDefined();
       expect(album1?.files).toHaveLength(2);
       expect(album1?.subdirectories).toHaveLength(1);
+      expect(album1?.totalFileCount).toBe(3); // 2 direct + 1 in disc1
 
       const disc1 = album1?.subdirectories.find(d => d.name === 'disc1');
       expect(disc1).toBeDefined();
       expect(disc1?.files).toHaveLength(1);
+      expect(disc1?.totalFileCount).toBe(1); // 1 direct file
     });
 
     it('should include correct file metadata', async () => {
@@ -166,6 +169,25 @@ describe('ScanService', () => {
       // Should still return valid tree structure
       expect(tree).toBeDefined();
       expect(tree.name).toBe('test-audio-files');
+    });
+
+    it('should calculate totalFileCount recursively for all directories', async () => {
+      const tree = await scanService.scanDirectory(testDir);
+
+      // Root should have total of all files
+      expect(tree.totalFileCount).toBe(7);
+
+      // album1 should have 2 direct + 1 in disc1
+      const album1 = tree.subdirectories.find(d => d.name === 'album1');
+      expect(album1?.totalFileCount).toBe(3);
+
+      // album2 should have 2 direct files
+      const album2 = tree.subdirectories.find(d => d.name === 'album2');
+      expect(album2?.totalFileCount).toBe(2);
+
+      // disc1 should have 1 direct file
+      const disc1 = album1?.subdirectories.find(d => d.name === 'disc1');
+      expect(disc1?.totalFileCount).toBe(1);
     });
   });
 
