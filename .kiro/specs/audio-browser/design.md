@@ -147,6 +147,7 @@ class ScanService {
   private async scanDirectory(rootPath: string): Promise<DirectoryTree>;
   private async buildTree(path: string): Promise<DirectoryNode>;
   private hasAudioFiles(node: DirectoryNode): boolean;  // 檢查是否包含音檔
+  private countTotalAudioFiles(node: DirectoryNode): number;  // 遞迴計算所有音檔數量
 }
 ```
 
@@ -196,6 +197,7 @@ interface DirectoryNode {
   path: string;
   files: AudioFile[];
   subdirectories: DirectoryNode[];
+  totalFileCount: number;  // 遞迴計算的總音檔數量（包括所有子資料夾）
 }
 
 type DirectoryTree = DirectoryNode;
@@ -265,12 +267,16 @@ class Database {
 - 文字篩選輸入框
 - 星級篩選下拉選單
 - 位於標題右側
+- 顯示被篩選出來的總音檔數量（不包含資料夾數量）
+- 高亮顯示符合篩選條件的文字（不改變文字寬度）
 
 **`AudioTree.tsx`**
 - 顯示音檔樹狀結構
 - 虛擬滾動實作（處理大量項目）
 - 管理展開/收合狀態
 - 佔據主要畫面空間
+- 顯示資料夾的總音檔數量（遞迴計算，不含 "files" 文字和括弧）
+- 自動捲動以保持選中項目可見
 
 **`AudioItem.tsx`**
 - 單一音檔項目（單行顯示）
@@ -287,11 +293,13 @@ class Database {
 - 波形圖顯示
 - 整合播放進度條
 - 使用 Canvas 或 SVG 繪製
+- 即時在瀏覽器中生成（使用 Web Audio API）
 
 **`SpectrogramDisplay.tsx`**
 - 頻譜圖顯示
 - 同步顯示播放進度條
 - 使用 Canvas 繪製
+- 即時在瀏覽器中生成（使用 Web Audio API）
 
 **`DescriptionField.tsx`**
 - 可編輯描述欄位
@@ -302,6 +310,8 @@ class Database {
 - 音頻播放控制（無 UI）
 - 循環播放邏輯
 - 播放狀態管理
+- 處理播放中斷和 AbortError
+- 確保同一時間只有一個音檔播放
 
 #### 2. Hooks (`frontend/src/hooks/`)
 
@@ -345,6 +355,11 @@ interface UseKeyboardNavigationReturn {
   handleKeyDown: (event: KeyboardEvent) => void;
   selectNext: () => void;
   selectPrevious: () => void;
+  collapseCurrentFolder: () => void;  // 收合當前資料夾
+  expandCurrentFolder: () => void;    // 展開當前資料夾
+  collapseParentFolder: () => void;   // 收合上層資料夾
+  handleNumberKey: (rating: number) => void;  // 處理數字鍵 1/2/3 設定評分
+  handleEnterKey: () => void;  // 處理 Enter 鍵進入描述編輯
 }
 ```
 
@@ -400,6 +415,8 @@ class SpectrogramGenerator {
 
 此設定檔為必要檔案，如果不存在，應用程式將無法啟動並顯示錯誤訊息。預設內容中 `audioDirectory` 設定為 "../music-player"。
 
+**設計決策**: 使用簡單的 JSON 設定檔而非環境變數，因為這是桌面應用的使用情境，使用者可以直接編輯設定檔來指定音檔資料夾路徑。
+
 ### Database Schema
 
 ```sql
@@ -441,13 +458,17 @@ CREATE INDEX idx_rating ON audio_metadata(rating);
           "size": 3145728
         }
       ],
-      "subdirectories": []
+      "subdirectories": [],
+      "totalFileCount": 1
     }
-  ]
+  ],
+  "totalFileCount": 2
 }
 ```
 
-注意：只包含有音檔的資料夾。空資料夾（不含音檔）會被過濾掉。
+注意：
+- 只包含有音檔的資料夾。空資料夾（不含音檔）會被過濾掉。
+- `totalFileCount` 欄位遞迴計算該資料夾及所有子資料夾內的音檔總數。
 
 **Metadata Response**
 ```json
@@ -513,6 +534,15 @@ CREATE INDEX idx_rating ON audio_metadata(rating);
 3. **波形圖生成錯誤**
    - 顯示簡化的佔位圖
    - 不影響播放功能
+
+4. **播放中斷處理**
+   - 正確處理 AbortError（快速切換音檔時）
+   - 不顯示 AbortError 錯誤訊息
+   - 清理被中斷的播放資源
+
+5. **成功狀態處理**
+   - 成功載入時不顯示任何訊息
+   - 只在發生錯誤時顯示訊息
 
 ## Testing Strategy
 
@@ -585,6 +615,85 @@ describe('AudioItem', () => {
 - 核心業務邏輯：≥ 90%
 - UI 元件：≥ 70%
 
+## UI Design Decisions
+
+### 最大化內容顯示
+
+本系統的 UI 設計以最大化音檔項目顯示為核心原則：
+
+1. **緊湊的標題列**
+   - 將篩選功能整合到標題右側
+   - 移除獨立的篩選區塊
+   - 設計理由：節省垂直空間，讓更多音檔項目可見
+
+2. **移除冗餘狀態顯示**
+   - 不顯示 Selected 狀態文字（改用背景色）
+   - 不顯示 Playing 狀態文字（整合在波形圖進度條中）
+   - 不顯示 Progress 資訊（整合在波形圖中）
+   - 設計理由：減少視覺雜訊，專注於音檔內容
+
+3. **單行音檔項目**
+   - 依序顯示：星級、檔名、波形圖、頻譜圖、描述
+   - 所有資訊在單行內呈現
+   - 設計理由：提高資訊密度，方便快速瀏覽
+
+4. **資料夾顯示優化**
+   - 顯示資料夾名稱和音檔數量（僅數字，不含 "files" 文字和括弧）
+   - 遞迴計算所有子資料夾內的音檔總數
+   - 設計理由：提供有用的統計資訊，同時保持簡潔
+
+5. **篩選結果顯示**
+   - 顯示被篩選出來的總音檔數量
+   - 高亮顯示符合條件的文字（使用背景色，不改變文字寬度）
+   - 設計理由：提供清晰的篩選反饋，避免版面跳動
+
+6. **成功狀態處理**
+   - 成功載入時不顯示任何訊息
+   - 只在發生錯誤時顯示訊息
+   - 設計理由：減少干擾，讓使用者專注於內容
+
+## Keyboard Navigation Design
+
+### 導航邏輯設計決策
+
+鍵盤導航是本系統的核心功能之一，設計時考慮了以下原則：
+
+1. **上下鍵導航**
+   - 向上/向下鍵移動選取項目
+   - 選中音檔時立即開始播放（提供即時反饋）
+   - 自動捲動以保持選中項目可見
+
+2. **左右鍵導航**
+   - **右鍵**: 展開資料夾（僅對資料夾有效）
+   - **左鍵**: 
+     - 若選中音檔：收合該音檔所屬的資料夾並選擇該資料夾
+     - 若選中已展開的資料夾：收合該資料夾
+     - 若選中已收合的資料夾：收合上層資料夾並選擇上層資料夾
+   - 設計理由：左鍵提供「向上導航」的直覺操作，類似檔案管理器的行為
+
+3. **空白鍵控制**
+   - 停止當前播放或重新開始播放當前音檔
+   - 重新播放時從頭開始（不是暫停/繼續）
+   - 設計理由：簡化播放控制，符合快速瀏覽的使用情境
+
+4. **數字鍵快速評分**
+   - 按下 1/2/3 鍵直接設定當前選中音檔的星級評分
+   - 設計理由：提高評分效率，無需使用滑鼠點擊
+
+5. **Enter 鍵快速編輯**
+   - 按下 Enter 鍵直接進入描述編輯模式
+   - 設計理由：提供純鍵盤操作流程
+
+6. **播放狀態管理**
+   - 從音檔切換到資料夾時自動停止播放
+   - 設計理由：避免混淆，明確播放狀態與選中項目的關聯
+
+### 視覺化反饋
+
+- 使用高亮背景色標示當前選中項目
+- 波形圖上顯示播放進度條
+- 不顯示額外的 Selected/Playing 狀態文字（節省空間）
+
 ## Performance Considerations
 
 ### Frontend Optimization
@@ -597,10 +706,18 @@ describe('AudioItem', () => {
 2. **波形圖與頻譜圖快取**
    - 使用 Map 快取已生成的波形和頻譜資料
    - LRU 策略限制記憶體使用
+   - 設計理由：避免重複生成，提升效能
 
 3. **延遲載入**
    - 音檔按需載入
-   - 波形圖和頻譜圖按可見性生成
+   - 波形圖和頻譜圖在音檔下載後即時生成
+   - 設計理由：平衡載入速度和使用者體驗
+
+4. **篩選效能優化**
+   - 篩選從所有項目中進行，不限於已展開的項目
+   - 使用 debounce (100ms) 減少不必要的計算
+   - 即時更新篩選結果和總數統計
+   - 設計理由：提供完整的搜尋功能，同時保持流暢的輸入體驗
 
 4. **防抖與節流**
    - 篩選輸入使用 debounce (100ms)
