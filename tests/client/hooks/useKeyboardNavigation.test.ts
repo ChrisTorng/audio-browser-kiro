@@ -250,6 +250,28 @@ describe('useKeyboardNavigation', () => {
     expect(event.preventDefault).toHaveBeenCalled();
   });
 
+  it('handles ArrowRight key for files - does nothing', () => {
+    const onExpand = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onExpand })
+    );
+
+    act(() => {
+      result.current.selectItem(0); // Select file
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not call onExpand for files
+    expect(onExpand).not.toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
   it('handles ArrowLeft key for expanded directories - collapses them', () => {
     const onCollapse = vi.fn();
     const { result } = renderHook(() =>
