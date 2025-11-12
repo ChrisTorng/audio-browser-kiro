@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { List } from 'react-window';
 import { AudioFile, DirectoryNode } from '../../shared/types';
 import { useVirtualScrollOptimization } from '../hooks/useVirtualScrollOptimization';
+import { AudioItem } from './AudioItem';
 
 /**
  * Tree item type for rendering
@@ -125,18 +126,20 @@ export function AudioTree({
   /**
    * Row component for react-window v2
    */
-  interface RowComponentProps {
-    index: number;
-    style: React.CSSProperties;
-    ariaAttributes: {
-      'aria-posinset': number;
-      'aria-setsize': number;
-      role: 'listitem';
-    };
-  }
-
   const RowComponent = useCallback(
-    ({ index, style, ariaAttributes }: RowComponentProps) => {
+    ({
+      index,
+      style,
+      ariaAttributes,
+    }: {
+      index: number;
+      style: React.CSSProperties;
+      ariaAttributes: {
+        'aria-posinset': number;
+        'aria-setsize': number;
+        role: 'listitem';
+      };
+    }) => {
       // Guard: Return empty div if style is invalid or index out of bounds
       if (!style || index < 0 || index >= items.length) {
         return <div style={style || {}} {...ariaAttributes} />;
@@ -152,11 +155,23 @@ export function AudioTree({
       const isSelected = index === selectedIndex;
       const isInOverscan = virtualScroll.isItemInOverscan(index);
 
-      // Skip rendering if not in overscan range (performance optimization)
-      if (!isInOverscan) {
-        return <div style={style} {...ariaAttributes} />;
+      // For file items, render AudioItem directly
+      if (item.type === 'file' && item.file) {
+        return (
+          <div style={style} {...ariaAttributes}>
+            <AudioItem
+              file={item.file}
+              isSelected={isSelected}
+              isVisible={isInOverscan}
+              level={item.level}
+              filterText={filterText}
+              onClick={() => onItemClick(index)}
+            />
+          </div>
+        );
       }
 
+      // For directory items, render directory UI
       return (
         <div
           style={style}
@@ -190,15 +205,6 @@ export function AudioTree({
                 </span>
               </div>
             )}
-
-            {item.type === 'file' && item.file && (
-              <div className="audio-tree__file">
-                <span className="audio-tree__file-icon">🎵</span>
-                <span className="audio-tree__file-name">
-                  {highlightText(item.file.name, filterText)}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       );
@@ -218,12 +224,13 @@ export function AudioTree({
     <div className="audio-tree">
       <List
         listRef={listRef}
-        style={{ height, width: '100%' }}
         rowComponent={RowComponent}
         rowCount={items.length}
         rowHeight={itemHeight}
-        rowProps={{}}
+        defaultHeight={height}
+        defaultWidth="100%"
         overscanCount={5}
+        rowProps={{}}
       />
     </div>
   );
