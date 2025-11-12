@@ -98,7 +98,7 @@ export function FilterBar({
       </select>
 
       <span className="filter-bar__count" aria-live="polite">
-        {resultCount} {resultCount === 1 ? 'item' : 'items'}
+        {resultCount} {resultCount === 1 ? 'file' : 'files'}
       </span>
     </div>
   );

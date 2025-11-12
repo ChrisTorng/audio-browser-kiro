@@ -146,6 +146,13 @@ export function AudioBrowser() {
   }, [directoryTree, flattenTree, applyFilters]);
 
   /**
+   * Count only audio files (not directories) in filtered results
+   */
+  const filteredFileCount = useMemo(() => {
+    return displayItems.filter((item) => item.type === 'file').length;
+  }, [displayItems]);
+
+  /**
    * Convert display items to navigation items
    */
   const navigationItems: NavigationItem[] = useMemo(() => {
@@ -365,7 +372,7 @@ export function AudioBrowser() {
         filterBarProps={{
           filterCriteria,
           onFilterChange: handleFilterChange,
-          resultCount: displayItems.length,
+          resultCount: filteredFileCount,
         }}
       />
 

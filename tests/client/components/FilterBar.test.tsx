@@ -49,13 +49,13 @@ describe('FilterBar', () => {
     it('displays result count', () => {
       render(<FilterBar {...defaultProps} resultCount={42} />);
       
-      expect(screen.getByText('42 items')).toBeDefined();
+      expect(screen.getByText('42 files')).toBeDefined();
     });
 
-    it('displays singular "item" for count of 1', () => {
+    it('displays singular "file" for count of 1', () => {
       render(<FilterBar {...defaultProps} resultCount={1} />);
       
-      expect(screen.getByText('1 item')).toBeDefined();
+      expect(screen.getByText('1 file')).toBeDefined();
     });
 
     it('displays current text filter value', () => {
@@ -211,7 +211,7 @@ describe('FilterBar', () => {
     it('has aria-live region for result count', () => {
       render(<FilterBar {...defaultProps} />);
       
-      const countElement = screen.getByText('10 items');
+      const countElement = screen.getByText('10 files');
       expect(countElement.getAttribute('aria-live')).toBe('polite');
     });
   });
