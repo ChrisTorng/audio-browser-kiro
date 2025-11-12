@@ -225,20 +225,6 @@ body {
   }
 }
 
-.audio-browser__debug {
-  padding: 12px;
-  background-color: #1e1e1e;
-  border: 1px solid #3e3e3e;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: 'Courier New', monospace;
-  color: #808080;
-}
-
-.audio-browser__debug p {
-  margin: 4px 0;
-}
-
 /* AudioTree Component */
 .audio-tree {
   width: 100%;

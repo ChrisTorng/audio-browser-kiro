@@ -96,7 +96,7 @@
     - _Requirements: 11.6_
 
 - [ ] 4. 播放錯誤處理優化
-  - [ ] 4.1 實作 AbortError 處理
+  - [x] 4.1 實作 AbortError 處理
     - 正確處理快速切換音檔時的 AbortError
     - 不顯示 AbortError 錯誤訊息
     - 清理被中斷的播放資源

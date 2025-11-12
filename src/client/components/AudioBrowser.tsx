@@ -420,14 +420,6 @@ export function AudioBrowser() {
         )}
       </div>
 
-      {/* Debug info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="audio-browser__debug">
-          <p>Selected: {navigation.selectedIndex}</p>
-          <p>Playing: {audioPlayer.isPlaying ? 'Yes' : 'No'}</p>
-          <p>Progress: {Math.round(audioPlayer.progress * 100)}%</p>
-        </div>
-      )}
     </div>
   );
 }

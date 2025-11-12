@@ -14,8 +14,20 @@ export interface UseAudioPlayerReturn {
 }
 
 /**
+ * Check if error is an AbortError that should be silently ignored
+ * AbortError occurs when switching audio files quickly
+ */
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    return error.name === 'AbortError';
+  }
+  return false;
+}
+
+/**
  * Custom hook for audio playback with loop functionality
  * Manages audio playback state, progress tracking, and loop playback
+ * Handles AbortError when switching audio files quickly (Requirement 12.1, 12.2, 12.4)
  */
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -25,6 +37,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentUrlRef = useRef<string>('');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Initialize audio element
   useEffect(() => {
@@ -34,6 +47,12 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
     // Cleanup on unmount
     return () => {
+      // Cancel any pending playback
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
@@ -76,10 +95,20 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   /**
    * Play audio from URL
    * If a different URL is provided, stops current playback and starts new one
+   * Properly handles AbortError when switching files quickly (Requirement 12.1, 12.2, 12.4)
    */
   const play = useCallback((audioUrl: string) => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Cancel previous playback request if exists (Requirement 12.1)
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new AbortController for this playback
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     // If playing a different file, reset and load new file
     if (currentUrlRef.current !== audioUrl) {
@@ -91,7 +120,15 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setCurrentTime(0);
     }
 
+    // Start playback and handle errors
     audio.play().catch((error) => {
+      // Don't show error message for AbortError (Requirement 12.2)
+      if (isAbortError(error)) {
+        // Silently ignore AbortError - this is expected when switching files quickly
+        return;
+      }
+      
+      // Log other errors
       console.error('Failed to play audio:', error);
       setIsPlaying(false);
     });
@@ -101,10 +138,17 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   /**
    * Stop audio playback and reset to beginning
+   * Cleans up resources and cancels pending playback (Requirement 12.4)
    */
   const stop = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Cancel any pending playback request (Requirement 12.4)
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
 
     audio.pause();
     audio.currentTime = 0;

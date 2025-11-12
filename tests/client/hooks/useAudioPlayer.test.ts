@@ -9,11 +9,16 @@ class MockAudioElement {
   duration = 100;
   loop = false;
   paused = true;
+  shouldRejectPlay = false;
+  playRejectionError: Error | null = null;
   
   private listeners: Record<string, Function[]> = {};
 
   play() {
     this.paused = false;
+    if (this.shouldRejectPlay && this.playRejectionError) {
+      return Promise.reject(this.playRejectionError);
+    }
     return Promise.resolve();
   }
 
@@ -163,5 +168,66 @@ describe('useAudioPlayer', () => {
 
     expect(mockAudio.src).toBe('test2.mp3');
     expect(mockAudio.currentTime).toBe(0);
+  });
+
+  it('handles AbortError silently when switching files quickly', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useAudioPlayer());
+
+    // Create an AbortError
+    const abortError = new DOMException('The play() request was interrupted', 'AbortError');
+    mockAudio.shouldRejectPlay = true;
+    mockAudio.playRejectionError = abortError;
+
+    await act(async () => {
+      result.current.play('test1.mp3');
+      // Wait for promise to settle
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    // AbortError should not be logged
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('logs non-AbortError errors', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useAudioPlayer());
+
+    // Create a different error
+    const networkError = new Error('Network error');
+    mockAudio.shouldRejectPlay = true;
+    mockAudio.playRejectionError = networkError;
+
+    await act(async () => {
+      result.current.play('test1.mp3');
+      // Wait for promise to settle
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    // Non-AbortError should be logged
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to play audio:', networkError);
+    expect(result.current.isPlaying).toBe(false);
+    
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('cleans up resources on stop', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    await act(async () => {
+      result.current.play('test.mp3');
+    });
+
+    expect(result.current.isPlaying).toBe(true);
+
+    act(() => {
+      result.current.stop();
+    });
+
+    expect(mockAudio.paused).toBe(true);
+    expect(mockAudio.currentTime).toBe(0);
+    expect(result.current.isPlaying).toBe(false);
   });
 });
