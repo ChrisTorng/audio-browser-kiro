@@ -249,6 +249,27 @@ export function AudioBrowser() {
     audioPlayer.toggle();
   }, [audioPlayer]);
 
+  /**
+   * Handle rating update via keyboard
+   */
+  const handleRating = useCallback(
+    async (_item: NavigationItem, index: number, rating: number) => {
+      const displayItem = displayItems[index];
+
+      // Only allow rating for files
+      if (displayItem.type === 'file' && displayItem.file) {
+        try {
+          await audioMetadata.updateRating(displayItem.file.path, rating);
+          toast.success(`Rating updated to ${rating} star${rating !== 1 ? 's' : ''}`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to update rating';
+          toast.error(`Rating update failed: ${errorMessage}`);
+        }
+      }
+    },
+    [displayItems, audioMetadata, toast]
+  );
+
   // Keyboard navigation
   const navigation = useKeyboardNavigation({
     items: navigationItems,
@@ -257,6 +278,7 @@ export function AudioBrowser() {
     onExpand: handleExpand,
     onCollapse: handleCollapse,
     onCollapseAndSelectParent: handleCollapseAndSelectParent,
+    onRating: handleRating,
     enabled: true,
   });
 

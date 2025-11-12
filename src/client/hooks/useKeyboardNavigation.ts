@@ -34,6 +34,7 @@ export interface UseKeyboardNavigationOptions {
   onExpand?: (item: NavigationItem, index: number) => void;
   onCollapse?: (item: NavigationItem, index: number) => void;
   onCollapseAndSelectParent?: (item: NavigationItem, index: number) => void;
+  onRating?: (item: NavigationItem, index: number, rating: number) => void;
   enabled?: boolean;
 }
 
@@ -49,6 +50,7 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
     onExpand,
     onCollapse,
     onCollapseAndSelectParent,
+    onRating,
     enabled = true,
   } = options;
 
@@ -189,10 +191,21 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
         }
         break;
 
+      case '1':
+      case '2':
+      case '3':
+        event.preventDefault();
+        // Only allow rating for file items
+        if (selectedItem?.type === 'file' && onRating) {
+          const rating = parseInt(event.key, 10);
+          onRating(selectedItem, selectedIndex, rating);
+        }
+        break;
+
       default:
         break;
     }
-  }, [enabled, selectNext, selectPrevious, expandItem, collapseItem, selectedItem, onTogglePlay]);
+  }, [enabled, selectNext, selectPrevious, expandItem, collapseItem, selectedItem, selectedIndex, onTogglePlay, onRating, onCollapseAndSelectParent]);
 
   /**
    * Attach keyboard event listener

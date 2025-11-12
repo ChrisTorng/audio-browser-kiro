@@ -46,7 +46,7 @@
     - 選中音檔時：無動作
     - _Requirements: 4.7_
   
-  - [ ] 2.3 實作數字鍵快速評分
+  - [x] 2.3 實作數字鍵快速評分
     - 按下 1/2/3 鍵直接設定當前選中音檔的星級評分
     - 更新 useKeyboardNavigation Hook 以處理數字鍵事件
     - _Requirements: 6.6_

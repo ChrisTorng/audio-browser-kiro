@@ -404,4 +404,114 @@ describe('useKeyboardNavigation', () => {
     // Should not crash
     expect(result.current.selectedIndex).toBe(0);
   });
+
+  it('handles number key 1 for rating', () => {
+    const onRating = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onRating })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: '1' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(onRating).toHaveBeenCalledWith(mockItems[0], 0, 1);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('handles number key 2 for rating', () => {
+    const onRating = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onRating })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(2);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: '2' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(onRating).toHaveBeenCalledWith(mockItems[2], 2, 2);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('handles number key 3 for rating', () => {
+    const onRating = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onRating })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(4);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: '3' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(onRating).toHaveBeenCalledWith(mockItems[4], 4, 3);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('does not call onRating for directories', () => {
+    const onRating = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onRating })
+    );
+
+    // Select a directory
+    act(() => {
+      result.current.selectItem(1);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: '1' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not call onRating for directories
+    expect(onRating).not.toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('does not call onRating when callback is not provided', () => {
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: '1' });
+    event.preventDefault = vi.fn();
+
+    // Should not crash when onRating is not provided
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
 });
