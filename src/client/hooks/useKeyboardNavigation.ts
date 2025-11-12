@@ -35,6 +35,7 @@ export interface UseKeyboardNavigationOptions {
   onCollapse?: (item: NavigationItem, index: number) => void;
   onCollapseAndSelectParent?: (item: NavigationItem, index: number) => void;
   onRating?: (item: NavigationItem, index: number, rating: number) => void;
+  onEnterEdit?: (item: NavigationItem, index: number) => void;
   enabled?: boolean;
 }
 
@@ -51,6 +52,7 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
     onCollapse,
     onCollapseAndSelectParent,
     onRating,
+    onEnterEdit,
     enabled = true,
   } = options;
 
@@ -202,10 +204,18 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
         }
         break;
 
+      case 'Enter':
+        event.preventDefault();
+        // Only allow editing description for file items
+        if (selectedItem?.type === 'file' && onEnterEdit) {
+          onEnterEdit(selectedItem, selectedIndex);
+        }
+        break;
+
       default:
         break;
     }
-  }, [enabled, selectNext, selectPrevious, expandItem, collapseItem, selectedItem, selectedIndex, onTogglePlay, onRating, onCollapseAndSelectParent]);
+  }, [enabled, selectNext, selectPrevious, expandItem, collapseItem, selectedItem, selectedIndex, onTogglePlay, onRating, onCollapseAndSelectParent, onEnterEdit]);
 
   /**
    * Attach keyboard event listener

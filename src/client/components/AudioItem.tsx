@@ -145,6 +145,7 @@ export function AudioItem({
             onChange={handleDescriptionChange}
             filterText={filterText}
             placeholder="Add description..."
+            filePath={file.path}
           />
         </div>
       </div>

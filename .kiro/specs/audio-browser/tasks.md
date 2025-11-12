@@ -51,7 +51,7 @@
     - 更新 useKeyboardNavigation Hook 以處理數字鍵事件
     - _Requirements: 6.6_
   
-  - [ ] 2.4 實作 Enter 鍵快速編輯描述
+  - [x] 2.4 實作 Enter 鍵快速編輯描述
     - 按下 Enter 鍵直接進入描述編輯模式
     - 更新 useKeyboardNavigation Hook 以處理 Enter 鍵事件
     - _Requirements: 7.6_

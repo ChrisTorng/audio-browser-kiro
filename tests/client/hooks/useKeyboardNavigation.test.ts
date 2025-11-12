@@ -514,4 +514,70 @@ describe('useKeyboardNavigation', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
   });
+
+  it('handles Enter key for files to trigger description edit', () => {
+    const onEnterEdit = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onEnterEdit })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(onEnterEdit).toHaveBeenCalledWith(mockItems[0], 0);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('does not call onEnterEdit for directories', () => {
+    const onEnterEdit = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onEnterEdit })
+    );
+
+    // Select a directory
+    act(() => {
+      result.current.selectItem(1);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not call onEnterEdit for directories
+    expect(onEnterEdit).not.toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('does not call onEnterEdit when callback is not provided', () => {
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    event.preventDefault = vi.fn();
+
+    // Should not crash when onEnterEdit is not provided
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
 });

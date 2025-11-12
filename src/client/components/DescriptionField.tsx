@@ -9,6 +9,9 @@ export interface DescriptionFieldProps {
   placeholder?: string;
   disabled?: boolean;
   filterText?: string;
+  triggerEdit?: boolean;
+  onEditComplete?: () => void;
+  filePath?: string;
 }
 
 /**
@@ -24,6 +27,9 @@ export function DescriptionField({
   placeholder = 'Add description...',
   disabled = false,
   filterText = '',
+  triggerEdit = false,
+  onEditComplete,
+  filePath,
 }: DescriptionFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(description);
@@ -72,7 +78,10 @@ export function DescriptionField({
       onChange(editValue);
     }
     setIsEditing(false);
-  }, [editValue, description, onChange]);
+    if (onEditComplete) {
+      onEditComplete();
+    }
+  }, [editValue, description, onChange, onEditComplete]);
 
   /**
    * Cancel edit
@@ -80,7 +89,10 @@ export function DescriptionField({
   const cancelEdit = useCallback(() => {
     setEditValue(description);
     setIsEditing(false);
-  }, [description]);
+    if (onEditComplete) {
+      onEditComplete();
+    }
+  }, [description, onEditComplete]);
 
   /**
    * Handle key down
@@ -115,6 +127,55 @@ export function DescriptionField({
       setEditValue(description);
     }
   }, [description, isEditing]);
+
+  /**
+   * Handle triggerEdit prop to programmatically enter edit mode
+   */
+  useEffect(() => {
+    if (triggerEdit && !isEditing && !disabled) {
+      setIsEditing(true);
+      setEditValue(description);
+
+      // Focus input after state update
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          // Set cursor at the end
+          inputRef.current.setSelectionRange(description.length, description.length);
+        }
+      }, 0);
+    }
+  }, [triggerEdit, isEditing, disabled, description]);
+
+  /**
+   * Listen for custom event to trigger edit mode
+   */
+  useEffect(() => {
+    if (!filePath) return;
+
+    const handleTriggerEdit = (event: Event) => {
+      const customEvent = event as CustomEvent<{ filePath: string }>;
+      if (customEvent.detail.filePath === filePath && !isEditing && !disabled) {
+        setIsEditing(true);
+        setEditValue(description);
+
+        // Focus input after state update
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+            // Set cursor at the end
+            inputRef.current.setSelectionRange(description.length, description.length);
+          }
+        }, 0);
+      }
+    };
+
+    window.addEventListener('trigger-description-edit', handleTriggerEdit);
+
+    return () => {
+      window.removeEventListener('trigger-description-edit', handleTriggerEdit);
+    };
+  }, [filePath, isEditing, disabled, description]);
 
   if (isEditing) {
     return (

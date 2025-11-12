@@ -270,6 +270,26 @@ export function AudioBrowser() {
     [displayItems, audioMetadata, toast]
   );
 
+  /**
+   * Handle Enter key to edit description
+   */
+  const handleEnterEdit = useCallback(
+    (_item: NavigationItem, index: number) => {
+      const displayItem = displayItems[index];
+
+      // Only allow editing description for files
+      if (displayItem.type === 'file' && displayItem.file) {
+        // Trigger edit mode by dispatching a custom event
+        // The DescriptionField component will listen for this event
+        const event = new CustomEvent('trigger-description-edit', {
+          detail: { filePath: displayItem.file.path },
+        });
+        window.dispatchEvent(event);
+      }
+    },
+    [displayItems]
+  );
+
   // Keyboard navigation
   const navigation = useKeyboardNavigation({
     items: navigationItems,
@@ -279,6 +299,7 @@ export function AudioBrowser() {
     onCollapse: handleCollapse,
     onCollapseAndSelectParent: handleCollapseAndSelectParent,
     onRating: handleRating,
+    onEnterEdit: handleEnterEdit,
     enabled: true,
   });
 
