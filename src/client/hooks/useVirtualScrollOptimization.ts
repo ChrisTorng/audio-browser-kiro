@@ -74,12 +74,25 @@ export function useVirtualScrollOptimization(
 
   /**
    * Update scroll position and recalculate visible range
+   * Only update if the range actually changed to prevent unnecessary re-renders
    */
   const updateScrollPosition = useCallback(
     (scrollTop: number) => {
       scrollTopRef.current = scrollTop;
       const newRange = calculateVisibleRange(scrollTop);
-      setVisibleRange(newRange);
+      
+      // Only update state if the range actually changed
+      setVisibleRange((prevRange) => {
+        if (
+          prevRange.startIndex === newRange.startIndex &&
+          prevRange.endIndex === newRange.endIndex &&
+          prevRange.overscanStartIndex === newRange.overscanStartIndex &&
+          prevRange.overscanEndIndex === newRange.overscanEndIndex
+        ) {
+          return prevRange;
+        }
+        return newRange;
+      });
     },
     [calculateVisibleRange]
   );

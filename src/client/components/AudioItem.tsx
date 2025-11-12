@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, memo } from 'react';
 import { AudioFile } from '../../shared/types';
 import { useAudioMetadata, useAudioPlayer, useLazyVisualization } from '../hooks';
 import { StarRating } from './StarRating';
@@ -23,7 +23,7 @@ export interface AudioItemProps {
  * Displays a single audio file in a compact single-line layout
  * Layout: StarRating | Filename | Waveform | Spectrogram | Description
  */
-export function AudioItem({
+export const AudioItem = memo(function AudioItem({
   file,
   isSelected,
   isVisible,
@@ -151,7 +151,7 @@ export function AudioItem({
       </div>
     </div>
   );
-}
+});
 
 /**
  * Highlight text matching the filter

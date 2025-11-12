@@ -160,7 +160,6 @@ body {
   padding: 6px 8px;
   cursor: pointer;
   border-radius: 3px;
-  transition: background-color 0.1s;
   user-select: none;
 }
 
@@ -242,7 +241,6 @@ body {
 
 .audio-tree__item {
   cursor: pointer;
-  transition: background-color 0.1s;
   user-select: none;
   border-bottom: 1px solid #2d2d2d;
 }
@@ -417,7 +415,6 @@ body {
 /* AudioItem Component */
 .audio-item {
   cursor: pointer;
-  transition: background-color 0.1s;
   user-select: none;
   border-bottom: 1px solid #2d2d2d;
 }
@@ -498,12 +495,11 @@ body {
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
-  transition: transform 0.1s, color 0.1s;
   color: #808080;
 }
 
 .star-rating__star:hover:not(:disabled) {
-  transform: scale(1.2);
+  transform: scale(1.1);
 }
 
 .star-rating__star:focus {
@@ -603,7 +599,6 @@ body {
   border: 1px solid #3e3e3e;
   border-radius: 4px;
   cursor: text;
-  transition: border-color 0.2s;
   min-height: 28px;
 }
 
@@ -655,68 +650,7 @@ body {
   border-radius: 2px;
 }
 
-/* AudioItem Component */
-.audio-item {
-  cursor: pointer;
-  transition: background-color 0.1s;
-  user-select: none;
-  border-bottom: 1px solid #2d2d2d;
-}
 
-.audio-item:hover {
-  background-color: #2a2d2e;
-}
-
-.audio-item--selected {
-  background-color: #094771;
-}
-
-.audio-item--selected:hover {
-  background-color: #0e639c;
-}
-
-.audio-item__content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  min-height: 32px;
-}
-
-.audio-item__rating {
-  flex-shrink: 0;
-}
-
-.audio-item__filename {
-  flex-shrink: 0;
-  min-width: 200px;
-  max-width: 300px;
-  color: #d4d4d4;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.audio-item__waveform {
-  flex-shrink: 0;
-}
-
-.audio-item__spectrogram {
-  flex-shrink: 0;
-}
-
-.audio-item__description {
-  flex: 1;
-  min-width: 150px;
-}
-
-.audio-item__highlight {
-  background-color: #4a4a00;
-  color: #ffff00;
-  padding: 1px 2px;
-  border-radius: 2px;
-}
 
 /* WaveformDisplay Component */
 .waveform-display {
@@ -790,30 +724,7 @@ body {
   user-select: none;
 }
 
-/* StarRating Component */
-.star-rating {
-  display: flex;
-  gap: 1px;
-}
-
-.star-rating__star {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  transition: transform 0.1s;
-  color: #808080;
-}
-
-.star-rating__star--filled {
-  color: #ffd700;
-}
-
-.star-rating__star:hover {
-  transform: scale(1.2);
-}
+/* StarRating Component - Duplicate removed, see above */
 
 .star-rating__star:focus {
   outline: 1px solid #007acc;
@@ -834,7 +745,6 @@ body {
   color: #d4d4d4;
   font-size: 11px;
   cursor: text;
-  transition: background-color 0.1s, border-color 0.1s;
   word-wrap: break-word;
   white-space: pre-wrap;
 }

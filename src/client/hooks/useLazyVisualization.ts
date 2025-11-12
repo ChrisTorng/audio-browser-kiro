@@ -65,8 +65,18 @@ export function useLazyVisualization(
       abortControllerRef.current = abortController;
 
       // Skip if already loading this file
-      if (currentFilePathRef.current === filePath && (waveformData || spectrogramData)) {
-        return;
+      if (currentFilePathRef.current === filePath) {
+        // Check if we already have the data
+        const cachedWaveform = visualizationCache.getWaveform(filePath, waveformWidth);
+        const cachedSpectrogram = visualizationCache.getSpectrogram(
+          filePath,
+          spectrogramWidth,
+          spectrogramHeight
+        );
+        
+        if (cachedWaveform && cachedSpectrogram) {
+          return;
+        }
       }
 
       currentFilePathRef.current = filePath;
@@ -161,7 +171,7 @@ export function useLazyVisualization(
         console.error('Visualization load error:', error);
       }
     },
-    [waveformWidth, spectrogramWidth, spectrogramHeight, priority, waveformData, spectrogramData]
+    [waveformWidth, spectrogramWidth, spectrogramHeight, priority]
   );
 
   /**
