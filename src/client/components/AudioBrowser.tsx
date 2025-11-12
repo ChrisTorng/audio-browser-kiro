@@ -295,6 +295,7 @@ export function AudioBrowser() {
     items: navigationItems,
     onSelect: handleSelect,
     onTogglePlay: handleTogglePlay,
+    onStop: audioPlayer.stop,
     onExpand: handleExpand,
     onCollapse: handleCollapse,
     onCollapseAndSelectParent: handleCollapseAndSelectParent,

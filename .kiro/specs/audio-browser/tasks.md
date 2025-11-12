@@ -56,7 +56,7 @@
     - 更新 useKeyboardNavigation Hook 以處理 Enter 鍵事件
     - _Requirements: 7.6_
   
-  - [ ] 2.5 實作從音檔切換到資料夾時停止播放
+  - [x] 2.5 實作從音檔切換到資料夾時停止播放
     - 當選取項目從音檔移動到資料夾時自動停止播放
     - 更新 useKeyboardNavigation Hook 以處理播放狀態
     - _Requirements: 4.11_

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 /**
  * Item type for keyboard navigation
@@ -31,6 +31,7 @@ export interface UseKeyboardNavigationOptions {
   items: NavigationItem[];
   onSelect?: (item: NavigationItem, index: number) => void;
   onTogglePlay?: () => void;
+  onStop?: () => void;
   onExpand?: (item: NavigationItem, index: number) => void;
   onCollapse?: (item: NavigationItem, index: number) => void;
   onCollapseAndSelectParent?: (item: NavigationItem, index: number) => void;
@@ -48,6 +49,7 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
     items,
     onSelect,
     onTogglePlay,
+    onStop,
     onExpand,
     onCollapse,
     onCollapseAndSelectParent,
@@ -60,6 +62,9 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
 
   // Get currently selected item
   const selectedItem = items[selectedIndex] || null;
+  
+  // Track previous item type to detect file -> directory transitions
+  const prevItemTypeRef = useRef<'file' | 'directory' | null>(null);
 
   /**
    * Select next item in the list
@@ -68,12 +73,22 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
     if (items.length === 0) return;
 
     const nextIndex = Math.min(selectedIndex + 1, items.length - 1);
+    const nextItem = items[nextIndex];
+    
+    // Stop playback if moving from file to directory
+    if (prevItemTypeRef.current === 'file' && nextItem?.type === 'directory' && onStop) {
+      onStop();
+    }
+    
     setSelectedIndex(nextIndex);
 
-    if (onSelect && items[nextIndex]) {
-      onSelect(items[nextIndex], nextIndex);
+    if (onSelect && nextItem) {
+      onSelect(nextItem, nextIndex);
     }
-  }, [selectedIndex, items, onSelect]);
+    
+    // Update previous item type
+    prevItemTypeRef.current = nextItem?.type || null;
+  }, [selectedIndex, items, onSelect, onStop]);
 
   /**
    * Select previous item in the list
@@ -82,12 +97,22 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
     if (items.length === 0) return;
 
     const prevIndex = Math.max(selectedIndex - 1, 0);
+    const prevItem = items[prevIndex];
+    
+    // Stop playback if moving from file to directory
+    if (prevItemTypeRef.current === 'file' && prevItem?.type === 'directory' && onStop) {
+      onStop();
+    }
+    
     setSelectedIndex(prevIndex);
 
-    if (onSelect && items[prevIndex]) {
-      onSelect(items[prevIndex], prevIndex);
+    if (onSelect && prevItem) {
+      onSelect(prevItem, prevIndex);
     }
-  }, [selectedIndex, items, onSelect]);
+    
+    // Update previous item type
+    prevItemTypeRef.current = prevItem?.type || null;
+  }, [selectedIndex, items, onSelect, onStop]);
 
   /**
    * Select item by index
@@ -95,12 +120,22 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
   const selectItem = useCallback((index: number) => {
     if (index < 0 || index >= items.length) return;
 
+    const item = items[index];
+    
+    // Stop playback if moving from file to directory
+    if (prevItemTypeRef.current === 'file' && item?.type === 'directory' && onStop) {
+      onStop();
+    }
+    
     setSelectedIndex(index);
 
-    if (onSelect && items[index]) {
-      onSelect(items[index], index);
+    if (onSelect && item) {
+      onSelect(item, index);
     }
-  }, [items, onSelect]);
+    
+    // Update previous item type
+    prevItemTypeRef.current = item?.type || null;
+  }, [items, onSelect, onStop]);
 
   /**
    * Toggle expand/collapse for directory items

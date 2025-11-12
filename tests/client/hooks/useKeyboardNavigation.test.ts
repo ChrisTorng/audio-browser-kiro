@@ -580,4 +580,136 @@ describe('useKeyboardNavigation', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
   });
+
+  it('calls onStop when moving from file to directory with selectNext', () => {
+    const onStop = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onStop })
+    );
+
+    // Start at file (index 0)
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    // Move to directory (index 1)
+    act(() => {
+      result.current.selectNext();
+    });
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onStop when moving from file to directory with selectPrevious', () => {
+    const onStop = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onStop })
+    );
+
+    // Start at file (index 2)
+    act(() => {
+      result.current.selectItem(2);
+    });
+
+    // Move to directory (index 1)
+    act(() => {
+      result.current.selectPrevious();
+    });
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onStop when moving from file to directory with selectItem', () => {
+    const onStop = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onStop })
+    );
+
+    // Start at file (index 0)
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    // Move to directory (index 1)
+    act(() => {
+      result.current.selectItem(1);
+    });
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onStop when moving from file to file', () => {
+    const onStop = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onStop })
+    );
+
+    // Start at file (index 0)
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    // Move to another file (index 2)
+    act(() => {
+      result.current.selectItem(2);
+    });
+
+    expect(onStop).not.toHaveBeenCalled();
+  });
+
+  it('does not call onStop when moving from directory to file', () => {
+    const onStop = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onStop })
+    );
+
+    // Start at directory (index 1)
+    act(() => {
+      result.current.selectItem(1);
+    });
+
+    // Move to file (index 2)
+    act(() => {
+      result.current.selectItem(2);
+    });
+
+    expect(onStop).not.toHaveBeenCalled();
+  });
+
+  it('does not call onStop when moving from directory to directory', () => {
+    const onStop = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onStop })
+    );
+
+    // Start at directory (index 1)
+    act(() => {
+      result.current.selectItem(1);
+    });
+
+    // Move to another directory (index 3)
+    act(() => {
+      result.current.selectItem(3);
+    });
+
+    expect(onStop).not.toHaveBeenCalled();
+  });
+
+  it('does not call onStop when callback is not provided', () => {
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems })
+    );
+
+    // Start at file (index 0)
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    // Move to directory (index 1) - should not crash
+    act(() => {
+      result.current.selectNext();
+    });
+
+    expect(result.current.selectedIndex).toBe(1);
+  });
 });
