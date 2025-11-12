@@ -33,6 +33,7 @@ export interface UseKeyboardNavigationOptions {
   onTogglePlay?: () => void;
   onExpand?: (item: NavigationItem, index: number) => void;
   onCollapse?: (item: NavigationItem, index: number) => void;
+  onCollapseAndSelectParent?: (item: NavigationItem, index: number) => void;
   enabled?: boolean;
 }
 
@@ -47,6 +48,7 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
     onTogglePlay,
     onExpand,
     onCollapse,
+    onCollapseAndSelectParent,
     enabled = true,
   } = options;
 
@@ -161,8 +163,21 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
 
       case 'ArrowLeft':
         event.preventDefault();
-        if (selectedItem?.type === 'directory') {
-          collapseItem();
+        if (selectedItem?.type === 'file') {
+          // File selected: collapse parent folder and select it
+          if (onCollapseAndSelectParent) {
+            onCollapseAndSelectParent(selectedItem, selectedIndex);
+          }
+        } else if (selectedItem?.type === 'directory') {
+          if (selectedItem.isExpanded) {
+            // Expanded folder: collapse it
+            collapseItem();
+          } else {
+            // Collapsed folder: collapse parent folder and select it
+            if (onCollapseAndSelectParent) {
+              onCollapseAndSelectParent(selectedItem, selectedIndex);
+            }
+          }
         }
         break;
 

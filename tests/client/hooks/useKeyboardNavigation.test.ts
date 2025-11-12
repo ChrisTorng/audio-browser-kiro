@@ -250,7 +250,7 @@ describe('useKeyboardNavigation', () => {
     expect(event.preventDefault).toHaveBeenCalled();
   });
 
-  it('handles ArrowLeft key for directories', () => {
+  it('handles ArrowLeft key for expanded directories - collapses them', () => {
     const onCollapse = vi.fn();
     const { result } = renderHook(() =>
       useKeyboardNavigation({ items: mockItems, onCollapse })
@@ -268,6 +268,48 @@ describe('useKeyboardNavigation', () => {
     });
 
     expect(onCollapse).toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('handles ArrowLeft key for collapsed directories - collapses parent', () => {
+    const onCollapseAndSelectParent = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onCollapseAndSelectParent })
+    );
+
+    act(() => {
+      result.current.selectItem(1); // Select collapsed directory
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(onCollapseAndSelectParent).toHaveBeenCalledWith(mockItems[1], 1);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('handles ArrowLeft key for files - collapses parent folder', () => {
+    const onCollapseAndSelectParent = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onCollapseAndSelectParent })
+    );
+
+    act(() => {
+      result.current.selectItem(0); // Select file
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    expect(onCollapseAndSelectParent).toHaveBeenCalledWith(mockItems[0], 0);
     expect(event.preventDefault).toHaveBeenCalled();
   });
 

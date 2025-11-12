@@ -205,6 +205,44 @@ export function AudioBrowser() {
   );
 
   /**
+   * Handle collapse and select parent
+   * Used for left arrow key navigation
+   */
+  const [pendingParentSelection, setPendingParentSelection] = useState<number | null>(null);
+  
+  const handleCollapseAndSelectParent = useCallback(
+    (_item: NavigationItem, index: number) => {
+      const displayItem = displayItems[index];
+      
+      if (!displayItem.parentPath) {
+        // No parent, do nothing
+        return;
+      }
+
+      // Find parent directory in display items
+      const parentIndex = displayItems.findIndex(
+        (item) => item.type === 'directory' && item.directory?.path === displayItem.parentPath
+      );
+
+      if (parentIndex === -1) {
+        // Parent not found in display items, do nothing
+        return;
+      }
+
+      // Collapse the parent directory
+      setExpandedPaths((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(displayItem.parentPath!);
+        return newSet;
+      });
+
+      // Mark parent for selection after re-render
+      setPendingParentSelection(parentIndex);
+    },
+    [displayItems]
+  );
+
+  /**
    * Handle toggle play/stop
    */
   const handleTogglePlay = useCallback(() => {
@@ -218,8 +256,19 @@ export function AudioBrowser() {
     onTogglePlay: handleTogglePlay,
     onExpand: handleExpand,
     onCollapse: handleCollapse,
+    onCollapseAndSelectParent: handleCollapseAndSelectParent,
     enabled: true,
   });
+
+  /**
+   * Handle pending parent selection after collapse
+   */
+  useEffect(() => {
+    if (pendingParentSelection !== null) {
+      navigation.selectItem(pendingParentSelection);
+      setPendingParentSelection(null);
+    }
+  }, [pendingParentSelection, navigation]);
 
   /**
    * Load directory tree on mount
