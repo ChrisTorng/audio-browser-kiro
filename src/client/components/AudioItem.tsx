@@ -39,7 +39,7 @@ export function AudioItem({
   const visualization = useLazyVisualization({
     waveformWidth: 200,
     spectrogramWidth: 200,
-    spectrogramHeight: 40,
+    spectrogramHeight: 28,
     priority: 'both',
   });
 
@@ -120,7 +120,7 @@ export function AudioItem({
             waveformData={visualization.waveformData}
             progress={progress}
             width={200}
-            height={40}
+            height={28}
             isLoading={visualization.isLoading}
             error={visualization.error}
           />
@@ -132,7 +132,7 @@ export function AudioItem({
             spectrogramData={visualization.spectrogramData}
             progress={progress}
             width={200}
-            height={40}
+            height={28}
             isLoading={visualization.isLoading}
             error={visualization.error}
           />

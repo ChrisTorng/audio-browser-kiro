@@ -415,7 +415,7 @@ export function AudioBrowser() {
             }}
             filterText={filterCriteria.text}
             height={600}
-            itemHeight={40}
+            itemHeight={32}
           />
         )}
       </div>

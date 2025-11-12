@@ -263,13 +263,13 @@ body {
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 8px 12px;
+  padding: 4px 8px;
 }
 
 .audio-tree__directory {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -281,8 +281,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   color: #808080;
   transition: color 0.2s;
 }
@@ -297,18 +297,18 @@ body {
 }
 
 .audio-tree__expand-icon {
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1;
 }
 
 .audio-tree__directory-name {
   font-weight: 500;
   color: #d4d4d4;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .audio-tree__directory-count {
-  font-size: 12px;
+  font-size: 11px;
   color: #808080;
   margin-left: 4px;
 }
@@ -678,9 +678,9 @@ body {
 .audio-item__content {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  min-height: 50px;
+  gap: 8px;
+  padding: 4px 8px;
+  min-height: 32px;
 }
 
 .audio-item__rating {
@@ -692,7 +692,7 @@ body {
   min-width: 200px;
   max-width: 300px;
   color: #d4d4d4;
-  font-size: 13px;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -793,7 +793,7 @@ body {
 /* StarRating Component */
 .star-rating {
   display: flex;
-  gap: 2px;
+  gap: 1px;
 }
 
 .star-rating__star {
@@ -801,7 +801,7 @@ body {
   border: none;
   padding: 0;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   transition: transform 0.1s;
   color: #808080;
@@ -826,13 +826,13 @@ body {
 }
 
 .description-field__display {
-  padding: 4px 8px;
-  min-height: 24px;
+  padding: 2px 6px;
+  min-height: 20px;
   background-color: transparent;
   border: 1px solid transparent;
   border-radius: 3px;
   color: #d4d4d4;
-  font-size: 12px;
+  font-size: 11px;
   cursor: text;
   transition: background-color 0.1s, border-color 0.1s;
   word-wrap: break-word;
@@ -851,13 +851,13 @@ body {
 
 .description-field__input {
   width: 100%;
-  padding: 4px 8px;
-  min-height: 24px;
+  padding: 2px 6px;
+  min-height: 20px;
   background-color: #2d2d2d;
   border: 1px solid #007acc;
   border-radius: 3px;
   color: #d4d4d4;
-  font-size: 12px;
+  font-size: 11px;
   font-family: inherit;
   resize: vertical;
 }
