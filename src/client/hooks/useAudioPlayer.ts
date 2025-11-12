@@ -95,13 +95,14 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   /**
    * Play audio from URL
    * If a different URL is provided, stops current playback and starts new one
+   * Ensures only one audio file plays at a time (Requirement 12.3)
    * Properly handles AbortError when switching files quickly (Requirement 12.1, 12.2, 12.4)
    */
   const play = useCallback((audioUrl: string) => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Cancel previous playback request if exists (Requirement 12.1)
+    // Cancel previous playback request if exists (Requirement 12.1, 12.3)
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -110,7 +111,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    // If playing a different file, reset and load new file
+    // If playing a different file, reset and load new file (Requirement 12.3)
+    // This ensures only one audio file plays at a time by pausing the current one
     if (currentUrlRef.current !== audioUrl) {
       audio.pause();
       audio.currentTime = 0;

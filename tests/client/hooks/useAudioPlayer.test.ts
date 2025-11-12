@@ -230,4 +230,76 @@ describe('useAudioPlayer', () => {
     expect(mockAudio.currentTime).toBe(0);
     expect(result.current.isPlaying).toBe(false);
   });
+
+  it('ensures only one audio file plays at a time', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    // Start playing first file
+    await act(async () => {
+      result.current.play('test1.mp3');
+    });
+
+    expect(mockAudio.src).toBe('test1.mp3');
+    expect(mockAudio.paused).toBe(false);
+    expect(result.current.isPlaying).toBe(true);
+
+    // Switch to second file - should stop first and play second
+    await act(async () => {
+      result.current.play('test2.mp3');
+    });
+
+    expect(mockAudio.src).toBe('test2.mp3');
+    expect(mockAudio.currentTime).toBe(0); // Reset to beginning
+    expect(mockAudio.paused).toBe(false);
+    expect(result.current.isPlaying).toBe(true);
+
+    // Switch to third file - should stop second and play third
+    await act(async () => {
+      result.current.play('test3.mp3');
+    });
+
+    expect(mockAudio.src).toBe('test3.mp3');
+    expect(mockAudio.currentTime).toBe(0); // Reset to beginning
+    expect(mockAudio.paused).toBe(false);
+    expect(result.current.isPlaying).toBe(true);
+  });
+
+  it('cancels previous playback request when switching files', async () => {
+    const { result } = renderHook(() => useAudioPlayer());
+
+    // Create a spy to track abort calls
+    let abortCallCount = 0;
+    const originalAbortController = global.AbortController;
+    
+    global.AbortController = class MockAbortController {
+      signal = {};
+      abort() {
+        abortCallCount++;
+      }
+    } as any;
+
+    // Start playing first file
+    await act(async () => {
+      result.current.play('test1.mp3');
+    });
+
+    expect(abortCallCount).toBe(0); // No abort on first play
+
+    // Switch to second file - should abort first request
+    await act(async () => {
+      result.current.play('test2.mp3');
+    });
+
+    expect(abortCallCount).toBe(1); // First request aborted
+
+    // Switch to third file - should abort second request
+    await act(async () => {
+      result.current.play('test3.mp3');
+    });
+
+    expect(abortCallCount).toBe(2); // Second request aborted
+
+    // Restore original AbortController
+    global.AbortController = originalAbortController;
+  });
 });
