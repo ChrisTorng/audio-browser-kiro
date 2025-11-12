@@ -260,7 +260,7 @@ export function AudioBrowser() {
       if (displayItem.type === 'file' && displayItem.file) {
         try {
           await audioMetadata.updateRating(displayItem.file.path, rating);
-          toast.success(`Rating updated to ${rating} star${rating !== 1 ? 's' : ''}`);
+          // Success: no message needed
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to update rating';
           toast.error(`Rating update failed: ${errorMessage}`);
@@ -337,7 +337,7 @@ export function AudioBrowser() {
           setExpandedPaths(new Set([tree.path]));
         }
         
-        toast.success('Audio directory loaded successfully');
+        // Success: no message needed
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to load audio directory';
         toast.error(`Load failed: ${errorMessage}`);
