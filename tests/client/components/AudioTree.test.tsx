@@ -77,8 +77,8 @@ describe('AudioTree', () => {
       />
     );
 
-    // Click on a file item
-    const fileItem = screen.getByText('song1.mp3').closest('.audio-tree__item');
+    // Click on a file item - AudioItem uses .audio-item class
+    const fileItem = screen.getByText('song1.mp3').closest('.audio-item');
     fireEvent.click(fileItem!);
 
     expect(onItemClick).toHaveBeenCalledWith(1);
@@ -118,8 +118,9 @@ describe('AudioTree', () => {
       />
     );
 
-    const fileItem = screen.getByText('song1.mp3').closest('.audio-tree__item');
-    expect(fileItem).toHaveClass('audio-tree__item--selected');
+    // AudioItem uses .audio-item class with --selected modifier
+    const fileItem = screen.getByText('song1.mp3').closest('.audio-item');
+    expect(fileItem).toHaveClass('audio-item--selected');
   });
 
   it('highlights filter text in item names', () => {
@@ -136,8 +137,8 @@ describe('AudioTree', () => {
       />
     );
 
-    // Check that the filter text is highlighted
-    const highlights = document.querySelectorAll('.audio-tree__highlight');
+    // Check that the filter text is highlighted - AudioItem uses .audio-item__highlight
+    const highlights = document.querySelectorAll('.audio-item__highlight');
     expect(highlights.length).toBeGreaterThan(0);
     expect(highlights[0].textContent).toBe('song1');
   });
@@ -208,12 +209,12 @@ describe('AudioTree', () => {
       />
     );
 
-    // Check level 0 item (directory)
+    // Check level 0 item (directory) - uses .audio-tree__item-content
     const dirContent = screen.getByText('Music').closest('.audio-tree__item-content');
     expect(dirContent).toHaveStyle({ paddingLeft: '0px' });
 
-    // Check level 1 item (file)
-    const fileContent = screen.getByText('song1.mp3').closest('.audio-tree__item-content');
-    expect(fileContent).toHaveStyle({ paddingLeft: '20px' });
+    // Check level 1 item (file) - AudioItem applies paddingLeft directly to .audio-item
+    const fileItem = screen.getByText('song1.mp3').closest('.audio-item');
+    expect(fileItem).toHaveStyle({ paddingLeft: '20px' });
   });
 });
