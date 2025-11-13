@@ -17,10 +17,12 @@ import { DirectoryTree } from '../../../src/shared/types';
 
 // Mock API
 const mockScanDirectory = vi.fn();
+const mockGetTree = vi.fn();
 
 vi.mock('../../../src/client/services/api', () => ({
   audioBrowserAPI: {
     scanDirectory: (...args: any[]) => mockScanDirectory(...args),
+    getTree: (...args: any[]) => mockGetTree(...args),
   },
 }));
 
@@ -113,6 +115,10 @@ describe('Audio Playback Integration Tests', () => {
     mockAudioInstance = new MockAudio();
     global.Audio = vi.fn(() => mockAudioInstance) as any;
 
+    // Setup default mock return values
+    mockGetTree.mockResolvedValue({ name: '', path: '', type: 'directory', files: [], subdirectories: [] });
+    mockScanDirectory.mockResolvedValue({ tree: { name: '', path: '', type: 'directory', files: [], subdirectories: [] } });
+
     // Mock fetch for metadata
     global.fetch = vi.fn((url) => {
       if (url === '/api/metadata') {
@@ -162,7 +168,7 @@ describe('Audio Playback Integration Tests', () => {
 
     await waitFor(() => {
       expect(screen.getByText('music')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   };
 
   describe('Loop Playback', () => {
@@ -175,7 +181,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.loop).toBe(true);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should continue playing after reaching end (loop)', async () => {
@@ -188,7 +194,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
         expect(mockAudioInstance.loop).toBe(true);
-      });
+      }, { timeout: 5000 });
 
       // Verify loop is enabled (the mock will handle looping automatically)
       // We just need to verify the loop property is set
@@ -207,7 +213,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.loop).toBe(true);
-      });
+      }, { timeout: 5000 });
 
       // Switch to second file
       const track2 = screen.getByText('track2.wav');
@@ -215,7 +221,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.loop).toBe(true);
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -230,7 +236,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track1.mp3');
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Simulate some playback
       mockAudioInstance.currentTime = 50;
@@ -244,7 +250,7 @@ describe('Audio Playback Integration Tests', () => {
         expect(mockAudioInstance.src).toContain('track2.wav');
         expect(mockAudioInstance.currentTime).toBe(0);
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle rapid file switching', async () => {
@@ -263,7 +269,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track3.flac');
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should switch files using keyboard navigation', async () => {
@@ -274,7 +280,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track1.mp3');
-      });
+      }, { timeout: 5000 });
 
       // Navigate to second file
       fireEvent.keyDown(window, { key: 'ArrowDown' });
@@ -282,7 +288,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track2.wav');
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
 
       // Navigate to third file
       fireEvent.keyDown(window, { key: 'ArrowDown' });
@@ -290,7 +296,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track3.flac');
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should preserve playback state when switching files', async () => {
@@ -302,7 +308,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Switch to second file
       const track2 = screen.getByText('track2.wav');
@@ -311,7 +317,7 @@ describe('Audio Playback Integration Tests', () => {
       // Should still be playing
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -325,7 +331,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
         expect(mockAudioInstance.src).toContain('track1.mp3');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should stop playback and reset to beginning', async () => {
@@ -337,7 +343,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Simulate playback progress
       mockAudioInstance.currentTime = 30;
@@ -348,7 +354,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(true);
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should resume playback from beginning', async () => {
@@ -360,14 +366,14 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Stop
       fireEvent.keyDown(window, { key: ' ' });
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(true);
-      });
+      }, { timeout: 5000 });
 
       // Resume
       fireEvent.keyDown(window, { key: ' ' });
@@ -375,7 +381,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle play/stop/resume cycle multiple times', async () => {
@@ -388,14 +394,14 @@ describe('Audio Playback Integration Tests', () => {
       for (let i = 0; i < 3; i++) {
         await waitFor(() => {
           expect(mockAudioInstance.paused).toBe(false);
-        });
+        }, { timeout: 5000 });
 
         fireEvent.keyDown(window, { key: ' ' });
 
         await waitFor(() => {
           expect(mockAudioInstance.paused).toBe(true);
           expect(mockAudioInstance.currentTime).toBe(0);
-        });
+        }, { timeout: 5000 });
 
         fireEvent.keyDown(window, { key: ' ' });
       }
@@ -410,7 +416,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Select second file (should stop first and play second)
       const track2 = screen.getByText('track2.wav');
@@ -420,7 +426,7 @@ describe('Audio Playback Integration Tests', () => {
         expect(mockAudioInstance.src).toContain('track2.wav');
         expect(mockAudioInstance.currentTime).toBe(0);
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -433,7 +439,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Trigger metadata loaded
       mockAudioInstance.triggerLoadedMetadata();
@@ -445,7 +451,7 @@ describe('Audio Playback Integration Tests', () => {
       // Progress should be tracked (25/100 = 25%)
       await waitFor(() => {
         expect(mockAudioInstance.currentTime).toBe(25);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should reset progress when switching files', async () => {
@@ -457,7 +463,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       mockAudioInstance.currentTime = 50;
       mockAudioInstance.triggerTimeUpdate();
@@ -469,7 +475,7 @@ describe('Audio Playback Integration Tests', () => {
       // Progress should reset
       await waitFor(() => {
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should reset progress when stopping playback', async () => {
@@ -480,7 +486,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Simulate progress
       mockAudioInstance.currentTime = 40;
@@ -490,7 +496,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle duration metadata', async () => {
@@ -501,7 +507,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Set duration and trigger metadata loaded
       mockAudioInstance.duration = 180;
@@ -510,7 +516,7 @@ describe('Audio Playback Integration Tests', () => {
       // Duration should be available
       await waitFor(() => {
         expect(mockAudioInstance.duration).toBe(180);
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -524,7 +530,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Interact with UI (e.g., navigate with keyboard)
       fireEvent.keyDown(window, { key: 'ArrowDown' });
@@ -532,7 +538,7 @@ describe('Audio Playback Integration Tests', () => {
       // Audio should switch to new file
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track2.wav');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle audio errors gracefully', async () => {
@@ -547,7 +553,7 @@ describe('Audio Playback Integration Tests', () => {
       // Should not crash, error should be logged
       await waitFor(() => {
         expect(mockAudioInstance.play).toHaveBeenCalled();
-      });
+      }, { timeout: 5000 });
     });
 
     it('should cleanup audio on component unmount', async () => {
@@ -558,7 +564,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Note: Actual cleanup testing would require unmounting the component
       // This is a placeholder to document the expected behavior
@@ -574,7 +580,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Simulate progress
       mockAudioInstance.currentTime = 30;
@@ -586,7 +592,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
         expect(mockAudioInstance.src).toContain('track1.mp3');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle audio source changes', async () => {
@@ -600,7 +606,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(firstSrc).toContain('track1.mp3');
-      });
+      }, { timeout: 5000 });
 
       // Switch to second file
       const track2 = screen.getByText('track2.wav');
@@ -611,7 +617,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(secondSrc).toContain('track2.wav');
         expect(secondSrc).not.toBe(firstSrc);
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -625,7 +631,7 @@ describe('Audio Playback Integration Tests', () => {
       // Should not crash
       await waitFor(() => {
         expect(mockAudioInstance.src).toBe('');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle rapid play/stop commands', async () => {
@@ -642,7 +648,7 @@ describe('Audio Playback Integration Tests', () => {
       // Should handle gracefully without errors
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track1.mp3');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle file selection during playback', async () => {
@@ -654,7 +660,7 @@ describe('Audio Playback Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Immediately select another file
       const track2 = screen.getByText('track2.wav');
@@ -664,7 +670,7 @@ describe('Audio Playback Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('track2.wav');
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
   });
 });

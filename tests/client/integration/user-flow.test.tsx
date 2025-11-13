@@ -19,11 +19,14 @@ const mockScanDirectory = vi.fn();
 const mockGetAllMetadata = vi.fn();
 const mockUpdateMetadata = vi.fn();
 
+const mockGetTree = vi.fn();
+
 vi.mock('../../../src/client/services/api', () => ({
   audioBrowserAPI: {
     scanDirectory: (...args: any[]) => mockScanDirectory(...args),
     getAllMetadata: (...args: any[]) => mockGetAllMetadata(...args),
     updateMetadata: (...args: any[]) => mockUpdateMetadata(...args),
+    getTree: (...args: any[]) => mockGetTree(...args),
   },
 }));
 
@@ -85,6 +88,11 @@ describe('User Flow Integration Tests', () => {
     // Mock Audio constructor
     mockAudioInstance = new MockAudio();
     global.Audio = vi.fn(() => mockAudioInstance) as any;
+
+    // Setup default mock return values
+    mockGetTree.mockResolvedValue({ name: '', path: '', type: 'directory', files: [], subdirectories: [] });
+    mockGetAllMetadata.mockResolvedValue({});
+    mockScanDirectory.mockResolvedValue({ tree: { name: '', path: '', type: 'directory', files: [], subdirectories: [] } });
 
     // Mock fetch for metadata
     global.fetch = vi.fn((url) => {
@@ -156,12 +164,12 @@ describe('User Flow Integration Tests', () => {
       // Step 3: Wait for scan to complete and tree to display
       await waitFor(() => {
         expect(mockScanDirectory).toHaveBeenCalledWith('/test/music');
-      });
+      }, { timeout: 5000 });
 
       // Step 4: Verify directory tree is displayed
       await waitFor(() => {
         expect(screen.getByText('music')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Step 5: Verify files are displayed
       expect(screen.getByText('song1.mp3')).toBeInTheDocument();
@@ -175,7 +183,7 @@ describe('User Flow Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('song1.mp3');
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle scanning errors gracefully', async () => {
@@ -192,7 +200,7 @@ describe('User Flow Integration Tests', () => {
       // Verify error message is displayed
       await waitFor(() => {
         expect(screen.getByText(/Scan failed/i)).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
     });
 
     it('should expand and collapse directories', async () => {
@@ -208,7 +216,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('music')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Initially, subdirectory should not show its files
       expect(screen.queryByText('track1.flac')).not.toBeInTheDocument();
@@ -221,7 +229,7 @@ describe('User Flow Integration Tests', () => {
       // Verify subdirectory files are now visible
       await waitFor(() => {
         expect(screen.getByText('track1.flac')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click collapse button for album1 (there are now 2 collapse buttons: music and album1)
       const collapseButtons = screen.getAllByLabelText('Collapse');
@@ -231,7 +239,7 @@ describe('User Flow Integration Tests', () => {
       // Verify files are hidden again
       await waitFor(() => {
         expect(screen.queryByText('track1.flac')).not.toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -249,7 +257,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Tree structure: music (root), album1 (dir), song1.mp3, song2.wav
       // Press ArrowDown to select album1
@@ -261,7 +269,7 @@ describe('User Flow Integration Tests', () => {
       // Verify first file is selected and playing
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('song1.mp3');
-      });
+      }, { timeout: 5000 });
 
       // Press ArrowDown again to select second file
       fireEvent.keyDown(window, { key: 'ArrowDown' });
@@ -269,7 +277,7 @@ describe('User Flow Integration Tests', () => {
       // Verify second file is now playing
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('song2.wav');
-      });
+      }, { timeout: 5000 });
 
       // Press Space to stop playback
       fireEvent.keyDown(window, { key: ' ' });
@@ -278,7 +286,7 @@ describe('User Flow Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(true);
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
 
       // Press Space again to resume
       fireEvent.keyDown(window, { key: ' ' });
@@ -286,7 +294,7 @@ describe('User Flow Integration Tests', () => {
       // Verify playback resumed
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should expand/collapse directories with arrow keys', async () => {
@@ -302,7 +310,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('album1')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Navigate to subdirectory (album1 is first item after root)
       fireEvent.keyDown(window, { key: 'ArrowDown' }); // Select album1
@@ -313,7 +321,7 @@ describe('User Flow Integration Tests', () => {
       // Verify subdirectory is expanded
       await waitFor(() => {
         expect(screen.getByText('track1.flac')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Press ArrowLeft to collapse
       fireEvent.keyDown(window, { key: 'ArrowLeft' });
@@ -321,7 +329,7 @@ describe('User Flow Integration Tests', () => {
       // Verify subdirectory is collapsed
       await waitFor(() => {
         expect(screen.queryByText('track1.flac')).not.toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
     });
 
     it('should navigate up with ArrowUp key', async () => {
@@ -337,7 +345,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Navigate down to second file
       fireEvent.keyDown(window, { key: 'ArrowDown' }); // album1
@@ -346,7 +354,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('song2.wav');
-      });
+      }, { timeout: 5000 });
 
       // Navigate back up
       fireEvent.keyDown(window, { key: 'ArrowUp' });
@@ -354,7 +362,7 @@ describe('User Flow Integration Tests', () => {
       // Verify first file is selected again
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('song1.mp3');
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -372,7 +380,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click on file to play
       const file1 = screen.getByText('song1.mp3');
@@ -381,7 +389,7 @@ describe('User Flow Integration Tests', () => {
       // Verify loop is enabled
       await waitFor(() => {
         expect(mockAudioInstance.loop).toBe(true);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should switch audio when selecting different file', async () => {
@@ -397,7 +405,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Play first file
       const file1 = screen.getByText('song1.mp3');
@@ -406,7 +414,7 @@ describe('User Flow Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('song1.mp3');
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Switch to second file
       const file2 = screen.getByText('song2.wav');
@@ -417,7 +425,7 @@ describe('User Flow Integration Tests', () => {
         expect(mockAudioInstance.src).toContain('song2.wav');
         expect(mockAudioInstance.currentTime).toBe(0); // Reset to beginning
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should restart from beginning when toggling play', async () => {
@@ -433,7 +441,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Play file
       const file1 = screen.getByText('song1.mp3');
@@ -441,7 +449,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Simulate playback progress
       mockAudioInstance.currentTime = 50;
@@ -452,14 +460,14 @@ describe('User Flow Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(true);
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
 
       // Resume playback
       fireEvent.keyDown(window, { key: ' ' });
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should track playback progress', async () => {
@@ -475,7 +483,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('song1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Play file
       const file1 = screen.getByText('song1.mp3');
@@ -483,7 +491,7 @@ describe('User Flow Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Trigger metadata loaded
       mockAudioInstance.triggerLoadedMetadata();

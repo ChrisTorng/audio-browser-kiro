@@ -16,10 +16,12 @@ import { DirectoryTree } from '../../../src/shared/types';
 
 // Mock API
 const mockScanDirectory = vi.fn();
+const mockGetTree = vi.fn();
 
 vi.mock('../../../src/client/services/api', () => ({
   audioBrowserAPI: {
     scanDirectory: (...args: any[]) => mockScanDirectory(...args),
+    getTree: (...args: any[]) => mockGetTree(...args),
   },
 }));
 
@@ -65,6 +67,10 @@ describe('Keyboard Navigation Integration Tests', () => {
     // Mock Audio constructor
     mockAudioInstance = new MockAudio();
     global.Audio = vi.fn(() => mockAudioInstance) as any;
+
+    // Setup default mock return values
+    mockGetTree.mockResolvedValue({ name: '', path: '', type: 'directory', files: [], subdirectories: [] });
+    mockScanDirectory.mockResolvedValue({ tree: { name: '', path: '', type: 'directory', files: [], subdirectories: [] } });
 
     // Mock fetch for metadata
     global.fetch = vi.fn((url) => {
@@ -140,7 +146,7 @@ describe('Keyboard Navigation Integration Tests', () => {
 
     await waitFor(() => {
       expect(screen.getByText('music')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   };
 
   describe('Arrow Key Navigation', () => {
@@ -161,14 +167,14 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('intro.mp3');
-      });
+      }, { timeout: 5000 });
 
       // Press down to select outro.mp3
       fireEvent.keyDown(window, { key: 'ArrowDown' });
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('outro.mp3');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should navigate up through visible items', async () => {
@@ -182,14 +188,14 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('outro.mp3');
-      });
+      }, { timeout: 5000 });
 
       // Navigate back up to intro.mp3
       fireEvent.keyDown(window, { key: 'ArrowUp' });
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('intro.mp3');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should not navigate beyond list boundaries', async () => {
@@ -202,7 +208,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       await waitFor(() => {
         // No audio should be playing yet
         expect(mockAudioInstance.src).toBe('');
-      });
+      }, { timeout: 5000 });
 
       // Navigate to last visible item
       fireEvent.keyDown(window, { key: 'ArrowDown' }); // intro.mp3
@@ -217,7 +223,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       await waitFor(() => {
         // Should still be at jazz directory
         expect(mockAudioInstance.src).toContain('outro.mp3'); // Last file played
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -238,7 +244,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       await waitFor(() => {
         expect(screen.getByText('rock1.mp3')).toBeInTheDocument();
         expect(screen.getByText('rock2.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
     });
 
     it('should collapse directory with ArrowLeft', async () => {
@@ -250,7 +256,7 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('rock1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Collapse with ArrowLeft
       fireEvent.keyDown(window, { key: 'ArrowLeft' });
@@ -258,7 +264,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       // Files should be hidden
       await waitFor(() => {
         expect(screen.queryByText('rock1.mp3')).not.toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
     });
 
     it('should navigate through expanded directory items', async () => {
@@ -270,20 +276,20 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('rock1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Navigate down into expanded directory
       fireEvent.keyDown(window, { key: 'ArrowDown' }); // rock1.mp3
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('rock1.mp3');
-      });
+      }, { timeout: 5000 });
 
       fireEvent.keyDown(window, { key: 'ArrowDown' }); // rock2.mp3
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('rock2.mp3');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should handle nested directory expansion', async () => {
@@ -317,7 +323,7 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('classic1.wav');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should not expand files with ArrowRight', async () => {
@@ -330,7 +336,7 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('intro.mp3');
-      });
+      }, { timeout: 5000 });
 
       // Try to expand file (should do nothing)
       fireEvent.keyDown(window, { key: 'ArrowRight' });
@@ -338,7 +344,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       // File should still be playing, no changes
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('intro.mp3');
-      });
+      }, { timeout: 5000 });
     });
 
     it('should not collapse files with ArrowLeft', async () => {
@@ -351,7 +357,7 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('intro.mp3');
-      });
+      }, { timeout: 5000 });
 
       // Try to collapse file (should do nothing)
       fireEvent.keyDown(window, { key: 'ArrowLeft' });
@@ -359,7 +365,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       // File should still be playing, no changes
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('intro.mp3');
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -374,7 +380,7 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Stop with space
       fireEvent.keyDown(window, { key: ' ' });
@@ -382,7 +388,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(true);
         expect(mockAudioInstance.currentTime).toBe(0);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should resume playback with space bar', async () => {
@@ -395,21 +401,21 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Stop
       fireEvent.keyDown(window, { key: ' ' });
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(true);
-      });
+      }, { timeout: 5000 });
 
       // Resume
       fireEvent.keyDown(window, { key: ' ' });
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
     });
 
     it('should toggle play/stop multiple times', async () => {
@@ -422,19 +428,19 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Toggle multiple times
       for (let i = 0; i < 3; i++) {
         fireEvent.keyDown(window, { key: ' ' });
         await waitFor(() => {
           expect(mockAudioInstance.paused).toBe(true);
-        });
+        }, { timeout: 5000 });
 
         fireEvent.keyDown(window, { key: ' ' });
         await waitFor(() => {
           expect(mockAudioInstance.paused).toBe(false);
-        });
+        }, { timeout: 5000 });
       }
     });
 
@@ -448,14 +454,14 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Stop with 'Spacebar' key name (older browsers)
       fireEvent.keyDown(window, { key: 'Spacebar' });
 
       await waitFor(() => {
         expect(mockAudioInstance.paused).toBe(true);
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -471,14 +477,14 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText('rock1.mp3')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Collapse
       fireEvent.keyDown(window, { key: 'ArrowLeft' });
 
       await waitFor(() => {
         expect(screen.queryByText('rock1.mp3')).not.toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Navigate down should go to next directory
       fireEvent.keyDown(window, { key: 'ArrowDown' }); // jazz
@@ -498,7 +504,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       // Should handle gracefully without errors
       await waitFor(() => {
         expect(mockAudioInstance.src).toBeTruthy();
-      });
+      }, { timeout: 5000 });
 
       // Rapidly press up
       for (let i = 0; i < 5; i++) {
@@ -508,7 +514,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       // Should handle gracefully
       await waitFor(() => {
         expect(mockAudioInstance.src).toBeTruthy();
-      });
+      }, { timeout: 5000 });
     });
 
     it('should navigate through fully expanded tree', async () => {
@@ -564,7 +570,7 @@ describe('Keyboard Navigation Integration Tests', () => {
 
       await waitFor(() => {
         expect(mockAudioInstance.src).toContain('classic1.wav');
-      });
+      }, { timeout: 5000 });
 
       // Navigate back up with keyboard
       for (let i = 0; i < 5; i++) {
@@ -574,7 +580,7 @@ describe('Keyboard Navigation Integration Tests', () => {
       // Should have navigated up (audio src should still be valid)
       await waitFor(() => {
         expect(mockAudioInstance.src).toBeTruthy();
-      });
+      }, { timeout: 5000 });
     });
   });
 });

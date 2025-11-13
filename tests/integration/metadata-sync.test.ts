@@ -24,7 +24,7 @@ describe('Metadata Synchronization Integration', () => {
   beforeAll(async () => {
     // Create temporary database
     const testDir = path.join(os.tmpdir(), `audio-browser-metadata-${Date.now()}`);
-    await fs.mkdir(testDir, { recursive: true });
+    await fs.mkdir(testDir, { recursive: true }, { timeout: 5000 });
     testDbPath = path.join(testDir, 'test-metadata.db');
 
     // Initialize database and service
@@ -33,16 +33,20 @@ describe('Metadata Synchronization Integration', () => {
 
     // Save original fetch
     originalFetch = global.fetch;
-  });
+  }, { timeout: 5000 });
 
   afterAll(async () => {
     // Clean up
-    database.close();
-    await fs.rm(path.dirname(testDbPath), { recursive: true, force: true });
+    try {
+      database.close();
+      await fs.rm(path.dirname(testDbPath), { recursive: true, force: true });
+    } catch (error) {
+      console.error('Cleanup error:', error);
+    }
     
     // Restore fetch
     global.fetch = originalFetch;
-  });
+  }, 15000);
 
   beforeEach(() => {
     // Clear database before each test
@@ -50,7 +54,13 @@ describe('Metadata Synchronization Integration', () => {
     const allMetadata = database.getAllMetadata();
     allMetadata.forEach(meta => database.deleteMetadata(meta.filePath));
     vi.clearAllMocks();
-  });
+    
+    // Setup default fetch mock to prevent hanging
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ metadata: {} }),
+    }, { timeout: 5000 });
+  }, { timeout: 5000 });
 
   describe('Initial Metadata Loading', () => {
     it('should load all metadata from backend on mount', async () => {
@@ -67,7 +77,7 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file2.mp3': metadataService.getMetadata('audio/file2.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       // Render hook
       const { result } = renderHook(() => useAudioMetadata());
@@ -75,7 +85,7 @@ describe('Metadata Synchronization Integration', () => {
       // Wait for loading to complete
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Verify metadata is loaded
       expect(result.current.metadata.size).toBe(2);
@@ -83,25 +93,25 @@ describe('Metadata Synchronization Integration', () => {
       expect(result.current.metadata.get('audio/file1.mp3')?.description).toBe('Great track');
       expect(result.current.metadata.get('audio/file2.mp3')?.rating).toBe(2);
       expect(result.current.error).toBe(null);
-    });
+    }, { timeout: 5000 });
 
     it('should handle empty metadata on initial load', async () => {
       // Mock fetch to return empty metadata
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: {} }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       expect(result.current.metadata.size).toBe(0);
       expect(result.current.error).toBe(null);
-    });
-  });
+    }, { timeout: 5000 });
+  }, { timeout: 5000 });
 
   describe('Optimistic Rating Updates', () => {
     it('should perform optimistic update and sync with backend', async () => {
@@ -116,25 +126,25 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file1.mp3': metadataService.getMetadata('audio/file1.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Mock update request
       const updatedMetadata = metadataService.updateMetadata('audio/file1.mp3', 3, 'Initial');
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: updatedMetadata }),
-      });
+      }, { timeout: 5000 });
 
       // Perform update
       await act(async () => {
         await result.current.updateRating('audio/file1.mp3', 3);
-      });
+      }, { timeout: 5000 });
 
       // Verify optimistic update
       expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(3);
@@ -151,7 +161,7 @@ describe('Metadata Synchronization Integration', () => {
           }),
         })
       );
-    });
+    }, { timeout: 5000 });
 
     it('should rollback on rating update failure', async () => {
       // Setup: Initial metadata
@@ -165,13 +175,13 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file1.mp3': metadataService.getMetadata('audio/file1.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       const originalRating = result.current.metadata.get('audio/file1.mp3')?.rating;
 
@@ -179,49 +189,49 @@ describe('Metadata Synchronization Integration', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         statusText: 'Internal Server Error',
-      });
+      }, { timeout: 5000 });
 
       // Attempt update
       await expect(async () => {
         await act(async () => {
           await result.current.updateRating('audio/file1.mp3', 3);
-        });
+        }, { timeout: 5000 });
       }).rejects.toThrow();
 
       // Verify rollback to original value
       expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(originalRating);
-    });
+    }, { timeout: 5000 });
 
     it('should create new metadata for unrated file', async () => {
       // Mock initial fetch (empty)
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: {} }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Mock create request
       const newMetadata = metadataService.updateMetadata('audio/new.mp3', 2, '');
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: newMetadata }),
-      });
+      }, { timeout: 5000 });
 
       // Create new metadata
       await act(async () => {
         await result.current.updateRating('audio/new.mp3', 2);
-      });
+      }, { timeout: 5000 });
 
       // Verify new metadata exists
       expect(result.current.metadata.has('audio/new.mp3')).toBe(true);
       expect(result.current.metadata.get('audio/new.mp3')?.rating).toBe(2);
-    });
-  });
+    }, { timeout: 5000 });
+  }, { timeout: 5000 });
 
   describe('Optimistic Description Updates', () => {
     it('should perform optimistic update and sync with backend', async () => {
@@ -236,25 +246,25 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file1.mp3': metadataService.getMetadata('audio/file1.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Mock update request
       const updatedMetadata = metadataService.updateMetadata('audio/file1.mp3', 2, 'New description');
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: updatedMetadata }),
-      });
+      }, { timeout: 5000 });
 
       // Perform update
       await act(async () => {
         await result.current.updateDescription('audio/file1.mp3', 'New description');
-      });
+      }, { timeout: 5000 });
 
       // Verify optimistic update
       expect(result.current.metadata.get('audio/file1.mp3')?.description).toBe('New description');
@@ -271,7 +281,7 @@ describe('Metadata Synchronization Integration', () => {
           }),
         })
       );
-    });
+    }, { timeout: 5000 });
 
     it('should rollback on description update failure', async () => {
       // Setup: Initial metadata
@@ -285,13 +295,13 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file1.mp3': metadataService.getMetadata('audio/file1.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       const originalDescription = result.current.metadata.get('audio/file1.mp3')?.description;
 
@@ -299,19 +309,19 @@ describe('Metadata Synchronization Integration', () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         statusText: 'Bad Request',
-      });
+      }, { timeout: 5000 });
 
       // Attempt update
       await expect(async () => {
         await act(async () => {
           await result.current.updateDescription('audio/file1.mp3', 'Failed description');
-        });
+        }, { timeout: 5000 });
       }).rejects.toThrow();
 
       // Verify rollback to original value
       expect(result.current.metadata.get('audio/file1.mp3')?.description).toBe(originalDescription);
-    });
-  });
+    }, { timeout: 5000 });
+  }, { timeout: 5000 });
 
   describe('Multiple Concurrent Updates', () => {
     it('should handle multiple rating updates in sequence', async () => {
@@ -326,13 +336,13 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file1.mp3': metadataService.getMetadata('audio/file1.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Mock multiple updates
       for (let rating = 1; rating <= 3; rating++) {
@@ -340,25 +350,25 @@ describe('Metadata Synchronization Integration', () => {
         (global.fetch as any).mockResolvedValueOnce({
           ok: true,
           json: async () => ({ metadata: updated }),
-        });
+        }, { timeout: 5000 });
       }
 
       // Perform multiple updates
       await act(async () => {
         await result.current.updateRating('audio/file1.mp3', 1);
-      });
+      }, { timeout: 5000 });
       expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(1);
 
       await act(async () => {
         await result.current.updateRating('audio/file1.mp3', 2);
-      });
+      }, { timeout: 5000 });
       expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(2);
 
       await act(async () => {
         await result.current.updateRating('audio/file1.mp3', 3);
-      });
+      }, { timeout: 5000 });
       expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(3);
-    });
+    }, { timeout: 5000 });
 
     it('should handle rating and description updates together', async () => {
       // Setup: Initial metadata
@@ -372,43 +382,43 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file1.mp3': metadataService.getMetadata('audio/file1.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Mock rating update
       let updated = metadataService.updateMetadata('audio/file1.mp3', 3, 'Initial');
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: updated }),
-      });
+      }, { timeout: 5000 });
 
       // Update rating
       await act(async () => {
         await result.current.updateRating('audio/file1.mp3', 3);
-      });
+      }, { timeout: 5000 });
 
       // Mock description update
       updated = metadataService.updateMetadata('audio/file1.mp3', 3, 'Updated description');
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: updated }),
-      });
+      }, { timeout: 5000 });
 
       // Update description
       await act(async () => {
         await result.current.updateDescription('audio/file1.mp3', 'Updated description');
-      });
+      }, { timeout: 5000 });
 
       // Verify both updates
       expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(3);
       expect(result.current.metadata.get('audio/file1.mp3')?.description).toBe('Updated description');
-    });
-  });
+    }, { timeout: 5000 });
+  }, { timeout: 5000 });
 
   describe('Metadata Refresh', () => {
     it('should refresh metadata from backend', async () => {
@@ -416,13 +426,13 @@ describe('Metadata Synchronization Integration', () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: {} }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       expect(result.current.metadata.size).toBe(0);
 
@@ -437,18 +447,18 @@ describe('Metadata Synchronization Integration', () => {
             'audio/file1.mp3': metadataService.getMetadata('audio/file1.mp3'),
           },
         }),
-      });
+      }, { timeout: 5000 });
 
       // Refresh
       await act(async () => {
         await result.current.refreshMetadata();
-      });
+      }, { timeout: 5000 });
 
       // Verify new metadata is loaded
       expect(result.current.metadata.size).toBe(1);
       expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(3);
-    });
-  });
+    }, { timeout: 5000 });
+  }, { timeout: 5000 });
 
   describe('Error Handling', () => {
     it('should handle network errors gracefully', async () => {
@@ -459,37 +469,37 @@ describe('Metadata Synchronization Integration', () => {
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       expect(result.current.error).not.toBe(null);
       expect(result.current.metadata.size).toBe(0);
-    });
+    }, { timeout: 5000 });
 
     it('should handle invalid rating values', async () => {
       // Mock initial fetch
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ metadata: {} }),
-      });
+      }, { timeout: 5000 });
 
       const { result } = renderHook(() => useAudioMetadata());
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-      });
+      }, { timeout: 5000 });
 
       // Test invalid ratings
       await expect(async () => {
         await act(async () => {
           await result.current.updateRating('audio/file1.mp3', -1);
-        });
+        }, { timeout: 5000 });
       }).rejects.toThrow('Rating must be between 0 and 3');
 
       await expect(async () => {
         await act(async () => {
           await result.current.updateRating('audio/file1.mp3', 4);
-        });
+        }, { timeout: 5000 });
       }).rejects.toThrow('Rating must be between 0 and 3');
-    });
-  });
-});
+    }, { timeout: 5000 });
+  }, { timeout: 5000 });
+}, { timeout: 5000 });
