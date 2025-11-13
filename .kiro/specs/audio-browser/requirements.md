@@ -62,8 +62,12 @@
 1. WHEN Frontend 下載音檔後，THE Frontend SHALL 即時在瀏覽器中生成波形圖和頻譜圖
 2. THE Frontend SHALL 使用 Web Audio API 或相關函式庫處理音頻資料
 3. THE Frontend SHALL 在音檔列表中依序顯示波形圖和頻譜圖
-4. THE Frontend SHALL 在波形圖和頻譜圖上同步顯示播放進度條
+4. THE Frontend SHALL 在波形圖和頻譜圖上同步顯示播放進度指示線
 5. THE Frontend SHALL 在 3 秒內完成單一音檔的波形圖和頻譜圖生成
+6. THE Frontend SHALL 以固定寬度和固定高度顯示頻譜圖，不論音檔長度
+7. THE Frontend SHALL 將完整音檔內容縮放至固定的頻譜圖顯示尺寸
+8. THE Frontend SHALL 確保波形圖和頻譜圖在音檔列表中正確顯示且不閃爍
+9. WHEN 音檔正在播放，THE Frontend SHALL 只更新播放進度指示線，不重新生成整個波形圖或頻譜圖
 
 ### Requirement 4
 
@@ -79,9 +83,13 @@
 6. WHEN 當前選中項目為已收合的資料夾且使用者按下左鍵，THE Frontend SHALL 收合該資料夾的上層資料夾並選擇上層資料夾
 7. WHEN 當前選中項目為資料夾且使用者按下右鍵，THE Frontend SHALL 展開該資料夾
 8. WHEN 使用者按上下鍵移動選取項目超出可見區域，THE Frontend SHALL 自動捲動畫面以顯示當前選取項目
-9. WHEN 使用者點擊資料夾項目，THE Frontend SHALL 展開或收合該資料夾
+9. WHEN 使用者點擊資料夾項目的任何位置，THE Frontend SHALL 展開或收合該資料夾
 10. THE Frontend SHALL 視覺化標示當前選中的項目（使用高亮背景色）
-11. WHEN 當前選取項目從音檔移動到資料夾，THE Frontend SHALL 停止音檔播放
+11. THE Frontend SHALL 確保選取項目的背景條高度與項目本身高度完全一致
+12. WHEN 當前選取項目從音檔移動到資料夾，THE Frontend SHALL 停止音檔播放
+13. WHEN 使用者在描述欄位輸入時按下空白鍵，THE Frontend SHALL 在描述欄位插入空白字元而非觸發播放控制
+14. WHEN 使用者在描述欄位輸入時按下方向鍵，THE Frontend SHALL 在描述欄位內移動游標而非切換選取項目
+15. WHEN 使用者在描述欄位輸入時按下左鍵，THE Frontend SHALL 在描述欄位內移動游標而非收合資料夾
 
 ### Requirement 5
 
@@ -102,11 +110,15 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 為每個音檔顯示三星評分介面
-2. WHEN 使用者點擊星星，THE Frontend SHALL 更新該音檔的評分（1-3 星）並立即儲存
-3. THE Frontend SHALL 不允許使用者直接設定 0 星（0 星僅表示未評分狀態）
-4. WHEN 評分被更新，THE Backend SHALL 將評分儲存到 Database 中
-5. THE Frontend SHALL 視覺化顯示當前的評分狀態（0 星顯示為空星）
-6. WHEN 使用者在選取的音檔項目上按下數字鍵 1/2/3，THE Frontend SHALL 直接設定該音檔的星級評分
+2. WHEN 使用者點擊當前選取音檔項目的星星，THE Frontend SHALL 更新該音檔的評分（1-3 星）並立即儲存
+3. WHEN 使用者點擊非當前選取音檔項目的星星，THE Frontend SHALL 選取該音檔項目並開始播放，不更新評分
+4. THE Frontend SHALL 不允許使用者直接設定 0 星（0 星僅表示未評分狀態）
+5. WHEN 評分被更新，THE Backend SHALL 將評分儲存到 Database 中
+6. THE Frontend SHALL 視覺化顯示當前的評分狀態（0 星顯示為空星）
+7. WHEN 使用者在選取的音檔項目上按下數字鍵 1/2/3，THE Frontend SHALL 直接設定該音檔的星級評分
+8. THE Frontend SHALL 在網頁載入時從 Backend 取得所有音檔的評分和描述資料
+9. WHEN 評分或描述被更新，THE Frontend SHALL 在瀏覽器記憶體中更新資料並同步傳送到 Backend 儲存
+10. THE Frontend SHALL 不在更新後重新從 Backend 取得評分和描述資料
 
 ### Requirement 7
 
@@ -115,11 +127,13 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 為每個音檔提供可點擊的描述欄位
-2. WHEN 使用者點擊描述欄位，THE Frontend SHALL 轉換為輸入框並根據點擊位置設定插入點
-3. WHEN 使用者按下 Esc 鍵，THE Frontend SHALL 取消編輯並恢復原值
-4. WHEN 使用者按下 Enter 鍵或輸入焦點離開，THE Frontend SHALL 自動儲存描述到 Backend
-5. WHEN 描述被更新，THE Backend SHALL 將描述儲存到 Database 中
-6. WHEN 使用者在選取的音檔項目上按下 Enter 鍵，THE Frontend SHALL 直接開始編輯該音檔的描述
+2. WHEN 使用者點擊當前選取音檔項目的描述欄位，THE Frontend SHALL 轉換為輸入框並根據點擊位置設定插入點
+3. WHEN 使用者點擊非當前選取音檔項目的描述欄位，THE Frontend SHALL 選取該音檔項目並開始播放，不開始編輯描述
+4. WHEN 使用者按下 Esc 鍵，THE Frontend SHALL 取消編輯並恢復原值
+5. WHEN 使用者按下 Enter 鍵或輸入焦點離開，THE Frontend SHALL 自動儲存描述到 Backend
+6. WHEN 描述被更新，THE Backend SHALL 將描述儲存到 Database 中
+7. WHEN 使用者在選取的音檔項目上按下 Enter 鍵，THE Frontend SHALL 直接開始編輯該音檔的描述
+8. THE Frontend SHALL 在描述欄位取得輸入焦點時保持焦點狀態，不因畫面更新而失去焦點
 
 ### Requirement 8
 
@@ -128,13 +142,14 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 在網站標題右側提供篩選輸入欄位
-2. WHEN 使用者輸入文字，THE Frontend SHALL 從所有項目中篩選，不限於目前展開顯示的項目
+2. WHEN 使用者輸入文字，THE Frontend SHALL 從所有項目中篩選，包括收合和展開的所有資料夾和音檔
 3. THE Frontend SHALL 篩選音檔名稱、資料夾名稱和描述欄位
 4. WHEN 篩選文字符合資料夾名稱，THE Frontend SHALL 顯示該資料夾下所有項目（包括子資料夾和音檔）
-5. THE Frontend SHALL 高亮顯示符合篩選條件的文字部分
-6. THE Frontend SHALL 確保高亮顯示不會改變文字或字母的寬度
-7. THE Frontend SHALL 顯示被篩選出來的總音檔數量（不包含資料夾數量）
-8. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
+5. WHEN 篩選文字符合音檔名稱或描述，THE Frontend SHALL 自動展開該音檔所在的所有上層資料夾
+6. THE Frontend SHALL 高亮顯示符合篩選條件的文字部分
+7. THE Frontend SHALL 確保高亮顯示不會改變文字或字母的寬度
+8. THE Frontend SHALL 顯示被篩選出來的總音檔數量（不包含資料夾數量）
+9. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
 
 ### Requirement 9
 
@@ -143,10 +158,11 @@
 #### Acceptance Criteria
 
 1. THE Frontend SHALL 在網站標題右側提供星級篩選選項（全部、未評分、1 星、2 星、3 星）
-2. WHEN 使用者選擇星級篩選，THE Frontend SHALL 從所有項目中篩選，不限於目前展開顯示的項目
+2. WHEN 使用者選擇星級篩選，THE Frontend SHALL 從所有項目中篩選，包括收合和展開的所有資料夾和音檔
 3. WHEN 使用者選擇星級篩選，THE Frontend SHALL 即時更新並只顯示符合該星級的音檔
-4. THE Frontend SHALL 允許同時使用文字篩選和星級篩選
-5. THE Frontend SHALL 在 100 毫秒內完成篩選更新
+4. WHEN 星級篩選符合音檔，THE Frontend SHALL 自動展開該音檔所在的所有上層資料夾
+5. THE Frontend SHALL 允許同時使用文字篩選和星級篩選
+6. THE Frontend SHALL 在 100 毫秒內完成篩選更新
 
 ### Requirement 10
 
@@ -173,6 +189,9 @@
 5. THE Waveform Generator SHALL 在背景執行，不阻塞使用者操作
 6. THE Frontend SHALL 避免不必要的畫面更新以防止滑鼠懸停時的閃爍現象
 7. THE Frontend SHALL 優化渲染效能以確保流暢的使用者體驗
+8. THE Frontend SHALL 避免在播放音檔時造成波形圖和頻譜圖閃爍
+9. THE Frontend SHALL 只在必要時重新渲染音檔項目，避免全部項目同時閃爍
+10. THE Frontend SHALL 確保描述欄位在取得輸入焦點後不因畫面更新而失去焦點
 
 ### Requirement 12
 
