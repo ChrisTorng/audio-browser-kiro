@@ -157,10 +157,14 @@ body {
 }
 
 .audio-browser__item {
-  padding: 6px 8px;
+  padding: 0;
+  margin: 0;
   cursor: pointer;
   border-radius: 3px;
   user-select: none;
+  line-height: 1;
+  /* Ensure consistent height */
+  box-sizing: border-box;
 }
 
 .audio-browser__item:hover {
@@ -243,6 +247,11 @@ body {
   cursor: pointer;
   user-select: none;
   border-bottom: 1px solid #2d2d2d;
+  /* Remove any default padding/margin that could affect height */
+  margin: 0;
+  padding: 0;
+  /* Ensure the item takes exactly the height specified by react-window */
+  line-height: 1;
 }
 
 .audio-tree__item:hover {
@@ -260,8 +269,11 @@ body {
 .audio-tree__item-content {
   display: flex;
   align-items: center;
-  height: 100%;
-  padding: 4px 8px;
+  /* Use exact height to match the item height (40px default) */
+  height: 40px;
+  padding: 0 8px;
+  /* Ensure content doesn't overflow */
+  box-sizing: border-box;
 }
 
 .audio-tree__directory {
@@ -417,6 +429,11 @@ body {
   cursor: pointer;
   user-select: none;
   border-bottom: 1px solid #2d2d2d;
+  /* Remove any default padding/margin that could affect height */
+  margin: 0;
+  padding: 0;
+  /* Ensure the item takes exactly the height specified by react-window */
+  line-height: 1;
 }
 
 .audio-item:hover {
@@ -434,9 +451,12 @@ body {
 .audio-item__content {
   display: flex;
   align-items: center;
-  height: 100%;
-  padding: 8px 12px;
+  /* Use exact height to match the item height (40px default) */
+  height: 40px;
+  padding: 0 12px;
   gap: 12px;
+  /* Ensure content doesn't overflow */
+  box-sizing: border-box;
 }
 
 .audio-item__rating {
