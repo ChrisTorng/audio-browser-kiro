@@ -110,11 +110,11 @@ describe('AudioItem - DescriptionField Integration', () => {
     expect(screen.getByText('Add description...')).toBeInTheDocument();
   });
 
-  it('enters edit mode when description is clicked', async () => {
+  it('enters edit mode when description is clicked on selected item', async () => {
     render(
       <AudioItem
         file={mockFile}
-        isSelected={false}
+        isSelected={true}
         isVisible={true}
         level={1}
         onClick={vi.fn()}
@@ -137,7 +137,7 @@ describe('AudioItem - DescriptionField Integration', () => {
     render(
       <AudioItem
         file={mockFile}
-        isSelected={false}
+        isSelected={true}
         isVisible={true}
         level={1}
         onClick={vi.fn()}
@@ -172,7 +172,7 @@ describe('AudioItem - DescriptionField Integration', () => {
     render(
       <AudioItem
         file={mockFile}
-        isSelected={false}
+        isSelected={true}
         isVisible={true}
         level={1}
         onClick={vi.fn()}
@@ -209,7 +209,7 @@ describe('AudioItem - DescriptionField Integration', () => {
     render(
       <AudioItem
         file={mockFile}
-        isSelected={false}
+        isSelected={true}
         isVisible={true}
         level={1}
         onClick={vi.fn()}
@@ -244,7 +244,7 @@ describe('AudioItem - DescriptionField Integration', () => {
     render(
       <AudioItem
         file={mockFile}
-        isSelected={false}
+        isSelected={true}
         isVisible={true}
         level={1}
         onClick={vi.fn()}
@@ -286,13 +286,13 @@ describe('AudioItem - DescriptionField Integration', () => {
     expect(highlight?.textContent).toBe('Original');
   });
 
-  it('does not propagate click event when clicking description', () => {
+  it('does not propagate click event when clicking description on selected item', () => {
     const onClick = vi.fn();
 
     render(
       <AudioItem
         file={mockFile}
-        isSelected={false}
+        isSelected={true}
         isVisible={true}
         level={1}
         onClick={onClick}
@@ -315,7 +315,7 @@ describe('AudioItem - DescriptionField Integration', () => {
     render(
       <AudioItem
         file={mockFile}
-        isSelected={false}
+        isSelected={true}
         isVisible={true}
         level={1}
         onClick={vi.fn()}

@@ -1,220 +1,208 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, fireEvent, waitFor } from '@testing-library/react';
+import { AudioItem } from '../../../src/client/components/AudioItem';
+import type { AudioFile } from '../../../src/shared/types';
+
+// Create mock blob with arrayBuffer method
+const createMockBlob = () => {
+  const blob = new Blob(['audio data'], { type: 'audio/mp3' });
+  // Add arrayBuffer method if not present (for Node.js environment)
+  if (!blob.arrayBuffer) {
+    (blob as any).arrayBuffer = () => Promise.resolve(new ArrayBuffer(8));
+  }
+  return blob;
+};
+
+// Mock API
+vi.mock('../../../src/client/services/api', () => ({
+  audioBrowserAPI: {
+    getAudioFile: vi.fn(() => Promise.resolve(createMockBlob())),
+  },
+}));
+
+// Mock AudioContext
+const mockDecodeAudioData = vi.fn(() =>
+  Promise.resolve({
+    length: 44100,
+    sampleRate: 44100,
+    numberOfChannels: 2,
+    getChannelData: () => new Float32Array(44100),
+  })
 );
 
-  });
-}e();kRestorocrSpy.moleErrocons
-       });
-;
- or)
-      )y(Errxpect.an
-        ee rating:',pdato uailed t      'F
-  CalledWith(oHaveBeenrSpy).tnsoleErropect(coex       => {
-itFor(()wa   await ]);
+global.AudioContext = vi.fn(() => ({
+  decodeAudioData: mockDecodeAudioData,
+})) as any;
 
- stars[0Event.click(  fire
-  );ar'rating__star-('.stySelectorAllntainer.quer= const stars 
+describe('AudioItem - StarRating Integration', () => {
+  const mockFile: AudioFile = {
+    name: 'test-song.mp3',
+    path: '/music/test-song.mp3',
+    size: 5242880,
+  };
 
-    co  );
-  >    /.fn()}
-  vi={   onClick={1}
-        levele}
-     Visible={tru
-        isted={false}    isSelecle}
-    le={mockFifi     oItem
-        <Audiender(
-  = r container }    const { => {});
+  const mockUpdateRating = vi.fn();
+  const mockGetMetadata = vi.fn();
 
-mentation(()mpler').mockIe, 'erroonsol= vi.spyOn(cy eErrorSpnst consol
-    co
-k error'));rror('NetwordValue(new EkRejecte.moctingkUpdateRa    moc{
->  = ()y', asyncllrors gracefupdate errating u('handles ;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUpdateRating.mockClear();
+    mockGetMetadata.mockClear();
 
-  it
-  }));
-    }e.path, 1);ith(mockFilalledW.toHaveBeenCeRating)pdat(mockUectexp=> {
-      (() itForit wa   awa
- ;
-alled()HaveBeenC.not.tomClick)ct(onItexpe e   
-
-);0]click(stars[fireEvent.
-    g__star');star-ratinrAll('.erySelectontainer.qucost stars = con
-
-      );  
-}
-      />temClicknI{oonClick=      ={1}
-      leveltrue}
-    le={   isVisib   alse}
-  ected={f  isSel      le}
-e={mockFi   fil    Item
-     <Audior(
-   = rendeiner }t { conta
-
-    cons vi.fn();ck = onItemCli
-    const() => {tar', async  clicking snt when to pareclick eventgate s not propat('doe i
-  });
-
+    // Reset mock implementations
+    mockGetMetadata.mockReturnValue({
+      rating: 0,
+      description: '',
     });
- 0);path, th(mockFile.lledWiveBeenCang).toHaUpdateRatiect(mock exp     => {
- (()ort waitF    awai1]);
 
-stars[t.click( fireEvenstar');
-   ng__star-ratitorAll('.r.querySelecine contas =const star);
-
-           />
-n()}
-   .f={vi  onClick      l={1}
-     leve}
-   uele={trisib isV     alse}
-  lected={f      isSele}
-  ckFi  file={mo      
-udioItem   <A
-   r( } = rende container {   const;
-
- ' })cription: ' 2, desue({ rating:eturnValtadata.mockRmockGetMe> {
-    c () =ain', asynr agame stahe slicking t when catingit('clears r;
-
-  })s(3);
-  enCalledTimeeBeav.toHateRating)mockUpdexpect( });
-
-      ;
-  3)kFile.path,mocith(dWaveBeenCalle.toHating)ateRpect(mockUpd
-      exor(() => {tFwait ai]);
-    awlick(stars[2fireEvent.c });
-
-    
-   path, 2);ckFile.th(moalledWiBeenCng).toHaveateRatipect(mockUpd{
-      exr(() => waitFowait 1]);
-    astars[ck(clint.  fireEve   });
-
-  , 1);
- pathile.edWith(mockFnCalleetoHaveBdateRating).ockUpexpect(m   
-   () => { waitFor(   await0]);
- s[lick(starireEvent.c   f
- _star');
-ing_star-rat'.lectorAll(uerySe.qinerconta stars = stcon);
-
-    
-    
-      />n()}ck={vi.f     onCli={1}
-      level
-     le={true}sib    isVifalse}
-    ected={ isSel
-       ckFile}   file={moItem
-         <Audio
-   } = render(container    const { {
-async () => ars', ent stfferking di when clicediatelymmtes rating i
-  it('upda);
- };
-     })th, 3);
-mockFile.paCalledWith(oHaveBeenting).tpdateRamockUexpect( {
-      itFor(() =>  await wa  ]);
-
-ck(stars[2eEvent.cli);
-    fir__star'ating'.star-rSelectorAll(r.querys = containear   const st );
-
-    />
-   n()}
-   Click={vi.fon1}
-         level={}
-       ruee={tVisiblis        ={false}
- isSelected       
-={mockFile}        fileAudioItem
-     < render(
- er } = { containonst   c) => {
- ync (icked', astar is cln srating whe'updates it(
-  2);
+    // Mock hooks
+    vi.doMock('../../../src/client/hooks', () => ({
+      useAudioMetadata: vi.fn(() => ({
+        getMetadata: mockGetMetadata,
+        updateRating: mockUpdateRating,
+        updateDescription: vi.fn(),
+      })),
+      useAudioPlayer: vi.fn(() => ({
+        isPlaying: false,
+        progress: 0,
+      })),
+      useLazyVisualization: vi.fn(() => ({
+        waveformData: null,
+        spectrogramData: null,
+        isLoading: false,
+        error: null,
+        loadVisualization: vi.fn(),
+        clearVisualization: vi.fn(),
+      })),
+    }));
   });
-h(eLengt).toHavdStarspect(fille;
-    ex-filled')g__star-r-ratinAll('.staSelectoreryquer.contains = edStar fill
-    const
+
+  it('displays current rating from metadata', () => {
+    mockGetMetadata.mockReturnValue({
+      rating: 2,
+      description: '',
+    });
+
+    const { container } = render(
+      <AudioItem
+        file={mockFile}
+        isSelected={true}
+        isVisible={true}
+        level={1}
+        onClick={vi.fn()}
+      />
     );
 
-      />{vi.fn()}lick=       onCevel={1}
-        lle={true}
- ibsVis     ifalse}
-   d={ isSelecte
-       }leile={mockFi
-        femoItdiAu(
-      < = renderer }st { containon
-    cn: '' });
-criptio2, des: ratinge({ ReturnValuckmoata.adckGetMet{
-    mo () => ta',ada from metent ratingys currplait('dis
+    const filledStars = container.querySelectorAll('.star-rating__star--filled');
+    expect(filledStars).toHaveLength(2);
   });
 
-  ed);efinedValue(undmockResolvcription.dateDesmockUpined);
-    lue(undefedValvesomockRng.atickUpdateR });
-    moon: ''ripti: 0, desclue({ ratingockReturnVaadata.mtMet
-    mockGerAllMocks();lea    vi.c> {
-ch(() =  beforeEa
+  it('updates rating immediately when star is clicked on selected item', async () => {
+    const { container } = render(
+      <AudioItem
+        file={mockFile}
+        isSelected={true}
+        isVisible={true}
+        level={1}
+        onClick={vi.fn()}
+      />
+    );
 
-42880,
-  };ize: 52    ssong.mp3',
-sic/test-: '/mu',
-    pathp3-song.meste: 't nam {
-    =oFilee: AudickFilmo
-  const n', () => {tiotegra InrRatingem - StaoItudi
-describe('A)),
-}));
-ion,
-  }arVisualizatlemockCualization: isearVion,
-    cllizatkLoadVisua: mocsualizationdVi,
-    loaerror: nulle,
-    oading: falssL
-    ita: null,rogramDactpe s,
-   : nullwaveformData    
-) => ({on: vi.fn((tiVisualizazy
-  useLa),})
-  ess: 0,progr
-    g: false,    isPlayin{
- () =>((.fnyer: vioPlaeAudi})),
-  us
-  tion,eDescripation: mockUpdriptescdateD upting,
-   ckUpdateRag: mopdateRatin udata,
-   ckGetMetamota: tadatMe ge({
-    => : vi.fn(()oMetadataeAudi  us{
-) => (nt/hooks', (cliesrc//../../ck('..
-vi.mok hooksMoc/ 
-/();
-tion = vi.fnzaearVisuali mockCln();
-constion = vi.flizatsuaadViLo mockn();
-const = vi.fptionateDescrionst mockUpd
-c;.fn()data = viGetMetast mock();
-convi.fnating = eRUpdat mocks
-constctionmock fun Create ;
+    const stars = container.querySelectorAll('.star-rating__star');
+    fireEvent.click(stars[0]);
 
-//as any
-  ),
-}))    })
- ay(44100), Float32Arra: () => newlDat   getChanne 2,
-   rOfChannels:
-      numbee: 44100, sampleRat4100,
-      length: 4ve({
-     se.resolromi() =>
-    Pata: vi.fn(ecodeAudioD
-  d ({) => vi.fn((ioContext =obal.Audontext
-gl AudioC
-// Mock },
-}));
-)),
- ockBlob()teMlve(crearesoPromise..fn(() =>  viFile:    getAudiowserAPI: {
+    await waitFor(() => {
+      expect(mockUpdateRating).toHaveBeenCalledWith(mockFile.path, 1);
+    });
+  });
 
-  audioBro ({', () =>es/apiervicc/client/s../../../sr.mock('ock API
-vi
-// Mb;
-};
-bloeturn  }
-  rffer(8));
- rayBusolve(new Ar Promise.re=> = () yBufferraany).ar (blob as    {
-ffer) b.arrayBu!blo });
-  if (/mp3''audio { type: ata'],['audio db( Blot blob = newns> {
-  co= () =MockBlob const createblob
-ate mock Cre
-// kend
- */
-om UI to bac frrrectlyates flow coting updies that ra* VerifAudioItem
- t within g componenrRatinst for Stagration te
- * Inte
+  it('clears rating when clicking the same star again', async () => {
+    mockGetMetadata.mockReturnValue({
+      rating: 2,
+      description: '',
+    });
 
-/**types';red//sha/src../../..from 'File } type { Audio
-import udioItem';ponents/At/comc/clien./../../srom '.tem } frdioIrt { Aut';
-impory/reacting-libram '@tesFor } frowaitt, r, fireEvenende rt {porimtest';
-vi } from ' beforeEacht, vi,ecxpit, escribe, { demport i
+    const { container } = render(
+      <AudioItem
+        file={mockFile}
+        isSelected={true}
+        isVisible={true}
+        level={1}
+        onClick={vi.fn()}
+      />
+    );
+
+    const stars = container.querySelectorAll('.star-rating__star');
+    fireEvent.click(stars[1]); // Click second star (already selected)
+
+    await waitFor(() => {
+      expect(mockUpdateRating).toHaveBeenCalledWith(mockFile.path, 0);
+    });
+  });
+
+  it('updates rating for different stars', async () => {
+    const { container } = render(
+      <AudioItem
+        file={mockFile}
+        isSelected={true}
+        isVisible={true}
+        level={1}
+        onClick={vi.fn()}
+      />
+    );
+
+    const stars = container.querySelectorAll('.star-rating__star');
+    
+    fireEvent.click(stars[2]);
+    await waitFor(() => {
+      expect(mockUpdateRating).toHaveBeenCalledWith(mockFile.path, 3);
+    });
+  });
+
+  it('does not propagate click event when clicking star on selected item', () => {
+    const onItemClick = vi.fn();
+
+    const { container } = render(
+      <AudioItem
+        file={mockFile}
+        isSelected={true}
+        isVisible={true}
+        level={1}
+        onClick={onItemClick}
+      />
+    );
+
+    const stars = container.querySelectorAll('.star-rating__star');
+    fireEvent.click(stars[0]);
+
+    // onClick should not be called because event propagation is stopped
+    expect(onItemClick).not.toHaveBeenCalled();
+  });
+
+  it('handles rating update errors gracefully', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockUpdateRating.mockRejectedValue(new Error('Network error'));
+
+    const { container } = render(
+      <AudioItem
+        file={mockFile}
+        isSelected={true}
+        isVisible={true}
+        level={1}
+        onClick={vi.fn()}
+      />
+    );
+
+    const stars = container.querySelectorAll('.star-rating__star');
+    fireEvent.click(stars[0]);
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to update rating:',
+        expect.any(Error)
+      );
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+});

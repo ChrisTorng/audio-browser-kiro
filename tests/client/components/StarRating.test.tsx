@@ -102,4 +102,21 @@ describe('StarRating', () => {
     expect(onChange).toHaveBeenCalled();
     expect(parentClick).not.toHaveBeenCalled();
   });
+
+  it('allows event propagation when disabled', () => {
+    const onChange = vi.fn();
+    const parentClick = vi.fn();
+    
+    const { container } = render(
+      <div onClick={parentClick}>
+        <StarRating rating={0} onChange={onChange} disabled={true} />
+      </div>
+    );
+
+    const stars = container.querySelectorAll('.star-rating__star');
+    fireEvent.click(stars[0]);
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(parentClick).toHaveBeenCalled();
+  });
 });

@@ -106,7 +106,11 @@ export const AudioItem = memo(function AudioItem({
       <div className="audio-item__content">
         {/* Star Rating */}
         <div className="audio-item__rating">
-          <StarRating rating={rating} onChange={handleRatingChange} />
+          <StarRating 
+            rating={rating} 
+            onChange={handleRatingChange}
+            disabled={!isSelected}
+          />
         </div>
 
         {/* Filename */}
@@ -146,6 +150,7 @@ export const AudioItem = memo(function AudioItem({
             filterText={filterText}
             placeholder="Add description..."
             filePath={file.path}
+            disabled={!isSelected}
           />
         </div>
       </div>

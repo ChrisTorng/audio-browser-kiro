@@ -18,8 +18,14 @@ export function StarRating({ rating, onChange, disabled = false }: StarRatingPro
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
   const handleClick = useCallback(
-    (starIndex: number) => {
-      if (disabled) return;
+    (e: React.MouseEvent, starIndex: number) => {
+      if (disabled) {
+        // When disabled, don't stop propagation so click bubbles to parent
+        return;
+      }
+
+      // Stop propagation only when enabled
+      e.stopPropagation();
 
       // If clicking the same star that's already selected, clear the rating
       if (rating === starIndex) {
@@ -58,10 +64,7 @@ export function StarRating({ rating, onChange, disabled = false }: StarRatingPro
           className={`star-rating__star ${
             starIndex <= displayRating ? 'star-rating__star--filled' : 'star-rating__star--empty'
           }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleClick(starIndex);
-          }}
+          onClick={(e) => handleClick(e, starIndex)}
           onMouseEnter={() => handleMouseEnter(starIndex)}
           disabled={disabled}
           aria-label={`Rate ${starIndex} star${starIndex > 1 ? 's' : ''}`}

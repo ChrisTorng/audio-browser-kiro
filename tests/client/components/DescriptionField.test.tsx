@@ -160,4 +160,19 @@ describe('DescriptionField', () => {
 
     expect(parentClick).not.toHaveBeenCalled();
   });
+
+  it('allows event propagation when disabled', () => {
+    const parentClick = vi.fn();
+    
+    render(
+      <div onClick={parentClick}>
+        <DescriptionField description="Test" onChange={vi.fn()} disabled={true} />
+      </div>
+    );
+
+    const field = screen.getByText('Test').closest('.description-field');
+    fireEvent.click(field!);
+
+    expect(parentClick).toHaveBeenCalled();
+  });
 });

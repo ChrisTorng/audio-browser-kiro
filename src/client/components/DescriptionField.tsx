@@ -40,7 +40,10 @@ export function DescriptionField({
    */
   const enterEditMode = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (disabled) return;
+      if (disabled) {
+        // When disabled, don't stop propagation so click bubbles to parent
+        return;
+      }
 
       e.stopPropagation();
       setIsEditing(true);
