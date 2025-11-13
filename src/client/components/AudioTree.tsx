@@ -176,7 +176,10 @@ export function AudioTree({
         <div
           style={style}
           className={`audio-tree__item ${isSelected ? 'audio-tree__item--selected' : ''}`}
-          onClick={() => onItemClick(index)}
+          onClick={() => {
+            onItemClick(index);
+            onExpandToggle(index);
+          }}
           {...ariaAttributes}
         >
           <div
@@ -185,18 +188,9 @@ export function AudioTree({
           >
             {item.type === 'directory' && item.directory && (
               <div className="audio-tree__directory">
-                <button
-                  className="audio-tree__expand-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExpandToggle(index);
-                  }}
-                  aria-label={item.isExpanded ? 'Collapse' : 'Expand'}
-                >
-                  <span className="audio-tree__expand-icon">
-                    {item.isExpanded ? '▼' : '▶'}
-                  </span>
-                </button>
+                <span className="audio-tree__expand-icon">
+                  {item.isExpanded ? '▼' : '▶'}
+                </span>
                 <span className="audio-tree__directory-name">
                   {highlightText(item.directory.name, filterText)}
                 </span>

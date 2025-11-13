@@ -84,7 +84,7 @@ describe('AudioTree', () => {
     expect(onItemClick).toHaveBeenCalledWith(1);
   });
 
-  it('calls onExpandToggle when expand button is clicked', () => {
+  it('calls both onItemClick and onExpandToggle when directory is clicked', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
@@ -97,12 +97,12 @@ describe('AudioTree', () => {
       />
     );
 
-    // Click on expand button
-    const expandButton = screen.getByLabelText('Collapse');
-    fireEvent.click(expandButton);
+    // Click anywhere on the directory item
+    const directoryItem = screen.getByText('Music').closest('.audio-tree__item');
+    fireEvent.click(directoryItem!);
 
+    expect(onItemClick).toHaveBeenCalledWith(0);
     expect(onExpandToggle).toHaveBeenCalledWith(0);
-    expect(onItemClick).not.toHaveBeenCalled();
   });
 
   it('highlights selected item', () => {

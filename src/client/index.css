@@ -283,32 +283,13 @@ body {
   width: 100%;
 }
 
-.audio-tree__expand-button {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  color: #808080;
-  transition: color 0.2s;
-}
-
-.audio-tree__expand-button:hover {
-  color: #d4d4d4;
-}
-
-.audio-tree__expand-button:focus {
-  outline: 1px solid #007acc;
-  outline-offset: 2px;
-}
-
 .audio-tree__expand-icon {
+  width: 16px;
   font-size: 9px;
   line-height: 1;
+  color: #808080;
+  display: inline-block;
+  text-align: center;
 }
 
 .audio-tree__directory-name {
