@@ -228,7 +228,7 @@ export function AudioTree({
         rowCount={items.length}
         rowHeight={itemHeight}
         defaultHeight={height}
-        defaultWidth="100%"
+        defaultwidth="100%"
         overscanCount={5}
         rowProps={{}}
       />

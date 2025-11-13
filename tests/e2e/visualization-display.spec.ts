@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Visualization Display', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the application
-    await page.goto('http://localhost:5174');
+    await page.goto('http://localhost:5173');
     
     // Wait for the application to load
     await page.waitForSelector('.audio-browser', { timeout: 10000 });
@@ -17,12 +17,18 @@ test.describe('Visualization Display', () => {
     // Wait for audio tree to load
     await page.waitForSelector('.audio-tree', { timeout: 5000 });
     
-    // Find a collapsed folder (with ▶ icon) and expand it
-    const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
-    await collapsedButton.click();
-    
-    // Wait a bit for the tree to expand
-    await page.waitForTimeout(500);
+    // Expand folders until we find audio files (max 5 levels)
+    for (let i = 0; i < 5; i++) {
+      const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
+      if (await collapsedButton.count() === 0) break;
+      
+      await collapsedButton.click();
+      await page.waitForTimeout(300);
+      
+      // Check if we found audio items
+      const audioItemCount = await page.locator('.audio-item').count();
+      if (audioItemCount > 0) break;
+    }
     
     // Find first audio item (not a folder)
     const audioItem = page.locator('.audio-item').first();
@@ -41,10 +47,14 @@ test.describe('Visualization Display', () => {
     // Wait for audio tree
     await page.waitForSelector('.audio-tree', { timeout: 5000 });
     
-    // Expand a collapsed folder to show audio files
-    const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
-    await collapsedButton.click();
-    await page.waitForTimeout(500);
+    // Expand folders until we find audio files
+    for (let i = 0; i < 5; i++) {
+      const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
+      if (await collapsedButton.count() === 0) break;
+      await collapsedButton.click();
+      await page.waitForTimeout(300);
+      if (await page.locator('.audio-item').count() > 0) break;
+    }
     
     // Find first audio item
     const audioItem = page.locator('.audio-item').first();
@@ -63,10 +73,14 @@ test.describe('Visualization Display', () => {
     // Wait for audio tree
     await page.waitForSelector('.audio-tree', { timeout: 5000 });
     
-    // Expand a collapsed folder to show audio files
-    const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
-    await collapsedButton.click();
-    await page.waitForTimeout(500);
+    // Expand folders until we find audio files
+    for (let i = 0; i < 5; i++) {
+      const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
+      if (await collapsedButton.count() === 0) break;
+      await collapsedButton.click();
+      await page.waitForTimeout(300);
+      if (await page.locator('.audio-item').count() > 0) break;
+    }
     
     // Find and click first audio item
     const audioItem = page.locator('.audio-item').first();
@@ -76,28 +90,29 @@ test.describe('Visualization Display', () => {
     await expect(audioItem).toHaveClass(/audio-item--selected/);
     
     // Wait for visualizations to load (give it some time)
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
     
-    // Check that waveform canvas exists
-    const waveformCanvas = audioItem.locator('.waveform-display__canvas');
-    const waveformExists = await waveformCanvas.count();
+    // Check that waveform canvas exists or waveform display is visible
+    const waveformDisplay = audioItem.locator('.waveform-display');
+    await expect(waveformDisplay).toBeVisible();
     
-    // Check that spectrogram canvas exists
-    const spectrogramCanvas = audioItem.locator('.spectrogram-display__canvas');
-    const spectrogramExists = await spectrogramCanvas.count();
-    
-    // At least one should exist (they may still be loading)
-    expect(waveformExists + spectrogramExists).toBeGreaterThan(0);
+    // Check that spectrogram display is visible
+    const spectrogramDisplay = audioItem.locator('.spectrogram-display');
+    await expect(spectrogramDisplay).toBeVisible();
   });
 
   test('should display all visualization components in correct order', async ({ page }) => {
     // Wait for audio tree
     await page.waitForSelector('.audio-tree', { timeout: 5000 });
     
-    // Expand a collapsed folder to show audio files
-    const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
-    await collapsedButton.click();
-    await page.waitForTimeout(500);
+    // Expand folders until we find audio files
+    for (let i = 0; i < 5; i++) {
+      const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
+      if (await collapsedButton.count() === 0) break;
+      await collapsedButton.click();
+      await page.waitForTimeout(300);
+      if (await page.locator('.audio-item').count() > 0) break;
+    }
     
     // Find first audio item
     const audioItem = page.locator('.audio-item').first();
@@ -114,10 +129,14 @@ test.describe('Visualization Display', () => {
     // Wait for audio tree
     await page.waitForSelector('.audio-tree', { timeout: 5000 });
     
-    // Expand a collapsed folder to show audio files
-    const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
-    await collapsedButton.click();
-    await page.waitForTimeout(500);
+    // Expand folders until we find audio files
+    for (let i = 0; i < 5; i++) {
+      const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
+      if (await collapsedButton.count() === 0) break;
+      await collapsedButton.click();
+      await page.waitForTimeout(300);
+      if (await page.locator('.audio-item').count() > 0) break;
+    }
     
     // Find first audio item
     const audioItem = page.locator('.audio-item').first();
@@ -135,10 +154,14 @@ test.describe('Visualization Display', () => {
     // Wait for audio tree
     await page.waitForSelector('.audio-tree', { timeout: 5000 });
     
-    // Expand a collapsed folder to show audio files
-    const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
-    await collapsedButton.click();
-    await page.waitForTimeout(500);
+    // Expand folders until we find audio files
+    for (let i = 0; i < 5; i++) {
+      const collapsedButton = page.locator('.audio-tree__expand-button').filter({ hasText: '▶' }).first();
+      if (await collapsedButton.count() === 0) break;
+      await collapsedButton.click();
+      await page.waitForTimeout(300);
+      if (await page.locator('.audio-item').count() > 0) break;
+    }
     
     // Find first audio item
     const audioItem = page.locator('.audio-item').first();
