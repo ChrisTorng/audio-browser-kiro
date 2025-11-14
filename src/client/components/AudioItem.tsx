@@ -169,31 +169,57 @@ export const AudioItem = memo(function AudioItem({
   // Custom comparison function for memo
   // Only re-render if these props change
   
+  // CRITICAL: Minimize re-renders to prevent DescriptionField focus loss
+  
+  // If file path changed, always re-render (different file)
+  if (prevProps.file.path !== nextProps.file.path) {
+    return false;
+  }
+  
   // If selection state changed, always re-render
   if (prevProps.isSelected !== nextProps.isSelected) {
     return false;
   }
   
-  // If selected, check if progress changed significantly (throttle progress updates)
-  // Only re-render if progress changed by more than 1% to reduce re-renders
+  // If visibility changed, re-render (affects lazy loading)
+  if (prevProps.isVisible !== nextProps.isVisible) {
+    return false;
+  }
+  
+  // If level changed, re-render (affects indentation)
+  if (prevProps.level !== nextProps.level) {
+    return false;
+  }
+  
+  // If filterText changed, re-render (affects highlighting)
+  if (prevProps.filterText !== nextProps.filterText) {
+    return false;
+  }
+  
+  // If onClick handler changed, re-render
+  if (prevProps.onClick !== nextProps.onClick) {
+    return false;
+  }
+  
+  // For progress updates, be more conservative to reduce re-renders
+  // Only re-render if:
+  // 1. Item is selected AND playing (progress > 0)
+  // 2. Progress changed by more than 2% (increased threshold)
+  // This reduces re-renders during playback which can cause focus loss
   if (nextProps.isSelected && nextProps.audioProgress > 0) {
-    const progressDiff = Math.abs(prevProps.audioProgress - nextProps.audioProgress);
-    if (progressDiff > 0.01) {
+    const progressDiff = Math.abs((prevProps.audioProgress || 0) - nextProps.audioProgress);
+    if (progressDiff > 0.02) { // Increased from 0.01 to 0.02
       return false;
     }
   }
   
-  // Check other props
-  if (
-    prevProps.file.path !== nextProps.file.path ||
-    prevProps.isVisible !== nextProps.isVisible ||
-    prevProps.level !== nextProps.level ||
-    prevProps.filterText !== nextProps.filterText
-  ) {
+  // If progress went from 0 to non-zero or vice versa, re-render
+  // This handles play/stop transitions
+  if ((prevProps.audioProgress === 0) !== (nextProps.audioProgress === 0)) {
     return false;
   }
   
-  // All props are the same, skip re-render
+  // All props are effectively the same, skip re-render
   return true;
 });
 

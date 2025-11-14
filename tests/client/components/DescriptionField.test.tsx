@@ -175,4 +175,83 @@ describe('DescriptionField', () => {
 
     expect(parentClick).toHaveBeenCalled();
   });
+
+  it('maintains focus during re-renders', async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <DescriptionField description="Original" onChange={onChange} />
+    );
+
+    // Enter edit mode
+    const field = screen.getByText('Original').closest('.description-field');
+    fireEvent.click(field!);
+
+    const input = await screen.findByDisplayValue('Original');
+    
+    // Verify input has focus
+    expect(document.activeElement).toBe(input);
+
+    // Change the value
+    fireEvent.change(input, { target: { value: 'Updated' } });
+
+    // Force a re-render with same props
+    rerender(<DescriptionField description="Original" onChange={onChange} />);
+
+    // Wait for any effects to run
+    await waitFor(() => {
+      // Input should still have focus after re-render
+      expect(document.activeElement).toBe(input);
+    });
+  });
+
+  it('maintains cursor position during re-renders', async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <DescriptionField description="Test description" onChange={onChange} />
+    );
+
+    // Enter edit mode
+    const field = screen.getByText('Test description').closest('.description-field');
+    fireEvent.click(field!);
+
+    const input = await screen.findByDisplayValue('Test description') as HTMLInputElement;
+    
+    // Set cursor position to middle of text
+    input.setSelectionRange(5, 5);
+    expect(input.selectionStart).toBe(5);
+
+    // Force a re-render
+    rerender(<DescriptionField description="Test description" onChange={onChange} />);
+
+    // Wait for any effects to run
+    await waitFor(() => {
+      // Cursor position should be maintained
+      expect(input.selectionStart).toBe(5);
+    });
+  });
+
+  it('does not re-render when description changes externally during editing', async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <DescriptionField description="Original" onChange={onChange} />
+    );
+
+    // Enter edit mode
+    const field = screen.getByText('Original').closest('.description-field');
+    fireEvent.click(field!);
+
+    const input = await screen.findByDisplayValue('Original');
+    
+    // Change the value in the input
+    fireEvent.change(input, { target: { value: 'User typing...' } });
+
+    // External description change (e.g., from another source)
+    rerender(<DescriptionField description="External change" onChange={onChange} />);
+
+    // The input should still show what the user typed, not the external change
+    await waitFor(() => {
+      expect(input).toHaveValue('User typing...');
+      expect(document.activeElement).toBe(input);
+    });
+  });
 });

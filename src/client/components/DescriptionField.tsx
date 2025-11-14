@@ -191,6 +191,9 @@ export const DescriptionField = memo(function DescriptionField({
    * Maintain focus during re-renders when editing
    * This prevents focus loss when parent components re-render
    * Uses a more robust approach with cursor position preservation
+   * 
+   * This effect runs on every render (no dependency array) to ensure
+   * focus is maintained even when parent components re-render
    */
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -202,11 +205,21 @@ export const DescriptionField = memo(function DescriptionField({
         const selectionStart = input.selectionStart || 0;
         const selectionEnd = input.selectionEnd || 0;
         
-        // Restore focus
-        input.focus();
-        
-        // Restore cursor position
-        input.setSelectionRange(selectionStart, selectionEnd);
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          if (input && isEditingRef.current) {
+            // Restore focus
+            input.focus();
+            
+            // Restore cursor position
+            try {
+              input.setSelectionRange(selectionStart, selectionEnd);
+            } catch (e) {
+              // Ignore errors if input is not focusable
+              console.warn('Failed to restore cursor position:', e);
+            }
+          }
+        });
       }
     }
   });
@@ -252,29 +265,50 @@ export const DescriptionField = memo(function DescriptionField({
   // Custom comparison function for memo
   // Prevent re-renders when editing to maintain focus stability
   
-  // If description changed, re-render
-  if (prevProps.description !== nextProps.description) {
-    return false;
-  }
+  // CRITICAL: Never re-render while editing to prevent focus loss
+  // The component manages its own editing state internally
+  // We rely on the focus restoration effect to handle any edge cases
   
-  // If disabled state changed, re-render
+  // If disabled state changed, re-render (affects interactivity)
   if (prevProps.disabled !== nextProps.disabled) {
     return false;
   }
   
-  // If filterText changed, re-render
+  // If filterText changed, re-render (affects highlighting)
   if (prevProps.filterText !== nextProps.filterText) {
     return false;
   }
   
-  // If triggerEdit changed, re-render
+  // If triggerEdit changed, re-render (external trigger to enter edit mode)
   if (prevProps.triggerEdit !== nextProps.triggerEdit) {
     return false;
   }
   
-  // If filePath changed, re-render
+  // If filePath changed, re-render (different file)
   if (prevProps.filePath !== nextProps.filePath) {
     return false;
+  }
+  
+  // If onChange function reference changed, re-render
+  // This is important for proper callback handling
+  if (prevProps.onChange !== nextProps.onChange) {
+    return false;
+  }
+  
+  // If description changed, only re-render if not currently editing
+  // When editing, we ignore external description changes to prevent interference
+  // The internal editValue state manages the current edit
+  if (prevProps.description !== nextProps.description) {
+    // Check if we're currently editing by looking at the DOM
+    // This is more reliable than relying on state during memo comparison
+    const descriptionFields = document.querySelectorAll('.description-field--editing');
+    const isCurrentlyEditing = descriptionFields.length > 0;
+    
+    if (!isCurrentlyEditing) {
+      return false; // Not editing, allow re-render
+    }
+    // Editing, skip re-render to maintain focus
+    return true;
   }
   
   // All relevant props are the same, skip re-render

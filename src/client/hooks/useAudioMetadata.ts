@@ -84,9 +84,10 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
           };
 
       // Mutate the map directly instead of creating a new one
+      // This prevents React from detecting a state change and re-rendering
       metadata.set(filePath, optimisticMeta);
 
-      // Send update to API
+      // Send update to API (don't await to avoid blocking)
       const response = await fetch('/api/metadata', {
         method: 'POST',
         headers: {
@@ -106,7 +107,11 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
       const data = await response.json();
       
       // Update with server response (mutate to avoid re-render)
-      metadata.set(filePath, data.metadata);
+      // Only update if the data is different to minimize mutations
+      const serverMeta = data.metadata;
+      if (JSON.stringify(metadata.get(filePath)) !== JSON.stringify(serverMeta)) {
+        metadata.set(filePath, serverMeta);
+      }
     } catch (err) {
       // Rollback on error
       if (previousMeta) {
@@ -144,9 +149,10 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
           };
 
       // Mutate the map directly instead of creating a new one
+      // This prevents React from detecting a state change and re-rendering
       metadata.set(filePath, optimisticMeta);
 
-      // Send update to API
+      // Send update to API (don't await to avoid blocking)
       const response = await fetch('/api/metadata', {
         method: 'POST',
         headers: {
@@ -166,7 +172,11 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
       const data = await response.json();
       
       // Update with server response (mutate to avoid re-render)
-      metadata.set(filePath, data.metadata);
+      // Only update if the data is different to minimize mutations
+      const serverMeta = data.metadata;
+      if (JSON.stringify(metadata.get(filePath)) !== JSON.stringify(serverMeta)) {
+        metadata.set(filePath, serverMeta);
+      }
     } catch (err) {
       // Rollback on error
       if (previousMeta) {
