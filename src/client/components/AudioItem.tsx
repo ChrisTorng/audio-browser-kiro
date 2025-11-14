@@ -174,9 +174,13 @@ export const AudioItem = memo(function AudioItem({
     return false;
   }
   
-  // If selected, check if progress changed (allow re-render for progress updates)
-  if (nextProps.isSelected && prevProps.audioProgress !== nextProps.audioProgress) {
-    return false;
+  // If selected, check if progress changed significantly (throttle progress updates)
+  // Only re-render if progress changed by more than 1% to reduce re-renders
+  if (nextProps.isSelected && nextProps.audioProgress > 0) {
+    const progressDiff = Math.abs(prevProps.audioProgress - nextProps.audioProgress);
+    if (progressDiff > 0.01) {
+      return false;
+    }
   }
   
   // Check other props

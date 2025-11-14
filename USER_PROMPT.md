@@ -1,14 +1,13 @@
 Implement the task from the markdown document at .kiro/specs/audio-browser/tasks.md:
         
-<task title="11.1 修復頻譜圖顯示異常問題">
+<task title="14.1 修復描述欄位失去焦點問題">
 
 Status: not started
 
 Task details:
-- 檢查頻譜圖生成邏輯，確保完整顯示音檔內容
-- 實作固定寬度和固定高度的頻譜圖顯示
-- 將完整音檔內容縮放至固定顯示尺寸，不論音檔長度
-- 確保頻譜圖不是只顯示部分圖片內容
-- _Requirements: 3.6, 3.7_
+- 確保點入描述欄位取得輸入焦點後不會因閃爍而失去焦點
+- 優化渲染邏輯，避免不必要的元件重新渲染
+- 使用 React ref 和 useEffect 確保焦點穩定
+- _Requirements: 7.8, 11.10_
 
 </task>

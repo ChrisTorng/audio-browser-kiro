@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, KeyboardEvent, memo } from 'react';
 
 /**
  * DescriptionField component props
@@ -21,7 +21,7 @@ export interface DescriptionFieldProps {
  * - Esc to cancel edit
  * - Enter or blur to save
  */
-export function DescriptionField({
+export const DescriptionField = memo(function DescriptionField({
   description,
   onChange,
   placeholder = 'Add description...',
@@ -128,9 +128,10 @@ export function DescriptionField({
 
   /**
    * Update edit value when description prop changes
+   * Only update if not currently editing to prevent interference
    */
   useEffect(() => {
-    if (!isEditing) {
+    if (!isEditing && !isEditingRef.current) {
       setEditValue(description);
     }
   }, [description, isEditing]);
@@ -189,13 +190,26 @@ export function DescriptionField({
   /**
    * Maintain focus during re-renders when editing
    * This prevents focus loss when parent components re-render
+   * Uses a more robust approach with cursor position preservation
    */
   useEffect(() => {
-    if (isEditing && inputRef.current && document.activeElement !== inputRef.current) {
-      // Restore focus if it was lost during re-render
-      inputRef.current.focus();
+    if (isEditing && inputRef.current) {
+      const input = inputRef.current;
+      const isInputFocused = document.activeElement === input;
+      
+      if (!isInputFocused) {
+        // Store cursor position before restoring focus
+        const selectionStart = input.selectionStart || 0;
+        const selectionEnd = input.selectionEnd || 0;
+        
+        // Restore focus
+        input.focus();
+        
+        // Restore cursor position
+        input.setSelectionRange(selectionStart, selectionEnd);
+      }
     }
-  }, [isEditing]);
+  });
 
   /**
    * Sync isEditingRef with isEditing state
@@ -234,7 +248,38 @@ export function DescriptionField({
       </span>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo
+  // Prevent re-renders when editing to maintain focus stability
+  
+  // If description changed, re-render
+  if (prevProps.description !== nextProps.description) {
+    return false;
+  }
+  
+  // If disabled state changed, re-render
+  if (prevProps.disabled !== nextProps.disabled) {
+    return false;
+  }
+  
+  // If filterText changed, re-render
+  if (prevProps.filterText !== nextProps.filterText) {
+    return false;
+  }
+  
+  // If triggerEdit changed, re-render
+  if (prevProps.triggerEdit !== nextProps.triggerEdit) {
+    return false;
+  }
+  
+  // If filePath changed, re-render
+  if (prevProps.filePath !== nextProps.filePath) {
+    return false;
+  }
+  
+  // All relevant props are the same, skip re-render
+  return true;
+});
 
 /**
  * Highlight text matching the filter
