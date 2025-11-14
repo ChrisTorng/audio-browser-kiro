@@ -60,7 +60,7 @@ describe('Header', () => {
     expect(screen.getByDisplayValue('test')).toBeInTheDocument();
     const select = screen.getByLabelText('Rating filter') as HTMLSelectElement;
     expect(select.value).toBe('2');
-    expect(screen.getByText('5 items')).toBeInTheDocument();
+    expect(screen.getByText('5 files')).toBeInTheDocument();
   });
 
   it('has correct structure with header element', () => {
