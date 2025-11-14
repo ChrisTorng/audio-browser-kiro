@@ -41,13 +41,14 @@ export function AudioBrowser() {
 
   /**
    * Flatten directory tree into a list for rendering and navigation
+   * When forceExpand is true, ignores expandedPaths and expands everything
    */
   const flattenTree = useCallback(
-    (node: DirectoryNode, level: number = 0, parentPath?: string): FlatTreeItem[] => {
+    (node: DirectoryNode, level: number = 0, parentPath?: string, forceExpand: boolean = false): FlatTreeItem[] => {
       const items: FlatTreeItem[] = [];
 
       // Add directory itself
-      const isExpanded = expandedPaths.has(node.path);
+      const isExpanded = forceExpand || expandedPaths.has(node.path);
       items.push({
         id: `dir-${node.path}`,
         type: 'directory',
@@ -61,7 +62,7 @@ export function AudioBrowser() {
       if (isExpanded) {
         // Add subdirectories
         node.subdirectories.forEach((subdir) => {
-          items.push(...flattenTree(subdir, level + 1, node.path));
+          items.push(...flattenTree(subdir, level + 1, node.path, forceExpand));
         });
 
         // Add files
@@ -82,57 +83,102 @@ export function AudioBrowser() {
   );
 
   /**
-   * Apply filters to flattened items
+   * Check if an item matches the filter criteria
    */
-  const applyFilters = useCallback(
-    (items: FlatTreeItem[]): FlatTreeItem[] => {
+  const itemMatchesFilter = useCallback(
+    (item: FlatTreeItem): boolean => {
       const { text, rating } = filterCriteria;
 
-      // No filters applied
-      if (!text && rating === null) {
-        return items;
+      // For directories, check if name matches text filter
+      if (item.type === 'directory' && item.directory) {
+        if (text && !item.directory.name.toLowerCase().includes(text.toLowerCase())) {
+          return false;
+        }
+        return true;
       }
 
-      return items.filter((item) => {
-        // For directories, check if name matches text filter
-        if (item.type === 'directory' && item.directory) {
-          if (text && !item.directory.name.toLowerCase().includes(text.toLowerCase())) {
+      // For files, check text and rating filters
+      if (item.type === 'file' && item.file) {
+        const file = item.file;
+        const meta = audioMetadata.getMetadata(file.path);
+
+        // Text filter: check file name and description
+        if (text) {
+          const textLower = text.toLowerCase();
+          const nameMatch = file.name.toLowerCase().includes(textLower);
+          const descMatch = meta?.description.toLowerCase().includes(textLower) || false;
+
+          if (!nameMatch && !descMatch) {
             return false;
           }
-          return true;
         }
 
-        // For files, check text and rating filters
-        if (item.type === 'file' && item.file) {
-          const file = item.file;
-          const meta = audioMetadata.getMetadata(file.path);
-
-          // Text filter: check file name and description
-          if (text) {
-            const textLower = text.toLowerCase();
-            const nameMatch = file.name.toLowerCase().includes(textLower);
-            const descMatch = meta?.description.toLowerCase().includes(textLower) || false;
-
-            if (!nameMatch && !descMatch) {
-              return false;
-            }
+        // Rating filter
+        if (rating !== null) {
+          const fileRating = meta?.rating || 0;
+          if (fileRating !== rating) {
+            return false;
           }
-
-          // Rating filter
-          if (rating !== null) {
-            const fileRating = meta?.rating || 0;
-            if (fileRating !== rating) {
-              return false;
-            }
-          }
-
-          return true;
         }
 
         return true;
-      });
+      }
+
+      return true;
     },
     [filterCriteria, audioMetadata]
+  );
+
+  /**
+   * Get all parent paths for a given path
+   */
+  const getParentPaths = useCallback((path: string): string[] => {
+    const parents: string[] = [];
+    let currentPath = path;
+    
+    // Walk up the tree by removing the last segment
+    while (currentPath) {
+      const lastSlash = currentPath.lastIndexOf('/');
+      if (lastSlash === -1) break;
+      
+      currentPath = currentPath.substring(0, lastSlash);
+      if (currentPath) {
+        parents.push(currentPath);
+      }
+    }
+    
+    return parents;
+  }, []);
+
+  /**
+   * Check if a directory should be included (it or any descendant matches)
+   */
+  const shouldIncludeDirectory = useCallback(
+    (node: DirectoryNode, allItems: FlatTreeItem[]): boolean => {
+      // Check if directory itself matches
+      const dirItem = allItems.find(
+        (item) => item.type === 'directory' && item.directory?.path === node.path
+      );
+      if (dirItem && itemMatchesFilter(dirItem)) {
+        return true;
+      }
+
+      // Check if any file in this directory matches
+      const hasMatchingFile = allItems.some(
+        (item) =>
+          item.type === 'file' &&
+          item.file &&
+          item.parentPath === node.path &&
+          itemMatchesFilter(item)
+      );
+      if (hasMatchingFile) {
+        return true;
+      }
+
+      // Check if any subdirectory should be included
+      return node.subdirectories.some((subdir) => shouldIncludeDirectory(subdir, allItems));
+    },
+    [itemMatchesFilter]
   );
 
   /**
@@ -141,9 +187,108 @@ export function AudioBrowser() {
   const displayItems = useMemo(() => {
     if (!directoryTree) return [];
 
-    const flattened = flattenTree(directoryTree);
-    return applyFilters(flattened);
-  }, [directoryTree, flattenTree, applyFilters]);
+    const { text, rating } = filterCriteria;
+
+    // No filters applied - use normal expansion state
+    if (!text && rating === null) {
+      return flattenTree(directoryTree);
+    }
+
+    // Filters applied - need to filter from all items and auto-expand parents
+    
+    // Step 1: Flatten entire tree to get all items
+    const allItems = flattenTree(directoryTree, 0, undefined, true);
+
+    // Step 2: Find all matching items and collect paths to expand
+    const pathsToExpand = new Set<string>();
+    const matchingFilePaths = new Set<string>();
+    const matchingDirPaths = new Set<string>();
+
+    allItems.forEach((item) => {
+      if (itemMatchesFilter(item)) {
+        if (item.type === 'file' && item.file) {
+          matchingFilePaths.add(item.file.path);
+          // Add all parent paths to expansion set
+          if (item.parentPath) {
+            getParentPaths(item.parentPath).forEach((p) => pathsToExpand.add(p));
+            pathsToExpand.add(item.parentPath);
+          }
+        } else if (item.type === 'directory' && item.directory) {
+          matchingDirPaths.add(item.directory.path);
+          // Add all parent paths to expansion set
+          getParentPaths(item.directory.path).forEach((p) => pathsToExpand.add(p));
+        }
+      }
+    });
+
+    // Step 3: Build filtered tree with proper expansion
+    const buildFilteredTree = (
+      node: DirectoryNode,
+      level: number = 0,
+      parentPath?: string
+    ): FlatTreeItem[] => {
+      const items: FlatTreeItem[] = [];
+
+      // Check if this directory or any descendant matches
+      const dirMatches = matchingDirPaths.has(node.path);
+      const shouldInclude = dirMatches || shouldIncludeDirectory(node, allItems);
+
+      if (!shouldInclude) {
+        return items;
+      }
+
+      // Add directory itself
+      const shouldExpand = pathsToExpand.has(node.path) || dirMatches;
+      items.push({
+        id: `dir-${node.path}`,
+        type: 'directory',
+        isExpanded: shouldExpand,
+        directory: node,
+        level,
+        parentPath,
+      });
+
+      // If directory matches, show all its contents
+      if (dirMatches) {
+        // Add all subdirectories
+        node.subdirectories.forEach((subdir) => {
+          items.push(...flattenTree(subdir, level + 1, node.path, true));
+        });
+
+        // Add all files
+        node.files.forEach((file) => {
+          items.push({
+            id: `file-${file.path}`,
+            type: 'file',
+            file,
+            level: level + 1,
+            parentPath: node.path,
+          });
+        });
+      } else if (shouldExpand) {
+        // Only show matching subdirectories and files
+        node.subdirectories.forEach((subdir) => {
+          items.push(...buildFilteredTree(subdir, level + 1, node.path));
+        });
+
+        node.files.forEach((file) => {
+          if (matchingFilePaths.has(file.path)) {
+            items.push({
+              id: `file-${file.path}`,
+              type: 'file',
+              file,
+              level: level + 1,
+              parentPath: node.path,
+            });
+          }
+        });
+      }
+
+      return items;
+    };
+
+    return buildFilteredTree(directoryTree);
+  }, [directoryTree, filterCriteria, flattenTree, itemMatchesFilter, getParentPaths, shouldIncludeDirectory]);
 
   /**
    * Count only audio files (not directories) in filtered results
