@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AudioItem } from '../../../src/client/components/AudioItem';
+import { AudioMetadataProvider } from '../../../src/client/contexts/AudioMetadataContext';
 import type { AudioFile } from '../../../src/shared/types';
 
 // Create mock blob with arrayBuffer method
@@ -81,21 +82,26 @@ describe('AudioItem', () => {
     mockDecodeAudioData.mockClear();
   });
 
+  // Helper function to render with AudioMetadataProvider
+  const renderWithProvider = (ui: React.ReactElement) => {
+    return render(<AudioMetadataProvider>{ui}</AudioMetadataProvider>);
+  };
+
   it('renders audio file information', () => {
-    render(<AudioItem {...defaultProps} />);
+    renderWithProvider(<AudioItem {...defaultProps} />);
 
     expect(screen.getByText('test-song.mp3')).toBeInTheDocument();
   });
 
   it('applies selected class when isSelected is true', () => {
-    const { container } = render(<AudioItem {...defaultProps} isSelected={true} />);
+    const { container } = renderWithProvider(<AudioItem {...defaultProps} isSelected={true} />);
 
     const audioItem = container.querySelector('.audio-item');
     expect(audioItem).toHaveClass('audio-item--selected');
   });
 
   it('applies correct padding based on level', () => {
-    const { container } = render(<AudioItem {...defaultProps} level={2} />);
+    const { container } = renderWithProvider(<AudioItem {...defaultProps} level={2} />);
 
     const audioItem = container.querySelector('.audio-item');
     expect(audioItem).toHaveStyle({ paddingLeft: '40px' });
@@ -103,7 +109,7 @@ describe('AudioItem', () => {
 
   it('calls onClick when clicked', () => {
     const onClick = vi.fn();
-    render(<AudioItem {...defaultProps} onClick={onClick} />);
+    renderWithProvider(<AudioItem {...defaultProps} onClick={onClick} />);
 
     const audioItem = screen.getByText('test-song.mp3').closest('.audio-item');
     fireEvent.click(audioItem!);
@@ -112,7 +118,7 @@ describe('AudioItem', () => {
   });
 
   it('highlights filename when filterText matches', () => {
-    const { container } = render(<AudioItem {...defaultProps} filterText="test" />);
+    const { container} = renderWithProvider(<AudioItem {...defaultProps} filterText="test" />);
 
     const highlight = container.querySelector('.audio-item__filename mark');
     expect(highlight).toBeInTheDocument();
@@ -120,41 +126,41 @@ describe('AudioItem', () => {
   });
 
   it('renders StarRating component', () => {
-    const { container } = render(<AudioItem {...defaultProps} />);
+    const { container } = renderWithProvider(<AudioItem {...defaultProps} />);
 
     const starRating = container.querySelector('.star-rating');
     expect(starRating).toBeInTheDocument();
   });
 
   it('renders WaveformDisplay component', () => {
-    const { container } = render(<AudioItem {...defaultProps} />);
+    const { container } = renderWithProvider(<AudioItem {...defaultProps} />);
 
     const waveform = container.querySelector('.waveform-display');
     expect(waveform).toBeInTheDocument();
   });
 
   it('renders SpectrogramDisplay component', () => {
-    const { container } = render(<AudioItem {...defaultProps} />);
+    const { container } = renderWithProvider(<AudioItem {...defaultProps} />);
 
     const spectrogram = container.querySelector('.spectrogram-display');
     expect(spectrogram).toBeInTheDocument();
   });
 
   it('renders DescriptionField component', () => {
-    const { container } = render(<AudioItem {...defaultProps} />);
+    const { container } = renderWithProvider(<AudioItem {...defaultProps} />);
 
     const description = container.querySelector('.description-field');
     expect(description).toBeInTheDocument();
   });
 
   it('loads audio and generates visualizations when visible', async () => {
-    const { rerender } = render(<AudioItem {...defaultProps} isVisible={false} />);
+    const { rerender } = renderWithProvider(<AudioItem {...defaultProps} isVisible={false} />);
 
     // Initially not visible, should not load
     expect(mockLoadVisualization).not.toHaveBeenCalled();
 
     // Make item visible
-    rerender(<AudioItem {...defaultProps} isVisible={true} />);
+    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} isVisible={true} /></AudioMetadataProvider>);
 
     // Wait for async operations
     await waitFor(() => {
@@ -169,14 +175,14 @@ describe('AudioItem', () => {
   });
 
   it('clears visualization when not visible', async () => {
-    const { rerender } = render(<AudioItem {...defaultProps} isVisible={true} />);
+    const { rerender } = renderWithProvider(<AudioItem {...defaultProps} isVisible={true} />);
 
     await waitFor(() => {
       expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
     });
 
     // Make item not visible
-    rerender(<AudioItem {...defaultProps} isVisible={false} />);
+    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} isVisible={false} /></AudioMetadataProvider>);
 
     // Should clear visualization
     await waitFor(() => {
@@ -185,7 +191,7 @@ describe('AudioItem', () => {
   });
 
   it('resets loaded state when file changes', async () => {
-    const { rerender } = render(<AudioItem {...defaultProps} isVisible={true} />);
+    const { rerender } = renderWithProvider(<AudioItem {...defaultProps} isVisible={true} />);
 
     await waitFor(() => {
       expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
@@ -198,10 +204,10 @@ describe('AudioItem', () => {
       size: 3145728,
     };
 
-    rerender(<AudioItem {...defaultProps} file={newFile} isVisible={false} />);
+    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} file={newFile} isVisible={false} /></AudioMetadataProvider>);
 
     // Make visible to trigger load
-    rerender(<AudioItem {...defaultProps} file={newFile} isVisible={true} />);
+    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} file={newFile} isVisible={true} /></AudioMetadataProvider>);
 
     // Should load new file
     await waitFor(() => {

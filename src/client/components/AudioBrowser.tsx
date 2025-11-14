@@ -4,9 +4,9 @@ import { audioBrowserAPI } from '../services/api';
 import {
   useAudioPlayer,
   useKeyboardNavigation,
-  useAudioMetadata,
   NavigationItem,
 } from '../hooks';
+import { useAudioMetadataContext } from '../contexts/AudioMetadataContext';
 import { FilterCriteria } from './FilterBar';
 import { Header } from './Header';
 import { AudioTree, TreeItem } from './AudioTree';
@@ -36,7 +36,7 @@ export function AudioBrowser() {
 
   // Hooks
   const audioPlayer = useAudioPlayer();
-  const audioMetadata = useAudioMetadata();
+  const audioMetadata = useAudioMetadataContext();
   const toast = useToastContext();
 
   /**

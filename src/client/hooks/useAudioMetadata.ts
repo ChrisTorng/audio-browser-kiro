@@ -71,7 +71,7 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
     const previousMeta = currentMeta ? { ...currentMeta } : null;
 
     try {
-      // Optimistic update - mutate the existing Map to avoid triggering re-renders
+      // Optimistic update - create new Map to trigger re-render
       const optimisticMeta: AudioMetadata = currentMeta
         ? { ...currentMeta, rating, updatedAt: new Date() }
         : {
@@ -83,11 +83,14 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
             updatedAt: new Date(),
           };
 
-      // Mutate the map directly instead of creating a new one
-      // This prevents React from detecting a state change and re-rendering
-      metadata.set(filePath, optimisticMeta);
+      // Create new Map with updated metadata to trigger React re-render
+      setMetadata(prev => {
+        const newMap = new Map(prev);
+        newMap.set(filePath, optimisticMeta);
+        return newMap;
+      });
 
-      // Send update to API (don't await to avoid blocking)
+      // Send update to API
       const response = await fetch('/api/metadata', {
         method: 'POST',
         headers: {
@@ -106,19 +109,24 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
 
       const data = await response.json();
       
-      // Update with server response (mutate to avoid re-render)
-      // Only update if the data is different to minimize mutations
+      // Update with server response
       const serverMeta = data.metadata;
-      if (JSON.stringify(metadata.get(filePath)) !== JSON.stringify(serverMeta)) {
-        metadata.set(filePath, serverMeta);
-      }
+      setMetadata(prev => {
+        const newMap = new Map(prev);
+        newMap.set(filePath, serverMeta);
+        return newMap;
+      });
     } catch (err) {
       // Rollback on error
-      if (previousMeta) {
-        metadata.set(filePath, previousMeta);
-      } else {
-        metadata.delete(filePath);
-      }
+      setMetadata(prev => {
+        const newMap = new Map(prev);
+        if (previousMeta) {
+          newMap.set(filePath, previousMeta);
+        } else {
+          newMap.delete(filePath);
+        }
+        return newMap;
+      });
 
       const error = err instanceof Error ? err : new Error('Failed to update rating');
       console.error('Rating update error:', error);
@@ -136,7 +144,7 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
     const previousMeta = currentMeta ? { ...currentMeta } : null;
 
     try {
-      // Optimistic update - mutate the existing Map to avoid triggering re-renders
+      // Optimistic update - create new Map to trigger re-render
       const optimisticMeta: AudioMetadata = currentMeta
         ? { ...currentMeta, description, updatedAt: new Date() }
         : {
@@ -148,11 +156,14 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
             updatedAt: new Date(),
           };
 
-      // Mutate the map directly instead of creating a new one
-      // This prevents React from detecting a state change and re-rendering
-      metadata.set(filePath, optimisticMeta);
+      // Create new Map with updated metadata to trigger React re-render
+      setMetadata(prev => {
+        const newMap = new Map(prev);
+        newMap.set(filePath, optimisticMeta);
+        return newMap;
+      });
 
-      // Send update to API (don't await to avoid blocking)
+      // Send update to API
       const response = await fetch('/api/metadata', {
         method: 'POST',
         headers: {
@@ -171,19 +182,24 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
 
       const data = await response.json();
       
-      // Update with server response (mutate to avoid re-render)
-      // Only update if the data is different to minimize mutations
+      // Update with server response
       const serverMeta = data.metadata;
-      if (JSON.stringify(metadata.get(filePath)) !== JSON.stringify(serverMeta)) {
-        metadata.set(filePath, serverMeta);
-      }
+      setMetadata(prev => {
+        const newMap = new Map(prev);
+        newMap.set(filePath, serverMeta);
+        return newMap;
+      });
     } catch (err) {
       // Rollback on error
-      if (previousMeta) {
-        metadata.set(filePath, previousMeta);
-      } else {
-        metadata.delete(filePath);
-      }
+      setMetadata(prev => {
+        const newMap = new Map(prev);
+        if (previousMeta) {
+          newMap.set(filePath, previousMeta);
+        } else {
+          newMap.delete(filePath);
+        }
+        return newMap;
+      });
 
       const error = err instanceof Error ? err : new Error('Failed to update description');
       console.error('Description update error:', error);

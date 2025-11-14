@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useEffect, memo } from 'react';
 import { AudioFile } from '../../shared/types';
-import { useAudioMetadata, useAudioPlayer, useLazyVisualization } from '../hooks';
+import { useAudioPlayer, useLazyVisualization } from '../hooks';
+import { useAudioMetadataContext } from '../contexts/AudioMetadataContext';
 import { StarRating } from './StarRating';
 import { WaveformDisplay } from './WaveformDisplay';
 import { SpectrogramDisplay } from './SpectrogramDisplay';
@@ -38,7 +39,7 @@ export const AudioItem = memo(function AudioItem({
   onEditComplete,
 }: AudioItemProps) {
   // Hooks
-  const audioMetadata = useAudioMetadata();
+  const audioMetadata = useAudioMetadataContext();
   
   // Use lazy visualization hook for on-demand loading
   // Memoize options to prevent unnecessary re-initialization
@@ -176,6 +177,7 @@ export const AudioItem = memo(function AudioItem({
   // Only re-render if these props change
   
   // CRITICAL: Minimize re-renders to prevent DescriptionField focus loss
+  // BUT: Allow re-renders when metadata might have changed
   
   // If file path changed, always re-render (different file)
   if (prevProps.file.path !== nextProps.file.path) {
@@ -204,6 +206,12 @@ export const AudioItem = memo(function AudioItem({
   
   // If onClick handler changed, re-render
   if (prevProps.onClick !== nextProps.onClick) {
+    return false;
+  }
+  
+  // If onEditStart or onEditComplete changed, re-render
+  if (prevProps.onEditStart !== nextProps.onEditStart || 
+      prevProps.onEditComplete !== nextProps.onEditComplete) {
     return false;
   }
   

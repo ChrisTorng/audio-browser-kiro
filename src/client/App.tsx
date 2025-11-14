@@ -3,6 +3,7 @@ import { AudioBrowser } from './components/AudioBrowser';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastContainer } from './components/Toast';
 import { ToastProvider } from './contexts/ToastContext';
+import { AudioMetadataProvider } from './contexts/AudioMetadataContext';
 import { useToast } from './hooks/useToast';
 
 function AppContent() {
@@ -26,7 +27,9 @@ function AppContent() {
 function App() {
   return (
     <ToastProvider>
-      <AppContent />
+      <AudioMetadataProvider>
+        <AppContent />
+      </AudioMetadataProvider>
     </ToastProvider>
   );
 }
