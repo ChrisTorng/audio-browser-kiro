@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo, useCallback } from 'react';
 
 /**
  * SpectrogramDisplay component props
@@ -15,8 +15,9 @@ export interface SpectrogramDisplayProps {
 /**
  * SpectrogramDisplay component
  * Displays audio spectrogram with playback progress overlay
+ * Optimized to only redraw progress indicator, not the entire spectrogram
  */
-export function SpectrogramDisplay({
+export const SpectrogramDisplay = memo(function SpectrogramDisplay({
   spectrogramData,
   progress = 0,
   width = 200,
@@ -24,25 +25,30 @@ export function SpectrogramDisplay({
   isLoading = false,
   error = null,
 }: SpectrogramDisplayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const spectrogramCanvasRef = useRef<HTMLCanvasElement>(null);
+  const progressCanvasRef = useRef<HTMLCanvasElement>(null);
+  const spectrogramDrawnRef = useRef(false);
 
   /**
    * Convert frequency intensity to color
    */
-  const intensityToColor = (intensity: number): string => {
+  const intensityToColor = useCallback((intensity: number): string => {
     // Map intensity (0-1) to color gradient (blue -> green -> yellow -> red)
     const r = Math.floor(Math.min(255, intensity * 2 * 255));
     const g = Math.floor(Math.min(255, intensity * 1.5 * 255));
     const b = Math.floor(Math.max(0, (1 - intensity) * 255));
     return `rgb(${r}, ${g}, ${b})`;
-  };
+  }, []);
 
   /**
-   * Draw spectrogram on canvas
+   * Draw spectrogram on canvas (only when spectrogram data changes)
    */
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !spectrogramData || spectrogramData.length === 0) return;
+    const canvas = spectrogramCanvasRef.current;
+    if (!canvas || !spectrogramData || spectrogramData.length === 0) {
+      spectrogramDrawnRef.current = false;
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -69,7 +75,23 @@ export function SpectrogramDisplay({
       });
     });
 
-    // Draw progress overlay
+    spectrogramDrawnRef.current = true;
+  }, [spectrogramData, width, height, intensityToColor]);
+
+  /**
+   * Draw progress overlay on separate canvas (updates frequently)
+   */
+  useEffect(() => {
+    const canvas = progressCanvasRef.current;
+    if (!canvas || !spectrogramDrawnRef.current) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw progress overlay only if playing
     if (progress > 0) {
       const progressX = width * progress;
 
@@ -81,7 +103,7 @@ export function SpectrogramDisplay({
       ctx.lineTo(progressX, height);
       ctx.stroke();
     }
-  }, [spectrogramData, progress, width, height]);
+  }, [progress, width, height]);
 
   if (error) {
     return (
@@ -108,13 +130,34 @@ export function SpectrogramDisplay({
   }
 
   return (
-    <div className="spectrogram-display" style={{ width, height }}>
+    <div className="spectrogram-display" style={{ width, height, position: 'relative' }}>
+      {/* Base spectrogram canvas - only redraws when spectrogram data changes */}
       <canvas
-        ref={canvasRef}
+        ref={spectrogramCanvasRef}
         width={width}
         height={height}
         className="spectrogram-display__canvas"
+        style={{ position: 'absolute', top: 0, left: 0 }}
+      />
+      {/* Progress overlay canvas - redraws frequently during playback */}
+      <canvas
+        ref={progressCanvasRef}
+        width={width}
+        height={height}
+        className="spectrogram-display__progress-canvas"
+        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
       />
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if these props change
+  // This prevents unnecessary re-renders when parent components update
+  return (
+    prevProps.spectrogramData === nextProps.spectrogramData &&
+    prevProps.progress === nextProps.progress &&
+    prevProps.width === nextProps.width &&
+    prevProps.height === nextProps.height &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+});

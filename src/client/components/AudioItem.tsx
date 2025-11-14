@@ -16,6 +16,7 @@ export interface AudioItemProps {
   level: number;
   filterText?: string;
   onClick: () => void;
+  audioProgress?: number; // 0-1, only provided for selected playing item
 }
 
 /**
@@ -30,18 +31,21 @@ export const AudioItem = memo(function AudioItem({
   level,
   filterText = '',
   onClick,
+  audioProgress = 0,
 }: AudioItemProps) {
   // Hooks
   const audioMetadata = useAudioMetadata();
-  const audioPlayer = useAudioPlayer();
   
   // Use lazy visualization hook for on-demand loading
-  const visualization = useLazyVisualization({
+  // Memoize options to prevent unnecessary re-initialization
+  const visualizationOptions = useMemo(() => ({
     waveformWidth: 200,
     spectrogramWidth: 200,
     spectrogramHeight: 28,
-    priority: 'both',
-  });
+    priority: 'both' as const,
+  }), []);
+  
+  const visualization = useLazyVisualization(visualizationOptions);
 
   // Get metadata for this file
   const metadata = useMemo(() => {
@@ -63,7 +67,13 @@ export const AudioItem = memo(function AudioItem({
       // Clear visualization when not visible to save memory
       visualization.clearVisualization();
     }
-  }, [isVisible, file.path, visualization]);
+  }, [isVisible, file.path, visualization.loadVisualization, visualization.clearVisualization]);
+
+  // Memoize visualization data to prevent unnecessary re-renders
+  const waveformData = useMemo(() => visualization.waveformData, [visualization.waveformData]);
+  const spectrogramData = useMemo(() => visualization.spectrogramData, [visualization.spectrogramData]);
+  const visualizationError = useMemo(() => visualization.error, [visualization.error]);
+  const visualizationLoading = useMemo(() => visualization.isLoading, [visualization.isLoading]);
 
   /**
    * Handle rating change
@@ -93,9 +103,8 @@ export const AudioItem = memo(function AudioItem({
     [audioMetadata, file.path]
   );
 
-  // Determine if this file is currently playing
-  const isPlaying = isSelected && audioPlayer.isPlaying;
-  const progress = isPlaying ? audioPlayer.progress : 0;
+  // Use the progress passed from parent (only non-zero for selected playing item)
+  const progress = audioProgress;
 
   return (
     <div
@@ -121,24 +130,24 @@ export const AudioItem = memo(function AudioItem({
         {/* Waveform */}
         <div className="audio-item__waveform">
           <WaveformDisplay
-            waveformData={visualization.waveformData}
+            waveformData={waveformData}
             progress={progress}
             width={200}
             height={28}
-            isLoading={visualization.isLoading}
-            error={visualization.error}
+            isLoading={visualizationLoading}
+            error={visualizationError}
           />
         </div>
 
         {/* Spectrogram */}
         <div className="audio-item__spectrogram">
           <SpectrogramDisplay
-            spectrogramData={visualization.spectrogramData}
+            spectrogramData={spectrogramData}
             progress={progress}
             width={200}
             height={28}
-            isLoading={visualization.isLoading}
-            error={visualization.error}
+            isLoading={visualizationLoading}
+            error={visualizationError}
           />
         </div>
 
@@ -155,6 +164,27 @@ export const AudioItem = memo(function AudioItem({
         </div>
       </div>
     </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo
+  // Only re-render if these props change
+  
+  // If selection state changed, always re-render
+  if (prevProps.isSelected !== nextProps.isSelected) {
+    return false;
+  }
+  
+  // If selected, check if progress changed (allow re-render for progress updates)
+  if (nextProps.isSelected && prevProps.audioProgress !== nextProps.audioProgress) {
+    return false;
+  }
+  
+  // Check other props
+  return (
+    prevProps.file.path === nextProps.file.path &&
+    prevProps.isVisible === nextProps.isVisible &&
+    prevProps.level === nextProps.level &&
+    prevProps.filterText === nextProps.filterText
   );
 });
 

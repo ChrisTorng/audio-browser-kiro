@@ -416,6 +416,7 @@ export function AudioBrowser() {
             filterText={filterCriteria.text}
             height={600}
             itemHeight={32}
+            audioProgress={audioPlayer.isPlaying ? audioPlayer.progress : 0}
           />
         )}
       </div>

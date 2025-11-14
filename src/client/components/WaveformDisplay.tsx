@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 
 /**
  * WaveformDisplay component props
@@ -15,8 +15,9 @@ export interface WaveformDisplayProps {
 /**
  * WaveformDisplay component
  * Displays audio waveform with playback progress overlay
+ * Optimized to only redraw progress indicator, not the entire waveform
  */
-export function WaveformDisplay({
+export const WaveformDisplay = memo(function WaveformDisplay({
   waveformData,
   progress = 0,
   width = 200,
@@ -24,14 +25,19 @@ export function WaveformDisplay({
   isLoading = false,
   error = null,
 }: WaveformDisplayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
+  const progressCanvasRef = useRef<HTMLCanvasElement>(null);
+  const waveformDrawnRef = useRef(false);
 
   /**
-   * Draw waveform on canvas
+   * Draw waveform on canvas (only when waveform data changes)
    */
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !waveformData || waveformData.length === 0) return;
+    const canvas = waveformCanvasRef.current;
+    if (!canvas || !waveformData || waveformData.length === 0) {
+      waveformDrawnRef.current = false;
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -53,7 +59,23 @@ export function WaveformDisplay({
       ctx.fillRect(x, centerY - barHeight / 2, barWidth - 1, barHeight);
     });
 
-    // Draw progress overlay
+    waveformDrawnRef.current = true;
+  }, [waveformData, width, height]);
+
+  /**
+   * Draw progress overlay on separate canvas (updates frequently)
+   */
+  useEffect(() => {
+    const canvas = progressCanvasRef.current;
+    if (!canvas || !waveformDrawnRef.current) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw progress overlay only if playing
     if (progress > 0) {
       const progressX = width * progress;
       
@@ -69,7 +91,7 @@ export function WaveformDisplay({
       ctx.lineTo(progressX, height);
       ctx.stroke();
     }
-  }, [waveformData, progress, width, height]);
+  }, [progress, width, height]);
 
   if (error) {
     return (
@@ -96,13 +118,34 @@ export function WaveformDisplay({
   }
 
   return (
-    <div className="waveform-display" style={{ width, height }}>
+    <div className="waveform-display" style={{ width, height, position: 'relative' }}>
+      {/* Base waveform canvas - only redraws when waveform data changes */}
       <canvas
-        ref={canvasRef}
+        ref={waveformCanvasRef}
         width={width}
         height={height}
         className="waveform-display__canvas"
+        style={{ position: 'absolute', top: 0, left: 0 }}
+      />
+      {/* Progress overlay canvas - redraws frequently during playback */}
+      <canvas
+        ref={progressCanvasRef}
+        width={width}
+        height={height}
+        className="waveform-display__progress-canvas"
+        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
       />
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if these props change
+  // This prevents unnecessary re-renders when parent components update
+  return (
+    prevProps.waveformData === nextProps.waveformData &&
+    prevProps.progress === nextProps.progress &&
+    prevProps.width === nextProps.width &&
+    prevProps.height === nextProps.height &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+});
