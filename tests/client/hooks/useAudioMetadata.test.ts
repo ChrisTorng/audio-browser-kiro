@@ -70,25 +70,12 @@ describe('useAudioMetadata', () => {
     expect(result.current.metadata.size).toBe(0);
   });
 
-  it('updates rating successfully', async () => {
-    (global.fetch as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ metadata: mockMetadata }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          metadata: {
-            id: 1,
-            filePath: 'audio/file1.mp3',
-            rating: 3,
-            description: 'Test file 1',
-            createdAt: new Date('2024-01-01'),
-            updatedAt: new Date(),
-          },
-        }),
-      });
+  it('updates rating successfully with optimistic update', async () => {
+    // Initial fetch
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ metadata: mockMetadata }),
+    });
 
     const { result } = renderHook(() => useAudioMetadata());
 
@@ -96,10 +83,26 @@ describe('useAudioMetadata', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
+    // Mock the backend update (fire and forget - we don't wait for it)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        metadata: {
+          id: 1,
+          filePath: 'audio/file1.mp3',
+          rating: 3,
+          description: 'Test file 1',
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date(),
+        },
+      }),
+    });
+
     await act(async () => {
       await result.current.updateRating('audio/file1.mp3', 3);
     });
 
+    // Should be updated immediately (optimistic update)
     expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(3);
   });
 
@@ -122,70 +125,7 @@ describe('useAudioMetadata', () => {
     }).rejects.toThrow('Rating must be between 0 and 3');
   });
 
-  it('performs optimistic update for rating', async () => {
-    (global.fetch as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ metadata: mockMetadata }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          metadata: {
-            id: 1,
-            filePath: 'audio/file1.mp3',
-            rating: 3,
-            description: 'Test file 1',
-            createdAt: new Date('2024-01-01'),
-            updatedAt: new Date(),
-          },
-        }),
-      });
-
-    const { result } = renderHook(() => useAudioMetadata());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    await act(async () => {
-      await result.current.updateRating('audio/file1.mp3', 3);
-    });
-
-    // Should be updated
-    expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(3);
-  });
-
-  it('rolls back on rating update error', async () => {
-    (global.fetch as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ metadata: mockMetadata }),
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Bad Request',
-      });
-
-    const { result } = renderHook(() => useAudioMetadata());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    const originalRating = result.current.metadata.get('audio/file1.mp3')?.rating;
-
-    await expect(async () => {
-      await act(async () => {
-        await result.current.updateRating('audio/file1.mp3', 1);
-      });
-    }).rejects.toThrow();
-
-    // Should rollback to original value
-    expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(originalRating);
-  });
-
-  it('updates description successfully', async () => {
+  it('performs optimistic update for rating without waiting for backend', async () => {
     // Initial fetch
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -198,7 +138,83 @@ describe('useAudioMetadata', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Mock the update call
+    // Mock backend call (will be fire-and-forget)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        metadata: {
+          id: 1,
+          filePath: 'audio/file1.mp3',
+          rating: 3,
+          description: 'Test file 1',
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date(),
+        },
+      }),
+    });
+
+    await act(async () => {
+      await result.current.updateRating('audio/file1.mp3', 3);
+    });
+
+    // Should be updated immediately (optimistic)
+    expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(3);
+    
+    // Verify backend was called
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/metadata',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"rating":3'),
+      })
+    );
+  });
+
+  it('does not rollback on backend sync error (fire and forget)', async () => {
+    // Initial fetch
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ metadata: mockMetadata }),
+    });
+
+    const { result } = renderHook(() => useAudioMetadata());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const originalRating = result.current.metadata.get('audio/file1.mp3')?.rating;
+
+    // Mock backend error (but we don't wait for it)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: false,
+      statusText: 'Bad Request',
+    });
+
+    // Should not throw since we use fire-and-forget
+    await act(async () => {
+      await result.current.updateRating('audio/file1.mp3', 1);
+    });
+
+    // Should keep the optimistic update (not rollback)
+    expect(result.current.metadata.get('audio/file1.mp3')?.rating).toBe(1);
+    expect(result.current.metadata.get('audio/file1.mp3')?.rating).not.toBe(originalRating);
+  });
+
+  it('updates description successfully with optimistic update', async () => {
+    // Initial fetch
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ metadata: mockMetadata }),
+    });
+
+    const { result } = renderHook(() => useAudioMetadata());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Mock the backend update (fire and forget)
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -217,28 +233,16 @@ describe('useAudioMetadata', () => {
       await result.current.updateDescription('audio/file1.mp3', 'Updated description');
     });
 
+    // Should be updated immediately (optimistic)
     expect(result.current.metadata.get('audio/file1.mp3')?.description).toBe('Updated description');
   });
 
-  it('performs optimistic update for description', async () => {
-    (global.fetch as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ metadata: mockMetadata }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          metadata: {
-            id: 1,
-            filePath: 'audio/file1.mp3',
-            rating: 3,
-            description: 'New description',
-            createdAt: new Date('2024-01-01'),
-            updatedAt: new Date(),
-          },
-        }),
-      });
+  it('performs optimistic update for description without waiting for backend', async () => {
+    // Initial fetch
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ metadata: mockMetadata }),
+    });
 
     const { result } = renderHook(() => useAudioMetadata());
 
@@ -246,12 +250,36 @@ describe('useAudioMetadata', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
+    // Mock backend call (fire and forget)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        metadata: {
+          id: 1,
+          filePath: 'audio/file1.mp3',
+          rating: 3,
+          description: 'New description',
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date(),
+        },
+      }),
+    });
+
     await act(async () => {
       await result.current.updateDescription('audio/file1.mp3', 'New description');
     });
 
-    // Should be updated
+    // Should be updated immediately (optimistic)
     expect(result.current.metadata.get('audio/file1.mp3')?.description).toBe('New description');
+    
+    // Verify backend was called
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/metadata',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"description":"New description"'),
+      })
+    );
   });
 
   it('deletes metadata successfully', async () => {
@@ -355,25 +383,12 @@ describe('useAudioMetadata', () => {
     expect(result.current.metadata.size).toBe(0);
   });
 
-  it('creates new metadata when updating non-existent file', async () => {
-    (global.fetch as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ metadata: {} }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          metadata: {
-            id: 3,
-            filePath: 'audio/new.mp3',
-            rating: 2,
-            description: '',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        }),
-      });
+  it('creates new metadata when updating non-existent file with optimistic update', async () => {
+    // Initial fetch with empty metadata
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ metadata: {} }),
+    });
 
     const { result } = renderHook(() => useAudioMetadata());
 
@@ -381,10 +396,26 @@ describe('useAudioMetadata', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
+    // Mock backend call (fire and forget)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        metadata: {
+          id: 3,
+          filePath: 'audio/new.mp3',
+          rating: 2,
+          description: '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }),
+    });
+
     await act(async () => {
       await result.current.updateRating('audio/new.mp3', 2);
     });
 
+    // Should create new metadata immediately (optimistic)
     expect(result.current.metadata.has('audio/new.mp3')).toBe(true);
     expect(result.current.metadata.get('audio/new.mp3')?.rating).toBe(2);
   });

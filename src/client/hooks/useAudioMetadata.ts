@@ -68,70 +68,42 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
     }
 
     const currentMeta = metadata.get(filePath);
-    const previousMeta = currentMeta ? { ...currentMeta } : null;
 
-    try {
-      // Optimistic update - create new Map to trigger re-render
-      const optimisticMeta: AudioMetadata = currentMeta
-        ? { ...currentMeta, rating, updatedAt: new Date() }
-        : {
-            id: 0,
-            filePath,
-            rating,
-            description: '',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-
-      // Create new Map with updated metadata to trigger React re-render
-      setMetadata(prev => {
-        const newMap = new Map(prev);
-        newMap.set(filePath, optimisticMeta);
-        return newMap;
-      });
-
-      // Send update to API
-      const response = await fetch('/api/metadata', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    // Optimistic update - create new Map to trigger re-render
+    const optimisticMeta: AudioMetadata = currentMeta
+      ? { ...currentMeta, rating, updatedAt: new Date() }
+      : {
+          id: 0,
           filePath,
           rating,
-          description: currentMeta?.description || '',
-        }),
-      });
+          description: '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
-      if (!response.ok) {
-        throw new Error(`Failed to update rating: ${response.statusText}`);
-      }
+    // Create new Map with updated metadata to trigger React re-render
+    setMetadata(prev => {
+      const newMap = new Map(prev);
+      newMap.set(filePath, optimisticMeta);
+      return newMap;
+    });
 
-      const data = await response.json();
-      
-      // Update with server response
-      const serverMeta = data.metadata;
-      setMetadata(prev => {
-        const newMap = new Map(prev);
-        newMap.set(filePath, serverMeta);
-        return newMap;
-      });
-    } catch (err) {
-      // Rollback on error
-      setMetadata(prev => {
-        const newMap = new Map(prev);
-        if (previousMeta) {
-          newMap.set(filePath, previousMeta);
-        } else {
-          newMap.delete(filePath);
-        }
-        return newMap;
-      });
-
-      const error = err instanceof Error ? err : new Error('Failed to update rating');
-      console.error('Rating update error:', error);
-      throw error;
-    }
+    // Send update to API (fire and forget - don't wait for response)
+    fetch('/api/metadata', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filePath,
+        rating,
+        description: currentMeta?.description || '',
+      }),
+    }).catch(err => {
+      console.error('Failed to sync rating to backend:', err);
+      // Note: We don't rollback here as the optimistic update already happened
+      // The user will see their change immediately, and we log the error
+    });
   }, [metadata]);
 
   /**
@@ -141,70 +113,42 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
    */
   const updateDescription = useCallback(async (filePath: string, description: string) => {
     const currentMeta = metadata.get(filePath);
-    const previousMeta = currentMeta ? { ...currentMeta } : null;
 
-    try {
-      // Optimistic update - create new Map to trigger re-render
-      const optimisticMeta: AudioMetadata = currentMeta
-        ? { ...currentMeta, description, updatedAt: new Date() }
-        : {
-            id: 0,
-            filePath,
-            rating: 0,
-            description,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-
-      // Create new Map with updated metadata to trigger React re-render
-      setMetadata(prev => {
-        const newMap = new Map(prev);
-        newMap.set(filePath, optimisticMeta);
-        return newMap;
-      });
-
-      // Send update to API
-      const response = await fetch('/api/metadata', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    // Optimistic update - create new Map to trigger re-render
+    const optimisticMeta: AudioMetadata = currentMeta
+      ? { ...currentMeta, description, updatedAt: new Date() }
+      : {
+          id: 0,
           filePath,
-          rating: currentMeta?.rating || 0,
+          rating: 0,
           description,
-        }),
-      });
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
-      if (!response.ok) {
-        throw new Error(`Failed to update description: ${response.statusText}`);
-      }
+    // Create new Map with updated metadata to trigger React re-render
+    setMetadata(prev => {
+      const newMap = new Map(prev);
+      newMap.set(filePath, optimisticMeta);
+      return newMap;
+    });
 
-      const data = await response.json();
-      
-      // Update with server response
-      const serverMeta = data.metadata;
-      setMetadata(prev => {
-        const newMap = new Map(prev);
-        newMap.set(filePath, serverMeta);
-        return newMap;
-      });
-    } catch (err) {
-      // Rollback on error
-      setMetadata(prev => {
-        const newMap = new Map(prev);
-        if (previousMeta) {
-          newMap.set(filePath, previousMeta);
-        } else {
-          newMap.delete(filePath);
-        }
-        return newMap;
-      });
-
-      const error = err instanceof Error ? err : new Error('Failed to update description');
-      console.error('Description update error:', error);
-      throw error;
-    }
+    // Send update to API (fire and forget - don't wait for response)
+    fetch('/api/metadata', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filePath,
+        rating: currentMeta?.rating || 0,
+        description,
+      }),
+    }).catch(err => {
+      console.error('Failed to sync description to backend:', err);
+      // Note: We don't rollback here as the optimistic update already happened
+      // The user will see their change immediately, and we log the error
+    });
   }, [metadata]);
 
   /**
