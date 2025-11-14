@@ -180,12 +180,17 @@ export const AudioItem = memo(function AudioItem({
   }
   
   // Check other props
-  return (
-    prevProps.file.path === nextProps.file.path &&
-    prevProps.isVisible === nextProps.isVisible &&
-    prevProps.level === nextProps.level &&
-    prevProps.filterText === nextProps.filterText
-  );
+  if (
+    prevProps.file.path !== nextProps.file.path ||
+    prevProps.isVisible !== nextProps.isVisible ||
+    prevProps.level !== nextProps.level ||
+    prevProps.filterText !== nextProps.filterText
+  ) {
+    return false;
+  }
+  
+  // All props are the same, skip re-render
+  return true;
 });
 
 /**

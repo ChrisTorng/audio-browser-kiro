@@ -34,6 +34,7 @@ export function DescriptionField({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(description);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isEditingRef = useRef(false); // Track editing state across renders
 
   /**
    * Enter edit mode
@@ -47,6 +48,7 @@ export function DescriptionField({
 
       e.stopPropagation();
       setIsEditing(true);
+      isEditingRef.current = true;
       setEditValue(description);
 
       // Focus input and set cursor position based on click
@@ -81,6 +83,7 @@ export function DescriptionField({
       onChange(editValue);
     }
     setIsEditing(false);
+    isEditingRef.current = false;
     if (onEditComplete) {
       onEditComplete();
     }
@@ -92,6 +95,7 @@ export function DescriptionField({
   const cancelEdit = useCallback(() => {
     setEditValue(description);
     setIsEditing(false);
+    isEditingRef.current = false;
     if (onEditComplete) {
       onEditComplete();
     }
@@ -137,6 +141,7 @@ export function DescriptionField({
   useEffect(() => {
     if (triggerEdit && !isEditing && !disabled) {
       setIsEditing(true);
+      isEditingRef.current = true;
       setEditValue(description);
 
       // Focus input after state update
@@ -160,6 +165,7 @@ export function DescriptionField({
       const customEvent = event as CustomEvent<{ filePath: string }>;
       if (customEvent.detail.filePath === filePath && !isEditing && !disabled) {
         setIsEditing(true);
+        isEditingRef.current = true;
         setEditValue(description);
 
         // Focus input after state update
@@ -179,6 +185,24 @@ export function DescriptionField({
       window.removeEventListener('trigger-description-edit', handleTriggerEdit);
     };
   }, [filePath, isEditing, disabled, description]);
+
+  /**
+   * Maintain focus during re-renders when editing
+   * This prevents focus loss when parent components re-render
+   */
+  useEffect(() => {
+    if (isEditing && inputRef.current && document.activeElement !== inputRef.current) {
+      // Restore focus if it was lost during re-render
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  /**
+   * Sync isEditingRef with isEditing state
+   */
+  useEffect(() => {
+    isEditingRef.current = isEditing;
+  }, [isEditing]);
 
   if (isEditing) {
     return (

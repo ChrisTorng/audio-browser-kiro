@@ -67,9 +67,11 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
       throw new Error('Rating must be between 0 and 3');
     }
 
+    const currentMeta = metadata.get(filePath);
+    const previousMeta = currentMeta ? { ...currentMeta } : null;
+
     try {
-      // Optimistic update
-      const currentMeta = metadata.get(filePath);
+      // Optimistic update - mutate the existing Map to avoid triggering re-renders
       const optimisticMeta: AudioMetadata = currentMeta
         ? { ...currentMeta, rating, updatedAt: new Date() }
         : {
@@ -81,7 +83,8 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
             updatedAt: new Date(),
           };
 
-      setMetadata(prev => new Map(prev).set(filePath, optimisticMeta));
+      // Mutate the map directly instead of creating a new one
+      metadata.set(filePath, optimisticMeta);
 
       // Send update to API
       const response = await fetch('/api/metadata', {
@@ -102,18 +105,14 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
 
       const data = await response.json();
       
-      // Update with server response
-      setMetadata(prev => new Map(prev).set(filePath, data.metadata));
+      // Update with server response (mutate to avoid re-render)
+      metadata.set(filePath, data.metadata);
     } catch (err) {
       // Rollback on error
-      if (metadata.has(filePath)) {
-        setMetadata(prev => new Map(prev).set(filePath, metadata.get(filePath)!));
+      if (previousMeta) {
+        metadata.set(filePath, previousMeta);
       } else {
-        setMetadata(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(filePath);
-          return newMap;
-        });
+        metadata.delete(filePath);
       }
 
       const error = err instanceof Error ? err : new Error('Failed to update rating');
@@ -128,9 +127,11 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
    * @param description - Description text
    */
   const updateDescription = useCallback(async (filePath: string, description: string) => {
+    const currentMeta = metadata.get(filePath);
+    const previousMeta = currentMeta ? { ...currentMeta } : null;
+
     try {
-      // Optimistic update
-      const currentMeta = metadata.get(filePath);
+      // Optimistic update - mutate the existing Map to avoid triggering re-renders
       const optimisticMeta: AudioMetadata = currentMeta
         ? { ...currentMeta, description, updatedAt: new Date() }
         : {
@@ -142,7 +143,8 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
             updatedAt: new Date(),
           };
 
-      setMetadata(prev => new Map(prev).set(filePath, optimisticMeta));
+      // Mutate the map directly instead of creating a new one
+      metadata.set(filePath, optimisticMeta);
 
       // Send update to API
       const response = await fetch('/api/metadata', {
@@ -163,18 +165,14 @@ export function useAudioMetadata(): UseAudioMetadataReturn {
 
       const data = await response.json();
       
-      // Update with server response
-      setMetadata(prev => new Map(prev).set(filePath, data.metadata));
+      // Update with server response (mutate to avoid re-render)
+      metadata.set(filePath, data.metadata);
     } catch (err) {
       // Rollback on error
-      if (metadata.has(filePath)) {
-        setMetadata(prev => new Map(prev).set(filePath, metadata.get(filePath)!));
+      if (previousMeta) {
+        metadata.set(filePath, previousMeta);
       } else {
-        setMetadata(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(filePath);
-          return newMap;
-        });
+        metadata.delete(filePath);
       }
 
       const error = err instanceof Error ? err : new Error('Failed to update description');
