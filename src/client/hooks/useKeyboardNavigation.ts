@@ -15,6 +15,7 @@ export interface NavigationItem {
 export interface UseKeyboardNavigationReturn {
   selectedIndex: number;
   selectedItem: NavigationItem | null;
+  isEditingDescription: boolean;
   handleKeyDown: (event: KeyboardEvent) => void;
   selectNext: () => void;
   selectPrevious: () => void;
@@ -22,6 +23,7 @@ export interface UseKeyboardNavigationReturn {
   toggleExpand: () => void;
   expandItem: () => void;
   collapseItem: () => void;
+  setEditingDescription: (isEditing: boolean) => void;
 }
 
 /**
@@ -59,12 +61,20 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
   } = options;
 
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
 
   // Get currently selected item
   const selectedItem = items[selectedIndex] || null;
   
   // Track previous item type to detect file -> directory transitions
   const prevItemTypeRef = useRef<'file' | 'directory' | null>(null);
+
+  /**
+   * Set editing description state
+   */
+  const setEditingDescription = useCallback((isEditing: boolean) => {
+    setIsEditingDescription(isEditing);
+  }, []);
 
   /**
    * Select next item in the list
@@ -182,6 +192,14 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!enabled) return;
 
+    // When editing description, disable special key functions
+    // Allow normal input behavior for space, arrows, and other keys
+    if (isEditingDescription) {
+      // Only handle Escape and Enter keys during editing
+      // These are handled by DescriptionField component itself
+      return;
+    }
+
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
@@ -250,7 +268,7 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
       default:
         break;
     }
-  }, [enabled, selectNext, selectPrevious, expandItem, collapseItem, selectedItem, selectedIndex, onTogglePlay, onRating, onCollapseAndSelectParent, onEnterEdit]);
+  }, [enabled, isEditingDescription, selectNext, selectPrevious, expandItem, collapseItem, selectedItem, selectedIndex, onTogglePlay, onRating, onCollapseAndSelectParent, onEnterEdit]);
 
   /**
    * Attach keyboard event listener
@@ -277,6 +295,7 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
   return {
     selectedIndex,
     selectedItem,
+    isEditingDescription,
     handleKeyDown,
     selectNext,
     selectPrevious,
@@ -284,5 +303,6 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
     toggleExpand,
     expandItem,
     collapseItem,
+    setEditingDescription,
   };
 }

@@ -712,4 +712,239 @@ describe('useKeyboardNavigation', () => {
 
     expect(result.current.selectedIndex).toBe(1);
   });
+
+  it('initializes with isEditingDescription as false', () => {
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems })
+    );
+
+    expect(result.current.isEditingDescription).toBe(false);
+  });
+
+  it('updates isEditingDescription when setEditingDescription is called', () => {
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems })
+    );
+
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    expect(result.current.isEditingDescription).toBe(true);
+
+    act(() => {
+      result.current.setEditingDescription(false);
+    });
+
+    expect(result.current.isEditingDescription).toBe(false);
+  });
+
+  it('disables space key when editing description', () => {
+    const onTogglePlay = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onTogglePlay })
+    );
+
+    // Enable editing mode
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: ' ' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not call onTogglePlay when editing
+    expect(onTogglePlay).not.toHaveBeenCalled();
+    // Should not prevent default to allow space input
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('disables arrow keys when editing description', () => {
+    const onSelect = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onSelect })
+    );
+
+    // Enable editing mode
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    const downEvent = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+    downEvent.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(downEvent as any);
+    });
+
+    // Should not change selection when editing
+    expect(result.current.selectedIndex).toBe(0);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(downEvent.preventDefault).not.toHaveBeenCalled();
+
+    const upEvent = new KeyboardEvent('keydown', { key: 'ArrowUp' });
+    upEvent.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(upEvent as any);
+    });
+
+    expect(result.current.selectedIndex).toBe(0);
+    expect(upEvent.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('disables left arrow key when editing description', () => {
+    const onCollapseAndSelectParent = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onCollapseAndSelectParent })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    // Enable editing mode
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not collapse parent when editing
+    expect(onCollapseAndSelectParent).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('disables right arrow key when editing description', () => {
+    const onExpand = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onExpand })
+    );
+
+    // Select a directory
+    act(() => {
+      result.current.selectItem(1);
+    });
+
+    // Enable editing mode
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not expand directory when editing
+    expect(onExpand).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('disables number keys when editing description', () => {
+    const onRating = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onRating })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    // Enable editing mode
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: '1' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not call onRating when editing
+    expect(onRating).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('disables Enter key when editing description', () => {
+    const onEnterEdit = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onEnterEdit })
+    );
+
+    // Select a file
+    act(() => {
+      result.current.selectItem(0);
+    });
+
+    // Enable editing mode
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    event.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event as any);
+    });
+
+    // Should not call onEnterEdit when already editing
+    expect(onEnterEdit).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('re-enables keys after editing is complete', () => {
+    const onTogglePlay = vi.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation({ items: mockItems, onTogglePlay })
+    );
+
+    // Enable editing mode
+    act(() => {
+      result.current.setEditingDescription(true);
+    });
+
+    // Try space key while editing
+    const event1 = new KeyboardEvent('keydown', { key: ' ' });
+    event1.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event1 as any);
+    });
+
+    expect(onTogglePlay).not.toHaveBeenCalled();
+
+    // Disable editing mode
+    act(() => {
+      result.current.setEditingDescription(false);
+    });
+
+    // Try space key after editing
+    const event2 = new KeyboardEvent('keydown', { key: ' ' });
+    event2.preventDefault = vi.fn();
+
+    act(() => {
+      result.current.handleKeyDown(event2 as any);
+    });
+
+    // Should now call onTogglePlay
+    expect(onTogglePlay).toHaveBeenCalledTimes(1);
+    expect(event2.preventDefault).toHaveBeenCalled();
+  });
 });

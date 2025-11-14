@@ -17,6 +17,8 @@ export interface AudioItemProps {
   filterText?: string;
   onClick: () => void;
   audioProgress?: number; // 0-1, only provided for selected playing item
+  onEditStart?: () => void;
+  onEditComplete?: () => void;
 }
 
 /**
@@ -32,6 +34,8 @@ export const AudioItem = memo(function AudioItem({
   filterText = '',
   onClick,
   audioProgress = 0,
+  onEditStart,
+  onEditComplete,
 }: AudioItemProps) {
   // Hooks
   const audioMetadata = useAudioMetadata();
@@ -160,6 +164,8 @@ export const AudioItem = memo(function AudioItem({
             placeholder="Add description..."
             filePath={file.path}
             disabled={!isSelected}
+            onEditStart={onEditStart}
+            onEditComplete={onEditComplete}
           />
         </div>
       </div>

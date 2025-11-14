@@ -11,6 +11,7 @@ export interface DescriptionFieldProps {
   filterText?: string;
   triggerEdit?: boolean;
   onEditComplete?: () => void;
+  onEditStart?: () => void;
   filePath?: string;
 }
 
@@ -29,6 +30,7 @@ export const DescriptionField = memo(function DescriptionField({
   filterText = '',
   triggerEdit = false,
   onEditComplete,
+  onEditStart,
   filePath,
 }: DescriptionFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -51,6 +53,11 @@ export const DescriptionField = memo(function DescriptionField({
       isEditingRef.current = true;
       setEditValue(description);
 
+      // Notify parent that editing has started
+      if (onEditStart) {
+        onEditStart();
+      }
+
       // Focus input and set cursor position based on click
       setTimeout(() => {
         if (inputRef.current) {
@@ -72,7 +79,7 @@ export const DescriptionField = memo(function DescriptionField({
         }
       }, 0);
     },
-    [description, disabled]
+    [description, disabled, onEditStart]
   );
 
   /**
@@ -145,6 +152,11 @@ export const DescriptionField = memo(function DescriptionField({
       isEditingRef.current = true;
       setEditValue(description);
 
+      // Notify parent that editing has started
+      if (onEditStart) {
+        onEditStart();
+      }
+
       // Focus input after state update
       setTimeout(() => {
         if (inputRef.current) {
@@ -154,7 +166,7 @@ export const DescriptionField = memo(function DescriptionField({
         }
       }, 0);
     }
-  }, [triggerEdit, isEditing, disabled, description]);
+  }, [triggerEdit, isEditing, disabled, description, onEditStart]);
 
   /**
    * Listen for custom event to trigger edit mode
@@ -168,6 +180,11 @@ export const DescriptionField = memo(function DescriptionField({
         setIsEditing(true);
         isEditingRef.current = true;
         setEditValue(description);
+
+        // Notify parent that editing has started
+        if (onEditStart) {
+          onEditStart();
+        }
 
         // Focus input after state update
         setTimeout(() => {
@@ -185,7 +202,7 @@ export const DescriptionField = memo(function DescriptionField({
     return () => {
       window.removeEventListener('trigger-description-edit', handleTriggerEdit);
     };
-  }, [filePath, isEditing, disabled, description]);
+  }, [filePath, isEditing, disabled, description, onEditStart]);
 
   /**
    * Maintain focus during re-renders when editing

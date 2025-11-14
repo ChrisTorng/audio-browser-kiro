@@ -312,6 +312,20 @@ export function AudioBrowser() {
   });
 
   /**
+   * Handle description edit start
+   */
+  const handleEditStart = useCallback(() => {
+    navigation.setEditingDescription(true);
+  }, [navigation]);
+
+  /**
+   * Handle description edit complete
+   */
+  const handleEditComplete = useCallback(() => {
+    navigation.setEditingDescription(false);
+  }, [navigation]);
+
+  /**
    * Handle pending parent selection after collapse
    */
   useEffect(() => {
@@ -417,6 +431,8 @@ export function AudioBrowser() {
             height={600}
             itemHeight={32}
             audioProgress={audioPlayer.isPlaying ? audioPlayer.progress : 0}
+            onEditStart={handleEditStart}
+            onEditComplete={handleEditComplete}
           />
         )}
       </div>

@@ -254,4 +254,91 @@ describe('DescriptionField', () => {
       expect(document.activeElement).toBe(input);
     });
   });
+
+  it('calls onEditStart when entering edit mode', async () => {
+    const onEditStart = vi.fn();
+    render(
+      <DescriptionField
+        description="Test"
+        onChange={vi.fn()}
+        onEditStart={onEditStart}
+      />
+    );
+
+    const field = screen.getByText('Test').closest('.description-field');
+    fireEvent.click(field!);
+
+    await waitFor(() => {
+      expect(onEditStart).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('calls onEditComplete when saving changes', async () => {
+    const onEditComplete = vi.fn();
+    render(
+      <DescriptionField
+        description="Original"
+        onChange={vi.fn()}
+        onEditComplete={onEditComplete}
+      />
+    );
+
+    const field = screen.getByText('Original').closest('.description-field');
+    fireEvent.click(field!);
+
+    const input = await screen.findByDisplayValue('Original');
+    fireEvent.change(input, { target: { value: 'Updated' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(onEditComplete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('calls onEditComplete when canceling edit', async () => {
+    const onEditComplete = vi.fn();
+    render(
+      <DescriptionField
+        description="Original"
+        onChange={vi.fn()}
+        onEditComplete={onEditComplete}
+      />
+    );
+
+    const field = screen.getByText('Original').closest('.description-field');
+    fireEvent.click(field!);
+
+    const input = await screen.findByDisplayValue('Original');
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(onEditComplete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('calls onEditStart when triggered programmatically', async () => {
+    const onEditStart = vi.fn();
+    const { rerender } = render(
+      <DescriptionField
+        description="Test"
+        onChange={vi.fn()}
+        onEditStart={onEditStart}
+        triggerEdit={false}
+      />
+    );
+
+    // Trigger edit mode
+    rerender(
+      <DescriptionField
+        description="Test"
+        onChange={vi.fn()}
+        onEditStart={onEditStart}
+        triggerEdit={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onEditStart).toHaveBeenCalledTimes(1);
+    });
+  });
 });
