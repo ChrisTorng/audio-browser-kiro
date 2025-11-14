@@ -64,26 +64,31 @@ export function useSpectrogram(): UseSpectrogramReturn {
       source.connect(analyser);
       analyser.connect(offlineContext.destination);
 
-      const frequencyData = new Uint8Array(analyser.frequencyBinCount);
       const spectrogram: number[][] = [];
       
-      const samples = audioBuffer.length;
-      const sampleRate = audioBuffer.sampleRate;
-      const timeSliceSize = Math.floor(samples / width);
+      const totalSamples = audioBuffer.length;
 
       // Get raw audio data
       const channelData = audioBuffer.getChannelData(0);
 
+      // Calculate samples per time slice to cover entire audio
+      // This ensures the complete audio file is scaled to fixed width
+      const samplesPerSlice = totalSamples / width;
+
       // Generate spectrogram data for each time slice
+      // Each slice represents equal portion of total audio duration
       for (let i = 0; i < width; i++) {
-        const start = i * timeSliceSize;
-        const end = Math.min(start + analyser.fftSize, samples);
+        // Calculate exact sample range for this time slice
+        const startSample = Math.floor(i * samplesPerSlice);
+        const endSample = Math.floor((i + 1) * samplesPerSlice);
         
-        // Extract slice of audio data
-        const slice = channelData.slice(start, end);
+        // Ensure we don't exceed buffer length
+        const actualEnd = Math.min(endSample, totalSamples);
         
-        // Perform FFT using Web Audio API approach
-        // Note: This is a simplified approach. For production, consider using a proper FFT library
+        // Extract audio data for this time window
+        const slice = channelData.slice(startSample, actualEnd);
+        
+        // Perform FFT - height determines frequency resolution
         const fftData = performSimpleFFT(slice, height);
         
         // Normalize to 0-1 range

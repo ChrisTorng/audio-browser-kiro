@@ -56,22 +56,30 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Draw spectrogram
+    // Draw spectrogram - scale entire audio content to fixed canvas size
     const timeSlices = spectrogramData.length;
     const frequencyBins = spectrogramData[0]?.length || 0;
 
     if (frequencyBins === 0) return;
 
+    // Calculate dimensions to fill entire canvas
+    // Each time slice gets equal width, each frequency bin gets equal height
     const sliceWidth = width / timeSlices;
     const binHeight = height / frequencyBins;
 
+    // Draw each time slice and frequency bin
     spectrogramData.forEach((slice, timeIndex) => {
       slice.forEach((intensity, freqIndex) => {
-        const x = timeIndex * sliceWidth;
-        const y = height - (freqIndex + 1) * binHeight; // Flip Y axis (low freq at bottom)
+        // Calculate position - ensure complete coverage
+        const x = Math.floor(timeIndex * sliceWidth);
+        const y = Math.floor(height - (freqIndex + 1) * binHeight); // Flip Y axis (low freq at bottom)
+        
+        // Calculate size - add 1 pixel to prevent gaps
+        const rectWidth = Math.ceil(sliceWidth) + 1;
+        const rectHeight = Math.ceil(binHeight) + 1;
 
         ctx.fillStyle = intensityToColor(intensity);
-        ctx.fillRect(x, y, sliceWidth + 1, binHeight + 1);
+        ctx.fillRect(x, y, rectWidth, rectHeight);
       });
     });
 
