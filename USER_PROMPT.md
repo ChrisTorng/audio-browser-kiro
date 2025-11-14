@@ -1,13 +1,1 @@
-Implement the task from the markdown document at .kiro/specs/audio-browser/tasks.md:
-        
-<task title="14.1 修復描述欄位失去焦點問題">
-
-Status: not started
-
-Task details:
-- 確保點入描述欄位取得輸入焦點後不會因閃爍而失去焦點
-- 優化渲染邏輯，避免不必要的元件重新渲染
-- 使用 React ref 和 useEffect 確保焦點穩定
-- _Requirements: 7.8, 11.10_
-
-</task>
+因為現在測試總數已相當多，會導致對話太長，agent 執行就會中斷了。請檢查是否有比較重覆的測試，可以合併，或刪除無關緊要，可以被其他測試所涵蓋的項目等，務使執行可以繼續完成。另其中還有一些錯誤一直沒有修正。請分段執行，找出仍然出錯的地方，請全部修正。
