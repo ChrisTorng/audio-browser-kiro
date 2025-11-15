@@ -5,7 +5,6 @@ import { useEffect, useRef, memo, useCallback } from 'react';
  */
 export interface SpectrogramDisplayProps {
   spectrogramData: number[][] | null;
-  progress?: number; // 0-1
   width?: number;
   height?: number;
   isLoading?: boolean;
@@ -14,46 +13,43 @@ export interface SpectrogramDisplayProps {
 
 /**
  * SpectrogramDisplay component
- * Displays audio spectrogram with playback progress overlay
- * Optimized to only redraw progress indicator, not the entire spectrogram
+ * Displays audio spectrogram with transparent background
  */
 export const SpectrogramDisplay = memo(function SpectrogramDisplay({
   spectrogramData,
-  progress = 0,
   width = 200,
   height = 40,
   isLoading = false,
   error = null,
 }: SpectrogramDisplayProps) {
   const spectrogramCanvasRef = useRef<HTMLCanvasElement>(null);
-  const progressCanvasRef = useRef<HTMLCanvasElement>(null);
-  const spectrogramDrawnRef = useRef(false);
 
   /**
-   * Convert frequency intensity to color
+   * Convert frequency intensity to color with transparency
+   * Low intensity values are transparent, high intensity values are opaque
    */
   const intensityToColor = useCallback((intensity: number): string => {
     // Map intensity (0-1) to color gradient (blue -> green -> yellow -> red)
     const r = Math.floor(Math.min(255, intensity * 2 * 255));
     const g = Math.floor(Math.min(255, intensity * 1.5 * 255));
     const b = Math.floor(Math.max(0, (1 - intensity) * 255));
-    return `rgb(${r}, ${g}, ${b})`;
+    // Use intensity as alpha channel for transparency
+    return `rgba(${r}, ${g}, ${b}, ${intensity})`;
   }, []);
 
   /**
-   * Draw spectrogram on canvas (only when spectrogram data changes)
+   * Draw spectrogram on canvas
    */
   useEffect(() => {
     const canvas = spectrogramCanvasRef.current;
     if (!canvas || !spectrogramData || spectrogramData.length === 0) {
-      spectrogramDrawnRef.current = false;
       return;
     }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
+    // Clear canvas with transparent background
     ctx.clearRect(0, 0, width, height);
 
     // Draw spectrogram - scale entire audio content to fixed canvas size
@@ -82,36 +78,7 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
         ctx.fillRect(Math.floor(x), Math.floor(y), rectWidth, rectHeight);
       });
     });
-
-    spectrogramDrawnRef.current = true;
   }, [spectrogramData, width, height, intensityToColor]);
-
-  /**
-   * Draw progress overlay on separate canvas (updates frequently)
-   */
-  useEffect(() => {
-    const canvas = progressCanvasRef.current;
-    if (!canvas || !spectrogramDrawnRef.current) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw progress overlay only if playing
-    if (progress > 0) {
-      const progressX = width * progress;
-
-      // Draw progress line
-      ctx.strokeStyle = '#ff6b6b';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(progressX, 0);
-      ctx.lineTo(progressX, height);
-      ctx.stroke();
-    }
-  }, [progress, width, height]);
 
   if (error) {
     return (
@@ -138,22 +105,12 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
   }
 
   return (
-    <div className="spectrogram-display" style={{ width, height, position: 'relative' }}>
-      {/* Base spectrogram canvas - only redraws when spectrogram data changes */}
+    <div className="spectrogram-display" style={{ width, height }}>
       <canvas
         ref={spectrogramCanvasRef}
         width={width}
         height={height}
         className="spectrogram-display__canvas"
-        style={{ position: 'absolute', top: 0, left: 0 }}
-      />
-      {/* Progress overlay canvas - redraws frequently during playback */}
-      <canvas
-        ref={progressCanvasRef}
-        width={width}
-        height={height}
-        className="spectrogram-display__progress-canvas"
-        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
       />
     </div>
   );

@@ -148,7 +148,6 @@ export const AudioItem = memo(function AudioItem({
         <div className="audio-item__spectrogram">
           <SpectrogramDisplay
             spectrogramData={spectrogramData}
-            progress={progress}
             width={200}
             height={32}
             isLoading={visualizationLoading}

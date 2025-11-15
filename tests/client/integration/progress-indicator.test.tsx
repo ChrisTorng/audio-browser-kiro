@@ -51,21 +51,19 @@ describe('Progress Indicator Integration', () => {
     expect(mockCanvasContext.stroke).toHaveBeenCalled();
   });
 
-  it('passes progress to SpectrogramDisplay when audio is playing', () => {
+  it('renders SpectrogramDisplay with transparent background', () => {
     render(
       <SpectrogramDisplay
         spectrogramData={mockSpectrogramData}
-        progress={0.75}
         width={200}
         height={40}
       />
     );
 
-    // Verify progress line is drawn at 75% position
-    expect(mockCanvasContext.beginPath).toHaveBeenCalled();
-    expect(mockCanvasContext.moveTo).toHaveBeenCalledWith(150, 0); // 75% of 200px width
-    expect(mockCanvasContext.lineTo).toHaveBeenCalledWith(150, 40); // full height
-    expect(mockCanvasContext.stroke).toHaveBeenCalled();
+    // Verify canvas is cleared (transparent background)
+    expect(mockCanvasContext.clearRect).toHaveBeenCalledWith(0, 0, 200, 40);
+    // Verify spectrogram is drawn
+    expect(mockCanvasContext.fillRect).toHaveBeenCalled();
   });
 
   it('draws progress line with correct color and width', () => {

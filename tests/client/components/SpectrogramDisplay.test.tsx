@@ -96,77 +96,17 @@ describe('SpectrogramDisplay', () => {
     expect(display).toHaveStyle({ width: '250px', height: '50px' });
   });
 
-  it('renders progress indicator when progress is provided', () => {
+  it('renders spectrogram with transparent background', () => {
     const mockContext = {
-      clearRect: () => {},
-      fillRect: () => {},
-      strokeStyle: '',
-      fillStyle: '',
-      lineWidth: 0,
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      stroke: vi.fn(),
-    };
-
-    HTMLCanvasElement.prototype.getContext = () => mockContext as any;
-
-    render(
-      <SpectrogramDisplay
-        spectrogramData={mockSpectrogramData}
-        progress={0.5}
-        width={200}
-        height={40}
-      />
-    );
-
-    // Verify progress line is drawn
-    expect(mockContext.beginPath).toHaveBeenCalled();
-    expect(mockContext.moveTo).toHaveBeenCalledWith(100, 0); // 50% of 200px width
-    expect(mockContext.lineTo).toHaveBeenCalledWith(100, 40); // full height
-    expect(mockContext.stroke).toHaveBeenCalled();
-  });
-
-  it('does not render progress indicator when progress is 0', () => {
-    const mockContext = {
-      clearRect: () => {},
-      fillRect: () => {},
-      strokeStyle: '',
-      fillStyle: '',
-      lineWidth: 0,
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      stroke: vi.fn(),
-    };
-
-    HTMLCanvasElement.prototype.getContext = () => mockContext as any;
-
-    render(
-      <SpectrogramDisplay
-        spectrogramData={mockSpectrogramData}
-        progress={0}
-        width={200}
-        height={40}
-      />
-    );
-
-    // Progress line should not be drawn when progress is 0
-    const beginPathCalls = mockContext.beginPath.mock.calls.length;
-    expect(beginPathCalls).toBe(0); // No progress line drawn
-  });
-
-  it('renders progress line with correct color and width', () => {
-    const mockContext = {
-      clearRect: () => {},
-      fillRect: () => {},
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
       strokeStyle: '',
       fillStyle: '',
       lineWidth: 0,
       beginPath: () => {},
       moveTo: () => {},
       lineTo: () => {},
-      stroke: vi.fn(),
+      stroke: () => {},
     };
 
     HTMLCanvasElement.prototype.getContext = () => mockContext as any;
@@ -174,16 +114,14 @@ describe('SpectrogramDisplay', () => {
     render(
       <SpectrogramDisplay
         spectrogramData={mockSpectrogramData}
-        progress={0.75}
         width={200}
         height={40}
       />
     );
 
-    // Verify stroke was called (progress line drawn)
-    expect(mockContext.stroke).toHaveBeenCalled();
-    // The strokeStyle should be set to red (#ff6b6b) and lineWidth to 2
-    expect(mockContext.strokeStyle).toBe('#ff6b6b');
-    expect(mockContext.lineWidth).toBe(2);
+    // Verify canvas is cleared (transparent background)
+    expect(mockContext.clearRect).toHaveBeenCalledWith(0, 0, 200, 40);
+    // Verify spectrogram is drawn
+    expect(mockContext.fillRect).toHaveBeenCalled();
   });
 });
