@@ -1,13 +1,18 @@
 /**
  * SpectrogramGenerator - Generate spectrogram data from audio sources
  * Uses Web Audio API and FFT analysis to create frequency-time visualizations
+ * Displays frequency range from 20Hz to 20KHz
  */
 export class SpectrogramGenerator {
+  // Human hearing range: 20Hz to 20KHz
+  private readonly MIN_FREQUENCY = 20;
+  private readonly MAX_FREQUENCY = 20000;
+
   /**
    * Generate spectrogram data from AudioBuffer using FFT analysis
    * @param audioBuffer - Web Audio API AudioBuffer
    * @param width - Number of time slices (columns)
-   * @param height - Number of frequency bins (rows)
+   * @param height - Number of frequency bins (rows) - represents 20Hz to 20KHz range
    * @returns 2D array of normalized frequency values (0-1)
    */
   generateFromAudioBuffer(
@@ -23,8 +28,10 @@ export class SpectrogramGenerator {
       throw new Error('Invalid dimensions: width and height must be greater than 0');
     }
 
-    // Ensure FFT size is power of 2
-    const fftSize = this.getNextPowerOfTwo(height * 2);
+    // Use a larger FFT size for better frequency resolution
+    // 2048 gives us good frequency resolution for 20Hz-20KHz range
+    const fftSize = 2048;
+    const sampleRate = audioBuffer.sampleRate;
 
     // Get raw audio data from first channel
     const channelData = audioBuffer.getChannelData(0);
@@ -39,13 +46,29 @@ export class SpectrogramGenerator {
       const end = Math.min(start + fftSize, samples);
 
       // Extract slice of audio data
-      const slice = channelData.slice(start, end);
+      const sliceLength = end - start;
+      const slice = new Float32Array(fftSize);
+      
+      // Copy data and apply windowing
+      for (let j = 0; j < sliceLength; j++) {
+        // Hann window to reduce spectral leakage
+        const window = 0.5 * (1 - Math.cos((2 * Math.PI * j) / sliceLength));
+        slice[j] = channelData[start + j] * window;
+      }
 
       // Perform FFT analysis
-      const frequencyData = this.performFFT(slice, height);
+      const frequencyData = this.performFFT(slice, fftSize, sampleRate);
+
+      // Extract frequency bins for 20Hz-20KHz range and resample to height
+      const filteredData = this.extractFrequencyRange(
+        frequencyData,
+        fftSize,
+        sampleRate,
+        height
+      );
 
       // Normalize to 0-1 range
-      const normalized = this.normalizeFrequencyData(frequencyData);
+      const normalized = this.normalizeFrequencyData(filteredData);
 
       spectrogram.push(normalized);
     }
@@ -98,36 +121,91 @@ export class SpectrogramGenerator {
   }
 
   /**
-   * Perform FFT analysis on audio data slice
-   * Returns frequency magnitude data for specified number of bins
-   * @param audioData - Audio sample data
-   * @param bins - Number of frequency bins to return
-   * @returns Array of frequency magnitudes
+   * Perform FFT analysis on audio data slice using a simple DFT implementation
+   * Returns frequency magnitude data for all FFT bins
+   * @param audioData - Audio sample data (should be windowed)
+   * @param fftSize - FFT size (power of 2)
+   * @param sampleRate - Sample rate of the audio
+   * @returns Array of frequency magnitudes for each FFT bin
    */
-  private performFFT(audioData: Float32Array, bins: number): number[] {
-    const n = audioData.length;
-    const result: number[] = new Array(bins).fill(0);
+  private performFFT(
+    audioData: Float32Array,
+    fftSize: number,
+    sampleRate: number
+  ): number[] {
+    const n = Math.min(audioData.length, fftSize);
+    const halfSize = Math.floor(fftSize / 2);
+    const result: number[] = new Array(halfSize).fill(0);
 
     if (n === 0) return result;
 
-    // Calculate frequency bins using magnitude spectrum
-    // Group samples into frequency bins based on energy distribution
-    const samplesPerBin = Math.max(1, Math.floor(n / bins));
+    // Perform DFT (Discrete Fourier Transform)
+    // For each frequency bin, calculate the magnitude
+    for (let k = 0; k < halfSize; k++) {
+      let real = 0;
+      let imag = 0;
 
-    for (let i = 0; i < bins; i++) {
-      const start = i * samplesPerBin;
-      const end = Math.min(start + samplesPerBin, n);
-      let sum = 0;
-
-      // Calculate energy in this frequency band
-      for (let j = start; j < end; j++) {
-        const value = audioData[j];
-        sum += value * value;
+      // Calculate DFT for this frequency bin
+      for (let t = 0; t < n; t++) {
+        const angle = (2 * Math.PI * k * t) / fftSize;
+        real += audioData[t] * Math.cos(angle);
+        imag -= audioData[t] * Math.sin(angle);
       }
 
-      // Convert to magnitude (RMS)
-      const magnitude = Math.sqrt(sum / (end - start));
-      result[i] = magnitude;
+      // Calculate magnitude
+      const magnitude = Math.sqrt(real * real + imag * imag) / n;
+      result[k] = magnitude;
+    }
+
+    return result;
+  }
+
+  /**
+   * Extract frequency range (20Hz-20KHz) from FFT data and resample to desired height
+   * @param fftData - Full FFT magnitude data
+   * @param fftSize - FFT size used
+   * @param sampleRate - Sample rate of the audio
+   * @param height - Desired number of frequency bins in output
+   * @returns Array of frequency magnitudes for 20Hz-20KHz range
+   */
+  private extractFrequencyRange(
+    fftData: number[],
+    fftSize: number,
+    sampleRate: number,
+    height: number
+  ): number[] {
+    const result: number[] = new Array(height).fill(0);
+    
+    // Calculate frequency resolution (Hz per bin)
+    const frequencyResolution = sampleRate / fftSize;
+    
+    // Find FFT bin indices for 20Hz and 20KHz
+    const minBin = Math.max(0, Math.floor(this.MIN_FREQUENCY / frequencyResolution));
+    const maxBin = Math.min(
+      fftData.length - 1,
+      Math.ceil(this.MAX_FREQUENCY / frequencyResolution)
+    );
+    
+    const rangeBins = maxBin - minBin + 1;
+    
+    if (rangeBins <= 0) {
+      return result;
+    }
+
+    // Resample the frequency range to fit the desired height
+    // Use linear interpolation for smooth resampling
+    for (let i = 0; i < height; i++) {
+      // Map output bin to input bin range
+      const inputPosition = minBin + (i / (height - 1)) * (rangeBins - 1);
+      const inputIndex = Math.floor(inputPosition);
+      const fraction = inputPosition - inputIndex;
+      
+      // Linear interpolation between adjacent bins
+      if (inputIndex < fftData.length - 1) {
+        result[i] = fftData[inputIndex] * (1 - fraction) + fftData[inputIndex + 1] * fraction;
+      } else {
+        result[i] = fftData[inputIndex];
+      }
     }
 
     return result;

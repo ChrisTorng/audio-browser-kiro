@@ -137,15 +137,4 @@ export const WaveformDisplay = memo(function WaveformDisplay({
       />
     </div>
   );
-}, (prevProps, nextProps) => {
-  // Custom comparison: only re-render if these props change
-  // This prevents unnecessary re-renders when parent components update
-  return (
-    prevProps.waveformData === nextProps.waveformData &&
-    prevProps.progress === nextProps.progress &&
-    prevProps.width === nextProps.width &&
-    prevProps.height === nextProps.height &&
-    prevProps.isLoading === nextProps.isLoading &&
-    prevProps.error === nextProps.error
-  );
 });

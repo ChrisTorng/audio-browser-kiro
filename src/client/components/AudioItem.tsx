@@ -215,23 +215,25 @@ export const AudioItem = memo(function AudioItem({
     return false;
   }
   
-  // For progress updates, be more conservative to reduce re-renders
-  // Only re-render if:
-  // 1. Item is selected AND playing (progress > 0)
-  // 2. Progress changed by more than 2% (increased threshold)
-  // This reduces re-renders during playback which can cause focus loss
-  if (nextProps.isSelected && nextProps.audioProgress > 0) {
-    const progressDiff = Math.abs((prevProps.audioProgress || 0) - nextProps.audioProgress);
-    if (progressDiff > 0.02) { // Increased from 0.01 to 0.02
-      return false;
-    }
-  }
+  // For progress updates, be very conservative to prevent flicker
+  // The WaveformDisplay and SpectrogramDisplay components handle progress updates
+  // internally via their own useEffect hooks, so AudioItem doesn't need to re-render
+  // for every progress change.
   
-  // If progress went from 0 to non-zero or vice versa, re-render
-  // This handles play/stop transitions
-  if ((prevProps.audioProgress === 0) !== (nextProps.audioProgress === 0)) {
+  // Only re-render for progress if:
+  // 1. Progress went from 0 to non-zero (playback started)
+  // 2. Progress went from non-zero to 0 (playback stopped)
+  const prevPlaying = (prevProps.audioProgress || 0) > 0;
+  const nextPlaying = (nextProps.audioProgress || 0) > 0;
+  
+  if (prevPlaying !== nextPlaying) {
+    // Playback state changed (started or stopped)
     return false;
   }
+  
+  // If both are playing, don't re-render AudioItem for progress updates
+  // The canvas components will update themselves via their useEffect hooks
+  // This prevents the entire AudioItem from flickering during playback
   
   // All props are effectively the same, skip re-render
   return true;
