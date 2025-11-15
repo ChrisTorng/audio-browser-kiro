@@ -62,12 +62,17 @@
 1. WHEN Frontend 下載音檔後，THE Frontend SHALL 即時在瀏覽器中生成波形圖和頻譜圖
 2. THE Frontend SHALL 使用 Web Audio API 或相關函式庫處理音頻資料
 3. THE Frontend SHALL 在音檔列表中依序顯示波形圖和頻譜圖
-4. THE Frontend SHALL 在波形圖和頻譜圖上同步顯示播放進度指示線
+4. THE Frontend SHALL 在波形圖和頻譜圖上同步顯示播放進度指示線（獨立的細直條）
 5. THE Frontend SHALL 在 3 秒內完成單一音檔的波形圖和頻譜圖生成
 6. THE Frontend SHALL 以固定寬度和固定高度顯示頻譜圖，不論音檔長度
 7. THE Frontend SHALL 將完整音檔內容縮放至固定的頻譜圖顯示尺寸
 8. THE Frontend SHALL 確保波形圖和頻譜圖在音檔列表中正確顯示且不閃爍
 9. WHEN 音檔正在播放，THE Frontend SHALL 只更新播放進度指示線，不重新生成整個波形圖或頻譜圖
+10. THE Frontend SHALL 在頻譜圖中顯示 20Hz 到 20KHz 的完整頻率範圍
+11. THE Frontend SHALL 確保頻譜圖的最底點對應 20Hz，最高點對應 20KHz
+12. THE Frontend SHALL 在可顯示高度內完整顯示整個頻率範圍，不截斷或遺漏任何頻率區段
+13. THE Frontend SHALL 使用兩個獨立的細直條分別覆蓋在波形圖與頻譜圖上標示播放位置
+14. THE Frontend SHALL 確保播放進度指示線清晰可見且位置準確
 
 ### Requirement 4
 
@@ -150,6 +155,11 @@
 7. THE Frontend SHALL 確保高亮顯示不會改變文字或字母的寬度
 8. THE Frontend SHALL 顯示被篩選出來的總音檔數量（不包含資料夾數量）
 9. THE Frontend SHALL 即時更新顯示結果，不超過 100 毫秒延遲
+10. THE Frontend SHALL 使用不區分大小寫的子字串比對進行篩選
+11. THE Frontend SHALL 確保篩選邏輯能正確符合單字的首字母
+12. THE Frontend SHALL 確保篩選邏輯能正確符合單字中間的字母
+13. THE Frontend SHALL 確保篩選邏輯能正確符合連續輸入的多個字母
+14. THE Frontend SHALL 確保篩選功能對所有階層的資料夾和音檔都能正常運作
 
 ### Requirement 9
 
