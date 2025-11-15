@@ -46,7 +46,7 @@ export const AudioItem = memo(function AudioItem({
   const visualizationOptions = useMemo(() => ({
     waveformWidth: 200,
     spectrogramWidth: 200,
-    spectrogramHeight: 28,
+    spectrogramHeight: 32,
     priority: 'both' as const,
   }), []);
   
@@ -138,7 +138,7 @@ export const AudioItem = memo(function AudioItem({
             waveformData={waveformData}
             progress={progress}
             width={200}
-            height={28}
+            height={32}
             isLoading={visualizationLoading}
             error={visualizationError}
           />
@@ -150,7 +150,7 @@ export const AudioItem = memo(function AudioItem({
             spectrogramData={spectrogramData}
             progress={progress}
             width={200}
-            height={28}
+            height={32}
             isLoading={visualizationLoading}
             error={visualizationError}
           />

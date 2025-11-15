@@ -70,16 +70,16 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
     // Draw each time slice and frequency bin
     spectrogramData.forEach((slice, timeIndex) => {
       slice.forEach((intensity, freqIndex) => {
-        // Calculate position - ensure complete coverage
-        const x = Math.floor(timeIndex * sliceWidth);
-        const y = Math.floor(height - (freqIndex + 1) * binHeight); // Flip Y axis (low freq at bottom)
+        // Calculate position - flip Y axis (low freq at bottom)
+        const x = timeIndex * sliceWidth;
+        const y = height - (freqIndex + 1) * binHeight;
         
-        // Calculate size - add 1 pixel to prevent gaps
-        const rectWidth = Math.ceil(sliceWidth) + 1;
-        const rectHeight = Math.ceil(binHeight) + 1;
+        // Calculate size to ensure complete coverage without gaps
+        const rectWidth = Math.ceil(sliceWidth + 0.5);
+        const rectHeight = Math.ceil(binHeight + 0.5);
 
         ctx.fillStyle = intensityToColor(intensity);
-        ctx.fillRect(x, y, rectWidth, rectHeight);
+        ctx.fillRect(Math.floor(x), Math.floor(y), rectWidth, rectHeight);
       });
     });
 

@@ -110,18 +110,22 @@ export const DescriptionField = memo(function DescriptionField({
 
   /**
    * Handle key down
+   * Stop propagation for all keys to prevent global keyboard shortcuts
    */
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
+      // Always stop propagation to prevent global keyboard navigation
+      e.stopPropagation();
+      
       if (e.key === 'Enter') {
         e.preventDefault();
-        e.stopPropagation();
         saveChanges();
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        e.stopPropagation();
         cancelEdit();
       }
+      // For all other keys (arrows, space, numbers, etc.), let them work normally in the input
+      // but don't let them bubble up to trigger global shortcuts
     },
     [saveChanges, cancelEdit]
   );

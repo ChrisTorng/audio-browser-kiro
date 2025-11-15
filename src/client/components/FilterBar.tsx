@@ -61,6 +61,15 @@ export function FilterBar({
   }, []);
 
   /**
+   * Handle key down in filter input
+   * Prevent global keyboard shortcuts from triggering
+   */
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Stop propagation to prevent global keyboard navigation
+    e.stopPropagation();
+  }, []);
+
+  /**
    * Handle rating filter change
    */
   const handleRatingChange = useCallback(
@@ -81,6 +90,7 @@ export function FilterBar({
         placeholder="Filter by name or description..."
         value={textInput}
         onChange={handleTextChange}
+        onKeyDown={handleKeyDown}
         aria-label="Text filter"
       />
 

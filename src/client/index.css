@@ -432,10 +432,10 @@ body {
 .audio-item__content {
   display: flex;
   align-items: center;
-  /* Use exact height to match the item height (40px default) */
-  height: 40px;
-  padding: 0 12px;
-  gap: 12px;
+  /* Use exact height to match the item height (32px for compact display) */
+  height: 32px;
+  padding: 0 8px;
+  gap: 8px;
   /* Ensure content doesn't overflow */
   box-sizing: border-box;
 }
@@ -458,11 +458,17 @@ body {
 .audio-item__waveform {
   flex-shrink: 0;
   width: 200px;
+  height: 32px;
+  display: flex;
+  align-items: center;
 }
 
 .audio-item__spectrogram {
   flex-shrink: 0;
   width: 200px;
+  height: 32px;
+  display: flex;
+  align-items: center;
 }
 
 .audio-item__description {

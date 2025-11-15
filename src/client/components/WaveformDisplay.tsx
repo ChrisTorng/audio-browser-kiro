@@ -46,17 +46,17 @@ export const WaveformDisplay = memo(function WaveformDisplay({
     ctx.clearRect(0, 0, width, height);
 
     // Draw waveform
-    const barWidth = width / waveformData.length;
+    const barWidth = Math.max(1, width / waveformData.length);
     const centerY = height / 2;
 
     ctx.fillStyle = '#4a90e2';
 
     waveformData.forEach((amplitude, index) => {
       const x = index * barWidth;
-      const barHeight = amplitude * centerY;
+      const barHeight = Math.max(1, amplitude * height * 0.9); // Use 90% of height for better visibility
 
       // Draw bar from center
-      ctx.fillRect(x, centerY - barHeight / 2, barWidth - 1, barHeight);
+      ctx.fillRect(x, centerY - barHeight / 2, Math.max(1, barWidth - 0.5), barHeight);
     });
 
     waveformDrawnRef.current = true;
