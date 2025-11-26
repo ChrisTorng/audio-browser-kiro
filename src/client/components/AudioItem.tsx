@@ -17,7 +17,6 @@ export interface AudioItemProps {
   level: number;
   filterText?: string;
   onClick: () => void;
-  audioProgress?: number; // 0-1, only provided for selected playing item
   onEditStart?: () => void;
   onEditComplete?: () => void;
 }
@@ -34,7 +33,6 @@ export const AudioItem = memo(function AudioItem({
   level,
   filterText = '',
   onClick,
-  audioProgress = 0,
   onEditStart,
   onEditComplete,
 }: AudioItemProps) {
@@ -108,9 +106,6 @@ export const AudioItem = memo(function AudioItem({
     [audioMetadata, file.path]
   );
 
-  // Use the progress passed from parent (only non-zero for selected playing item)
-  const progress = audioProgress;
-
   return (
     <div
       className={`audio-item ${isSelected ? 'audio-item--selected' : ''}`}
@@ -136,7 +131,6 @@ export const AudioItem = memo(function AudioItem({
         <div className="audio-item__waveform">
           <WaveformDisplay
             waveformData={waveformData}
-            progress={progress}
             width={200}
             height={32}
             isLoading={visualizationLoading}
@@ -213,26 +207,6 @@ export const AudioItem = memo(function AudioItem({
       prevProps.onEditComplete !== nextProps.onEditComplete) {
     return false;
   }
-  
-  // For progress updates, be very conservative to prevent flicker
-  // The WaveformDisplay and SpectrogramDisplay components handle progress updates
-  // internally via their own useEffect hooks, so AudioItem doesn't need to re-render
-  // for every progress change.
-  
-  // Only re-render for progress if:
-  // 1. Progress went from 0 to non-zero (playback started)
-  // 2. Progress went from non-zero to 0 (playback stopped)
-  const prevPlaying = (prevProps.audioProgress || 0) > 0;
-  const nextPlaying = (nextProps.audioProgress || 0) > 0;
-  
-  if (prevPlaying !== nextPlaying) {
-    // Playback state changed (started or stopped)
-    return false;
-  }
-  
-  // If both are playing, don't re-render AudioItem for progress updates
-  // The canvas components will update themselves via their useEffect hooks
-  // This prevents the entire AudioItem from flickering during playback
   
   // All props are effectively the same, skip re-render
   return true;

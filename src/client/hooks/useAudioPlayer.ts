@@ -8,9 +8,6 @@ export interface UseAudioPlayerReturn {
   stop: () => void;
   toggle: () => void;
   isPlaying: boolean;
-  progress: number; // 0-1
-  currentTime: number;
-  duration: number;
 }
 
 /**
@@ -31,9 +28,6 @@ function isAbortError(error: unknown): boolean {
  */
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentUrlRef = useRef<string>('');
@@ -57,38 +51,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         audioRef.current.pause();
         audioRef.current.src = '';
       }
-    };
-  }, []);
-
-  // Update progress during playback
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateProgress = () => {
-      if (audio.duration) {
-        setCurrentTime(audio.currentTime);
-        setProgress(audio.currentTime / audio.duration);
-      }
-    };
-
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
-
-    const handleEnded = () => {
-      // Loop is handled by audio.loop = true
-      // This event won't fire when loop is enabled
-    };
-
-    audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateProgress);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('ended', handleEnded);
     };
   }, []);
 
@@ -118,8 +80,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       audio.currentTime = 0;
       audio.src = audioUrl;
       currentUrlRef.current = audioUrl;
-      setProgress(0);
-      setCurrentTime(0);
     }
 
     // Start playback and handle errors
@@ -155,8 +115,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     audio.pause();
     audio.currentTime = 0;
     setIsPlaying(false);
-    setProgress(0);
-    setCurrentTime(0);
   }, []);
 
   /**
@@ -181,8 +139,5 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     stop,
     toggle,
     isPlaying,
-    progress,
-    currentTime,
-    duration,
   };
 }

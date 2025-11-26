@@ -5,7 +5,6 @@ import { useEffect, useRef, memo } from 'react';
  */
 export interface WaveformDisplayProps {
   waveformData: number[] | null;
-  progress?: number; // 0-1
   width?: number;
   height?: number;
   isLoading?: boolean;
@@ -14,28 +13,23 @@ export interface WaveformDisplayProps {
 
 /**
  * WaveformDisplay component
- * Displays audio waveform with playback progress overlay
- * Optimized to only redraw progress indicator, not the entire waveform
+ * Displays audio waveform
  */
 export const WaveformDisplay = memo(function WaveformDisplay({
   waveformData,
-  progress = 0,
   width = 200,
   height = 40,
   isLoading = false,
   error = null,
 }: WaveformDisplayProps) {
   const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
-  const progressCanvasRef = useRef<HTMLCanvasElement>(null);
-  const waveformDrawnRef = useRef(false);
 
   /**
-   * Draw waveform on canvas (only when waveform data changes)
+   * Draw waveform on canvas
    */
   useEffect(() => {
     const canvas = waveformCanvasRef.current;
     if (!canvas || !waveformData || waveformData.length === 0) {
-      waveformDrawnRef.current = false;
       return;
     }
 
@@ -58,40 +52,7 @@ export const WaveformDisplay = memo(function WaveformDisplay({
       // Draw bar from center
       ctx.fillRect(x, centerY - barHeight / 2, Math.max(1, barWidth - 0.5), barHeight);
     });
-
-    waveformDrawnRef.current = true;
   }, [waveformData, width, height]);
-
-  /**
-   * Draw progress overlay on separate canvas (updates frequently)
-   */
-  useEffect(() => {
-    const canvas = progressCanvasRef.current;
-    if (!canvas || !waveformDrawnRef.current) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw progress overlay only if playing
-    if (progress > 0) {
-      const progressX = width * progress;
-      
-      // Draw semi-transparent overlay for played portion
-      ctx.fillStyle = 'rgba(74, 144, 226, 0.3)';
-      ctx.fillRect(0, 0, progressX, height);
-
-      // Draw progress line
-      ctx.strokeStyle = '#ff6b6b';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(progressX, 0);
-      ctx.lineTo(progressX, height);
-      ctx.stroke();
-    }
-  }, [progress, width, height]);
 
   if (error) {
     return (
@@ -118,22 +79,12 @@ export const WaveformDisplay = memo(function WaveformDisplay({
   }
 
   return (
-    <div className="waveform-display" style={{ width, height, position: 'relative' }}>
-      {/* Base waveform canvas - only redraws when waveform data changes */}
+    <div className="waveform-display" style={{ width, height }}>
       <canvas
         ref={waveformCanvasRef}
         width={width}
         height={height}
         className="waveform-display__canvas"
-        style={{ position: 'absolute', top: 0, left: 0 }}
-      />
-      {/* Progress overlay canvas - redraws frequently during playback */}
-      <canvas
-        ref={progressCanvasRef}
-        width={width}
-        height={height}
-        className="waveform-display__progress-canvas"
-        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
       />
     </div>
   );

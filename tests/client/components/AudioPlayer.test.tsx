@@ -16,9 +16,6 @@ describe('AudioPlayer', () => {
       stop: vi.fn(),
       toggle: vi.fn(),
       isPlaying: false,
-      progress: 0,
-      currentTime: 0,
-      duration: 0,
     };
 
     vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(mockPlayer);
@@ -59,24 +56,7 @@ describe('AudioPlayer', () => {
     );
   });
 
-  it('calls onProgressUpdate when progress changes', () => {
-    const onProgressUpdate = vi.fn();
-    
-    const { rerender } = render(
-      <AudioPlayer onProgressUpdate={onProgressUpdate} />
-    );
 
-    expect(onProgressUpdate).toHaveBeenCalledWith(0, 0, 0);
-
-    // Update progress
-    mockPlayer.progress = 0.5;
-    mockPlayer.currentTime = 30;
-    mockPlayer.duration = 60;
-    
-    rerender(<AudioPlayer onProgressUpdate={onProgressUpdate} />);
-
-    expect(onProgressUpdate).toHaveBeenCalledWith(0.5, 30, 60);
-  });
 
   it('switches audio when audioUrl changes', () => {
     const { rerender } = render(
@@ -108,30 +88,20 @@ describe('AudioPlayer', () => {
 
   it('tracks playback state through useAudioPlayer', () => {
     mockPlayer.isPlaying = true;
-    mockPlayer.progress = 0.75;
-    mockPlayer.currentTime = 45;
-    mockPlayer.duration = 60;
 
     const onPlaybackChange = vi.fn();
-    const onProgressUpdate = vi.fn();
 
     render(
       <AudioPlayer
         audioUrl="/test/audio.mp3"
         onPlaybackChange={onPlaybackChange}
-        onProgressUpdate={onProgressUpdate}
       />
     );
 
     expect(onPlaybackChange).toHaveBeenCalledWith(
       expect.objectContaining({
         isPlaying: true,
-        progress: 0.75,
-        currentTime: 45,
-        duration: 60,
       })
     );
-
-    expect(onProgressUpdate).toHaveBeenCalledWith(0.75, 45, 60);
   });
 });

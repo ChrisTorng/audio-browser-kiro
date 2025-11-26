@@ -9,7 +9,6 @@ const mockClearVisualization = vi.fn();
 vi.mock('../../../src/client/hooks', () => ({
   useAudioPlayer: vi.fn(() => ({
     isPlaying: false,
-    progress: 0,
   })),
   useLazyVisualization: vi.fn(() => ({
     waveformData: null,

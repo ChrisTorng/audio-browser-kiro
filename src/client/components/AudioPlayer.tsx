@@ -19,11 +19,6 @@ export interface AudioPlayerProps {
    * Callback when playback state changes
    */
   onPlaybackChange?: (player: UseAudioPlayerReturn) => void;
-  
-  /**
-   * Callback when progress updates
-   */
-  onProgressUpdate?: (progress: number, currentTime: number, duration: number) => void;
 }
 
 /**
@@ -37,7 +32,6 @@ export function AudioPlayer({
   audioUrl,
   autoPlay = true,
   onPlaybackChange,
-  onProgressUpdate,
 }: AudioPlayerProps) {
   const player = useAudioPlayer();
 
@@ -54,13 +48,6 @@ export function AudioPlayer({
       onPlaybackChange(player);
     }
   }, [player.isPlaying, onPlaybackChange, player]);
-
-  // Notify parent of progress updates
-  useEffect(() => {
-    if (onProgressUpdate) {
-      onProgressUpdate(player.progress, player.currentTime, player.duration);
-    }
-  }, [player.progress, player.currentTime, player.duration, onProgressUpdate]);
 
   // This is a headless component - no UI rendering
   return null;

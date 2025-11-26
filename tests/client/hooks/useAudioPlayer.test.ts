@@ -66,9 +66,6 @@ describe('useAudioPlayer', () => {
     const { result } = renderHook(() => useAudioPlayer());
 
     expect(result.current.isPlaying).toBe(false);
-    expect(result.current.progress).toBe(0);
-    expect(result.current.currentTime).toBe(0);
-    expect(result.current.duration).toBe(0);
   });
 
   it('plays audio from URL', async () => {
@@ -97,7 +94,6 @@ describe('useAudioPlayer', () => {
     expect(mockAudio.paused).toBe(true);
     expect(mockAudio.currentTime).toBe(0);
     expect(result.current.isPlaying).toBe(false);
-    expect(result.current.progress).toBe(0);
   });
 
   it('toggles playback state', async () => {
@@ -122,36 +118,7 @@ describe('useAudioPlayer', () => {
     expect(mockAudio.loop).toBe(true);
   });
 
-  it('updates progress during playback', async () => {
-    const { result } = renderHook(() => useAudioPlayer());
 
-    await act(async () => {
-      result.current.play('test.mp3');
-    });
-
-    act(() => {
-      mockAudio.currentTime = 50;
-      mockAudio.triggerTimeUpdate();
-    });
-
-    expect(result.current.currentTime).toBe(50);
-    expect(result.current.progress).toBe(0.5);
-  });
-
-  it('updates duration on metadata load', async () => {
-    const { result } = renderHook(() => useAudioPlayer());
-
-    await act(async () => {
-      result.current.play('test.mp3');
-    });
-
-    act(() => {
-      mockAudio.duration = 200;
-      mockAudio.triggerLoadedMetadata();
-    });
-
-    expect(result.current.duration).toBe(200);
-  });
 
   it('switches to new audio file when playing different URL', async () => {
     const { result } = renderHook(() => useAudioPlayer());

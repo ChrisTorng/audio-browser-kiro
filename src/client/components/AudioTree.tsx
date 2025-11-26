@@ -29,7 +29,6 @@ export interface AudioTreeProps {
   height?: number;
   itemHeight?: number;
   onVisibleRangeChange?: (startIndex: number, endIndex: number) => void;
-  audioProgress?: number; // 0-1, progress of currently playing audio
   onEditStart?: () => void;
   onEditComplete?: () => void;
 }
@@ -86,7 +85,6 @@ export function AudioTree({
   height = 600,
   itemHeight = 40,
   onVisibleRangeChange,
-  audioProgress = 0,
   onEditStart,
   onEditComplete,
 }: AudioTreeProps) {
@@ -172,7 +170,6 @@ export function AudioTree({
               level={item.level}
               filterText={filterText}
               onClick={() => onItemClick(index)}
-              audioProgress={isSelected ? audioProgress : 0}
               onEditStart={onEditStart}
               onEditComplete={onEditComplete}
             />
@@ -212,7 +209,7 @@ export function AudioTree({
         </div>
       );
     },
-    [items, selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll, audioProgress, onEditStart, onEditComplete]
+    [items, selectedIndex, onItemClick, onExpandToggle, filterText, virtualScroll, onEditStart, onEditComplete]
   );
 
   if (items.length === 0) {
