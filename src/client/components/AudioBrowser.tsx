@@ -91,8 +91,12 @@ export function AudioBrowser() {
 
       // For directories, check if name matches text filter
       if (item.type === 'directory' && item.directory) {
-        if (text && !item.directory.name.toLowerCase().includes(text.toLowerCase())) {
-          return false;
+        if (text && text.trim()) {
+          const textLower = text.toLowerCase().trim();
+          const nameLower = item.directory.name.toLowerCase();
+          if (!nameLower.includes(textLower)) {
+            return false;
+          }
         }
         return true;
       }
@@ -103,10 +107,11 @@ export function AudioBrowser() {
         const meta = audioMetadata.getMetadata(file.path);
 
         // Text filter: check file name and description
-        if (text) {
-          const textLower = text.toLowerCase();
-          const nameMatch = file.name.toLowerCase().includes(textLower);
-          const descMatch = meta?.description.toLowerCase().includes(textLower) || false;
+        if (text && text.trim()) {
+          const textLower = text.toLowerCase().trim();
+          const nameLower = file.name.toLowerCase();
+          const nameMatch = nameLower.includes(textLower);
+          const descMatch = meta?.description ? meta.description.toLowerCase().includes(textLower) : false;
 
           if (!nameMatch && !descMatch) {
             return false;
@@ -229,9 +234,14 @@ export function AudioBrowser() {
     ): FlatTreeItem[] => {
       const items: FlatTreeItem[] = [];
 
-      // Check if this directory or any descendant matches
+      // Check if this directory matches or has any matching descendants
       const dirMatches = matchingDirPaths.has(node.path);
-      const shouldInclude = dirMatches || shouldIncludeDirectory(node, allItems);
+      const hasMatchingFiles = node.files.some(file => matchingFilePaths.has(file.path));
+      const hasMatchingSubdirs = node.subdirectories.some(subdir => 
+        matchingDirPaths.has(subdir.path) || shouldIncludeDirectory(subdir, allItems)
+      );
+
+      const shouldInclude = dirMatches || hasMatchingFiles || hasMatchingSubdirs;
 
       if (!shouldInclude) {
         return items;
@@ -288,7 +298,7 @@ export function AudioBrowser() {
     };
 
     return buildFilteredTree(directoryTree);
-  }, [directoryTree, filterCriteria, flattenTree, itemMatchesFilter, getParentPaths, shouldIncludeDirectory]);
+  }, [directoryTree, filterCriteria, flattenTree, itemMatchesFilter, getParentPaths, shouldIncludeDirectory, audioMetadata]);
 
   /**
    * Count only audio files (not directories) in filtered results

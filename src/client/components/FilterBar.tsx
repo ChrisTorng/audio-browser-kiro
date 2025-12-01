@@ -26,31 +26,34 @@ export function FilterBar({
   filterCriteria,
   onFilterChange,
   resultCount,
-  debounceMs = 100,
+  debounceMs = 300,
 }: FilterBarProps) {
   // Local state for text input (for debouncing)
   const [textInput, setTextInput] = useState(filterCriteria.text);
 
   /**
    * Debounced text filter update
+   * Only triggers when textInput changes, not when filterCriteria changes
    */
   useEffect(() => {
+    // Don't trigger if textInput already matches filterCriteria
+    if (textInput === filterCriteria.text) {
+      return;
+    }
+
     const timer = setTimeout(() => {
-      if (textInput !== filterCriteria.text) {
-        onFilterChange({ text: textInput });
-      }
+      onFilterChange({ text: textInput });
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [textInput, debounceMs, filterCriteria.text, onFilterChange]);
+  }, [textInput, debounceMs, onFilterChange]);
 
   /**
    * Sync local text input with external filter criteria changes
+   * This only happens when filterCriteria is changed externally (e.g., clear button)
    */
   useEffect(() => {
-    if (filterCriteria.text !== textInput) {
-      setTextInput(filterCriteria.text);
-    }
+    setTextInput(filterCriteria.text);
   }, [filterCriteria.text]);
 
   /**
