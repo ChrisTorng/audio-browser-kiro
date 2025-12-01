@@ -35,12 +35,12 @@ describe('useSpectrogram', () => {
     expect(result.current.error).toBe(null);
   });
 
-  it('generates spectrogram data from AudioBuffer', () => {
+  it('generates spectrogram data from AudioBuffer', async () => {
     const { result } = renderHook(() => useSpectrogram());
     const mockBuffer = createMockAudioBuffer(10000);
 
-    act(() => {
-      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     expect(result.current.spectrogramData).toHaveLength(50);
@@ -49,12 +49,12 @@ describe('useSpectrogram', () => {
     expect(result.current.error).toBe(null);
   });
 
-  it('normalizes spectrogram data to 0-1 range', () => {
+  it('normalizes spectrogram data to 0-1 range', async () => {
     const { result } = renderHook(() => useSpectrogram());
     const mockBuffer = createMockAudioBuffer(10000);
 
-    act(() => {
-      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     const allInRange = result.current.spectrogramData.every(timeSlice =>
@@ -63,30 +63,30 @@ describe('useSpectrogram', () => {
     expect(allInRange).toBe(true);
   });
 
-  it('uses default dimensions when not specified', () => {
+  it('uses default dimensions when not specified', async () => {
     const { result } = renderHook(() => useSpectrogram());
     const mockBuffer = createMockAudioBuffer(20000);
 
-    act(() => {
-      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3');
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3');
     });
 
     expect(result.current.spectrogramData).toHaveLength(200);
     expect(result.current.spectrogramData[0]).toHaveLength(128);
   });
 
-  it('caches generated spectrograms', () => {
+  it('caches generated spectrograms', async () => {
     const { result } = renderHook(() => useSpectrogram());
     const mockBuffer = createMockAudioBuffer(10000);
 
-    act(() => {
-      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     const firstResult = result.current.spectrogramData;
 
-    act(() => {
-      result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
     const secondResult = result.current.spectrogramData;
@@ -95,18 +95,18 @@ describe('useSpectrogram', () => {
     expect(firstResult).toBe(secondResult);
   });
 
-  it('generates different spectrograms for different dimensions', () => {
+  it('generates different spectrograms for different dimensions', async () => {
     const { result } = renderHook(() => useSpectrogram());
     const mockBuffer = createMockAudioBuffer(10000);
 
-    act(() => {
-      result.current.generateSpectrogram(mockBuffer, '/test/audio1.mp3', 50, 64);
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio1.mp3', 50, 64);
     });
 
     const firstResult = result.current.spectrogramData;
 
-    act(() => {
-      result.current.generateSpectrogram(mockBuffer, '/test/audio2.mp3', 100, 128);
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio2.mp3', 100, 128);
     });
 
     const secondResult = result.current.spectrogramData;
@@ -136,7 +136,7 @@ describe('useSpectrogram', () => {
     expect(result.current.error).toBe(null);
   });
 
-  it('handles errors during generation', () => {
+  it('handles errors during generation', async () => {
     const { result } = renderHook(() => useSpectrogram());
     
     // Create invalid buffer that will cause error (missing getChannelData method)
@@ -146,8 +146,8 @@ describe('useSpectrogram', () => {
       numberOfChannels: 1,
     } as AudioBuffer;
 
-    act(() => {
-      result.current.generateSpectrogram(invalidBuffer, '/test/invalid.mp3', 50, 64);
+    await act(async () => {
+      await result.current.generateSpectrogram(invalidBuffer, '/test/invalid.mp3', 50, 64);
     });
 
     // Error should be set when generation fails
@@ -155,28 +155,66 @@ describe('useSpectrogram', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('handles empty audio buffer', () => {
+  it('handles empty audio buffer', async () => {
     const { result } = renderHook(() => useSpectrogram());
     const audioContext = new AudioContext();
     const emptyBuffer = audioContext.createBuffer(1, 0, 44100);
 
-    act(() => {
-      result.current.generateSpectrogram(emptyBuffer, '/test/audio.mp3', 50, 64);
+    await act(async () => {
+      await result.current.generateSpectrogram(emptyBuffer, '/test/audio.mp3', 50, 64);
     });
 
     // Should handle gracefully
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('sets loading state during generation', () => {
+  it('sets loading state during generation', async () => {
     const { result } = renderHook(() => useSpectrogram());
     const mockBuffer = createMockAudioBuffer(10000);
 
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
+    });
+
+    // After generation completes, loading should be false
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('cancels generation when requested', async () => {
+    const { result } = renderHook(() => useSpectrogram());
+    const mockBuffer = createMockAudioBuffer(10000);
+
+    // Start generation
     act(() => {
       result.current.generateSpectrogram(mockBuffer, '/test/audio.mp3', 50, 64);
     });
 
-    // After generation completes, loading should be false
+    // Cancel immediately
+    act(() => {
+      result.current.cancelGeneration();
+    });
+
+    // Should not be loading after cancel
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('cancels previous generation when starting new one', async () => {
+    const { result } = renderHook(() => useSpectrogram());
+    const mockBuffer1 = createMockAudioBuffer(10000);
+    const mockBuffer2 = createMockAudioBuffer(15000);
+
+    // Start first generation
+    act(() => {
+      result.current.generateSpectrogram(mockBuffer1, '/test/audio1.mp3', 50, 64);
+    });
+
+    // Start second generation (should cancel first)
+    await act(async () => {
+      await result.current.generateSpectrogram(mockBuffer2, '/test/audio2.mp3', 100, 128);
+    });
+
+    // Should have second result
+    expect(result.current.spectrogramData).toHaveLength(100);
     expect(result.current.isLoading).toBe(false);
   });
 });

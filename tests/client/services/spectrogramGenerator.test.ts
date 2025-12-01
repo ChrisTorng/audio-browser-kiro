@@ -9,7 +9,7 @@ describe('SpectrogramGenerator', () => {
   });
 
   describe('generateFromAudioBuffer', () => {
-    it('should generate spectrogram data from AudioBuffer', () => {
+    it('should generate spectrogram data from AudioBuffer', async () => {
       // Create mock AudioBuffer
       const sampleRate = 44100;
       const duration = 1; // 1 second
@@ -24,7 +24,7 @@ describe('SpectrogramGenerator', () => {
 
       const width = 100;
       const height = 64;
-      const spectrogram = generator.generateFromAudioBuffer(audioBuffer, width, height);
+      const spectrogram = await generator.generateFromAudioBuffer(audioBuffer, width, height);
 
       expect(spectrogram).toHaveLength(width);
       expect(spectrogram[0]).toHaveLength(height);
@@ -38,7 +38,7 @@ describe('SpectrogramGenerator', () => {
       });
     });
 
-    it('should normalize frequency data to 0-1 range', () => {
+    it('should normalize frequency data to 0-1 range', async () => {
       const sampleRate = 44100;
       const audioContext = new AudioContext({ sampleRate });
       const audioBuffer = audioContext.createBuffer(1, 10000, sampleRate);
@@ -51,7 +51,7 @@ describe('SpectrogramGenerator', () => {
 
       const width = 50;
       const height = 32;
-      const spectrogram = generator.generateFromAudioBuffer(audioBuffer, width, height);
+      const spectrogram = await generator.generateFromAudioBuffer(audioBuffer, width, height);
 
       // Find max value across all time slices
       let maxValue = 0;
@@ -64,30 +64,30 @@ describe('SpectrogramGenerator', () => {
       expect(maxValue).toBeGreaterThan(0.9);
     });
 
-    it('should throw error for invalid AudioBuffer', () => {
-      expect(() => {
-        generator.generateFromAudioBuffer(null as any, 100, 64);
-      }).toThrow('Invalid AudioBuffer');
+    it('should throw error for invalid AudioBuffer', async () => {
+      await expect(
+        generator.generateFromAudioBuffer(null as any, 100, 64)
+      ).rejects.toThrow('Invalid AudioBuffer');
     });
 
-    it('should throw error for invalid dimensions', () => {
+    it('should throw error for invalid dimensions', async () => {
       const audioContext = new AudioContext();
       const audioBuffer = audioContext.createBuffer(1, 1000, 44100);
 
-      expect(() => {
-        generator.generateFromAudioBuffer(audioBuffer, 0, 64);
-      }).toThrow('Invalid dimensions');
+      await expect(
+        generator.generateFromAudioBuffer(audioBuffer, 0, 64)
+      ).rejects.toThrow('Invalid dimensions');
 
-      expect(() => {
-        generator.generateFromAudioBuffer(audioBuffer, 100, 0);
-      }).toThrow('Invalid dimensions');
+      await expect(
+        generator.generateFromAudioBuffer(audioBuffer, 100, 0)
+      ).rejects.toThrow('Invalid dimensions');
 
-      expect(() => {
-        generator.generateFromAudioBuffer(audioBuffer, -10, 64);
-      }).toThrow('Invalid dimensions');
+      await expect(
+        generator.generateFromAudioBuffer(audioBuffer, -10, 64)
+      ).rejects.toThrow('Invalid dimensions');
     });
 
-    it('should generate correct dimensions', () => {
+    it('should generate correct dimensions', async () => {
       const sampleRate = 44100;
       const audioContext = new AudioContext({ sampleRate });
       const audioBuffer = audioContext.createBuffer(1, 10000, sampleRate);
@@ -99,7 +99,7 @@ describe('SpectrogramGenerator', () => {
 
       const width = 80;
       const height = 48;
-      const spectrogram = generator.generateFromAudioBuffer(audioBuffer, width, height);
+      const spectrogram = await generator.generateFromAudioBuffer(audioBuffer, width, height);
 
       expect(spectrogram).toHaveLength(width);
       spectrogram.forEach(timeSlice => {

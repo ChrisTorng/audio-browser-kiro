@@ -1,6 +1,6 @@
 /**
  * SpectrogramGenerator - Generate spectrogram data from audio sources
- * Uses Web Audio API and FFT analysis to create frequency-time visualizations
+ * Uses Web Workers for background processing to avoid blocking the main thread
  * Displays frequency range from 20Hz to 20KHz
  */
 export class SpectrogramGenerator {
@@ -8,18 +8,106 @@ export class SpectrogramGenerator {
   private readonly MIN_FREQUENCY = 20;
   private readonly MAX_FREQUENCY = 20000;
 
+  private worker: Worker | null = null;
+  private pendingRequests: Map<
+    string,
+    {
+      resolve: (data: number[][]) => void;
+      reject: (error: Error) => void;
+    }
+  > = new Map();
+  private requestCounter = 0;
+
   /**
-   * Generate spectrogram data from AudioBuffer using FFT analysis
+   * Initialize Web Worker for background processing
+   */
+  private initializeWorker(): void {
+    if (this.worker) return;
+
+    try {
+      this.worker = new Worker(
+        new URL('../workers/spectrogramWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+
+      this.worker.onmessage = (event: MessageEvent) => {
+        const { type, requestId, spectrogramData, error } = event.data;
+        const pending = this.pendingRequests.get(requestId);
+
+        if (!pending) return;
+
+        this.pendingRequests.delete(requestId);
+
+        if (type === 'success' && spectrogramData) {
+          pending.resolve(spectrogramData);
+        } else if (type === 'error') {
+          pending.reject(new Error(error || 'Unknown worker error'));
+        }
+      };
+
+      this.worker.onerror = (error: ErrorEvent) => {
+        console.error('Spectrogram worker error:', error);
+        // Reject all pending requests
+        this.pendingRequests.forEach(({ reject }) => {
+          reject(new Error('Worker error: ' + error.message));
+        });
+        this.pendingRequests.clear();
+      };
+    } catch (error) {
+      console.error('Failed to initialize spectrogram worker:', error);
+      this.worker = null;
+    }
+  }
+
+  /**
+   * Terminate the Web Worker and clean up resources
+   */
+  terminate(): void {
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+    // Reject all pending requests
+    this.pendingRequests.forEach(({ reject }) => {
+      reject(new Error('Worker terminated'));
+    });
+    this.pendingRequests.clear();
+  }
+
+  /**
+   * Cancel a specific request
+   * @param requestId - Request ID to cancel
+   */
+  cancelRequest(requestId: string): void {
+    const pending = this.pendingRequests.get(requestId);
+    if (pending) {
+      this.pendingRequests.delete(requestId);
+      pending.reject(new Error('Request cancelled'));
+    }
+  }
+
+  /**
+   * Cancel all pending requests
+   */
+  cancelAllRequests(): void {
+    this.pendingRequests.forEach(({ reject }) => {
+      reject(new Error('All requests cancelled'));
+    });
+    this.pendingRequests.clear();
+  }
+
+  /**
+   * Generate spectrogram data from AudioBuffer using FFT analysis (background processing)
    * @param audioBuffer - Web Audio API AudioBuffer
    * @param width - Number of time slices (columns)
    * @param height - Number of frequency bins (rows) - represents 20Hz to 20KHz range
-   * @returns 2D array of normalized frequency values (0-1)
+   * @returns Promise resolving to 2D array of normalized frequency values (0-1)
    */
-  generateFromAudioBuffer(
+  async generateFromAudioBuffer(
     audioBuffer: AudioBuffer,
     width: number,
     height: number
-  ): number[][] {
+  ): Promise<number[][]> {
     if (!audioBuffer || audioBuffer.length === 0) {
       throw new Error('Invalid AudioBuffer: buffer is empty or null');
     }
@@ -28,8 +116,51 @@ export class SpectrogramGenerator {
       throw new Error('Invalid dimensions: width and height must be greater than 0');
     }
 
+    // Initialize worker if not already done
+    this.initializeWorker();
+
+    // If worker is not available, fall back to synchronous generation
+    if (!this.worker) {
+      return this.generateFromAudioBufferSync(audioBuffer, width, height);
+    }
+
+    // Generate unique request ID
+    const requestId = `spectrogram-${++this.requestCounter}-${Date.now()}`;
+
+    // Get audio data from first channel
+    const audioData = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+
+    // Create promise for async processing
+    return new Promise<number[][]>((resolve, reject) => {
+      // Store promise handlers
+      this.pendingRequests.set(requestId, { resolve, reject });
+
+      // Send request to worker
+      this.worker!.postMessage({
+        type: 'generate',
+        audioData,
+        width,
+        height,
+        sampleRate,
+        requestId,
+      });
+    });
+  }
+
+  /**
+   * Synchronous fallback for spectrogram generation (when worker is not available)
+   * @param audioBuffer - Web Audio API AudioBuffer
+   * @param width - Number of time slices (columns)
+   * @param height - Number of frequency bins (rows)
+   * @returns 2D array of normalized frequency values (0-1)
+   */
+  private generateFromAudioBufferSync(
+    audioBuffer: AudioBuffer,
+    width: number,
+    height: number
+  ): number[][] {
     // Use a larger FFT size for better frequency resolution
-    // 2048 gives us good frequency resolution for 20Hz-20KHz range
     const fftSize = 2048;
     const sampleRate = audioBuffer.sampleRate;
 
@@ -48,7 +179,7 @@ export class SpectrogramGenerator {
       // Extract slice of audio data
       const sliceLength = end - start;
       const slice = new Float32Array(fftSize);
-      
+
       // Copy data and apply windowing
       for (let j = 0; j < sliceLength; j++) {
         // Hann window to reduce spectral leakage
