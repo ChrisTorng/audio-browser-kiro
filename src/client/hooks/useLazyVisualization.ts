@@ -130,7 +130,8 @@ export function useLazyVisualization(
         // Generate visualizations based on priority
         if (priority === 'waveform' || priority === 'both') {
           if (!cachedWaveform) {
-            const waveform = waveformGenerator.generateFromAudioBuffer(audioBuffer, waveformWidth);
+            // Use async background generation to avoid blocking main thread
+            const waveform = await waveformGenerator.generateFromAudioBufferAsync(audioBuffer, waveformWidth);
             visualizationCache.setWaveform(filePath, waveformWidth, waveform);
             if (!abortController.signal.aborted) {
               setWaveformData(waveform);
