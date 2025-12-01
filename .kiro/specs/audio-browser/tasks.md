@@ -36,7 +36,7 @@
     - 更新 useSpectrogram Hook 支援非同步背景生成
     - _Requirements: 3.1, 3.15, 3.18, 11.6, 11.12_
   
-  - [ ] 21.3 實作視覺化載入狀態顯示
+  - [x] 21.3 實作視覺化載入狀態顯示
     - 在 WaveformDisplay 元件中顯示載入指示器或佔位圖
     - 在 SpectrogramDisplay 元件中顯示載入指示器或佔位圖
     - 視覺化生成完成後即時顯示生成的圖形

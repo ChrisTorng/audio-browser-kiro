@@ -689,7 +689,30 @@ body {
   color: #f48771;
 }
 
-.waveform-display__loading-text,
+.waveform-display__loading-text {
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.waveform-display__loading-text::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #3e3e3e;
+  border-top-color: #007acc;
+  border-radius: 50%;
+  animation: waveform-spinner 0.8s linear infinite;
+}
+
+@keyframes waveform-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .waveform-display__empty-text,
 .waveform-display__error-icon {
   user-select: none;
@@ -725,7 +748,30 @@ body {
   color: #f48771;
 }
 
-.spectrogram-display__loading-text,
+.spectrogram-display__loading-text {
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spectrogram-display__loading-text::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #3e3e3e;
+  border-top-color: #007acc;
+  border-radius: 50%;
+  animation: spectrogram-spinner 0.8s linear infinite;
+}
+
+@keyframes spectrogram-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .spectrogram-display__empty-text,
 .spectrogram-display__error-icon {
   user-select: none;
