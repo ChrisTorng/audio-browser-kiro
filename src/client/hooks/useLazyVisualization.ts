@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { visualizationCache } from '../utils/visualizationCache';
-import { waveformGenerator } from '../services/waveformGenerator';
-import { spectrogramGenerator } from '../services/spectrogramGenerator';
+import { visualizationTaskQueue, TaskPriority } from '../services/visualizationTaskQueue';
 
 /**
  * Lazy visualization hook return type
@@ -11,7 +10,8 @@ export interface UseLazyVisualizationReturn {
   spectrogramData: number[][] | null;
   isLoading: boolean;
   error: Error | null;
-  loadVisualization: (filePath: string, audioUrl: string) => Promise<void>;
+  progress: number; // 0-100
+  loadVisualization: (filePath: string, audioUrl: string, priority?: TaskPriority) => void;
   clearVisualization: () => void;
 }
 
@@ -28,7 +28,7 @@ export interface LazyVisualizationOptions {
 
 /**
  * Custom hook for lazy loading and on-demand generation of visualizations
- * Optimizes performance by loading only when needed and using cached data
+ * Uses centralized task queue for optimized background processing
  */
 export function useLazyVisualization(
   options: LazyVisualizationOptions = {}
@@ -44,26 +44,18 @@ export function useLazyVisualization(
   const [spectrogramData, setSpectrogramData] = useState<number[][] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [progress, setProgress] = useState<number>(0);
 
-  // Track current file path to avoid duplicate loads
+  // Track current file path and task ID
   const currentFilePathRef = useRef<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentTaskIdRef = useRef<string | null>(null);
 
   /**
-   * Load visualization data for a file
-   * Checks cache first, then generates if needed
+   * Load visualization data for a file using task queue
+   * Checks cache first, then adds task to queue if needed
    */
   const loadVisualization = useCallback(
-    async (filePath: string, audioUrl: string) => {
-      // Abort any ongoing load
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      // Create new abort controller
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
+    (filePath: string, audioUrl: string, taskPriority: TaskPriority = 'normal') => {
       // Skip if already loading this file
       if (currentFilePathRef.current === filePath) {
         // Check if we already have the data
@@ -75,113 +67,64 @@ export function useLazyVisualization(
         );
         
         if (cachedWaveform && cachedSpectrogram) {
+          // Update state with cached data if not already set
+          if (!waveformData || !spectrogramData) {
+            setWaveformData(cachedWaveform);
+            setSpectrogramData(cachedSpectrogram);
+            setIsLoading(false);
+            setProgress(100);
+          }
           return;
         }
+      }
+
+      // Cancel previous task if any
+      if (currentTaskIdRef.current) {
+        visualizationTaskQueue.cancelTask(currentTaskIdRef.current);
       }
 
       currentFilePathRef.current = filePath;
       setIsLoading(true);
       setError(null);
+      setProgress(0);
 
-      try {
-        // Check cache first
-        const cachedWaveform = visualizationCache.getWaveform(filePath, waveformWidth);
-        const cachedSpectrogram = visualizationCache.getSpectrogram(
-          filePath,
-          spectrogramWidth,
-          spectrogramHeight
-        );
+      // Check cache first
+      const cachedWaveform = visualizationCache.getWaveform(filePath, waveformWidth);
+      const cachedSpectrogram = visualizationCache.getSpectrogram(
+        filePath,
+        spectrogramWidth,
+        spectrogramHeight
+      );
 
-        // If both are cached, use them
-        if (cachedWaveform && cachedSpectrogram) {
-          if (!abortController.signal.aborted) {
-            setWaveformData(cachedWaveform);
-            setSpectrogramData(cachedSpectrogram);
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // Check if audio buffer is cached
-        let audioBuffer = visualizationCache.getAudioBuffer(filePath);
-
-        // If not cached, fetch and decode audio
-        if (!audioBuffer) {
-          const response = await fetch(audioUrl, { signal: abortController.signal });
-          if (!response.ok) {
-            throw new Error(`Failed to fetch audio: ${response.statusText}`);
-          }
-
-          const arrayBuffer = await response.arrayBuffer();
-          if (abortController.signal.aborted) return;
-
-          const audioContext = new AudioContext();
-          audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          
-          // Cache the audio buffer
-          visualizationCache.setAudioBuffer(filePath, audioBuffer);
-          
-          // Close audio context
-          await audioContext.close();
-        }
-
-        if (abortController.signal.aborted) return;
-
-        // Generate visualizations based on priority
-        if (priority === 'waveform' || priority === 'both') {
-          if (!cachedWaveform) {
-            // Use async background generation to avoid blocking main thread
-            const waveform = await waveformGenerator.generateFromAudioBufferAsync(audioBuffer, waveformWidth);
-            visualizationCache.setWaveform(filePath, waveformWidth, waveform);
-            if (!abortController.signal.aborted) {
-              setWaveformData(waveform);
-            }
-          } else {
-            setWaveformData(cachedWaveform);
-          }
-        }
-
-        if (priority === 'spectrogram' || priority === 'both') {
-          if (!cachedSpectrogram) {
-            const spectrogram = spectrogramGenerator.generateFromAudioBuffer(
-              audioBuffer,
-              spectrogramWidth,
-              spectrogramHeight
-            );
-            visualizationCache.setSpectrogram(filePath, spectrogramWidth, spectrogramHeight, spectrogram);
-            if (!abortController.signal.aborted) {
-              setSpectrogramData(spectrogram);
-            }
-          } else {
-            setSpectrogramData(cachedSpectrogram);
-          }
-        }
-
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
-      } catch (err) {
-        if (abortController.signal.aborted) {
-          // Ignore abort errors
-          return;
-        }
-
-        const error = err instanceof Error ? err : new Error('Failed to load visualization');
-        setError(error);
+      // If both are cached, use them immediately
+      if (cachedWaveform && cachedSpectrogram) {
+        setWaveformData(cachedWaveform);
+        setSpectrogramData(cachedSpectrogram);
         setIsLoading(false);
-        console.error('Visualization load error:', error);
+        setProgress(100);
+        return;
       }
+
+      // Add task to queue
+      const taskId = visualizationTaskQueue.addTask(
+        filePath,
+        audioUrl,
+        priority,
+        taskPriority
+      );
+      currentTaskIdRef.current = taskId;
     },
-    [waveformWidth, spectrogramWidth, spectrogramHeight, priority]
+    [waveformWidth, spectrogramWidth, spectrogramHeight, priority, waveformData, spectrogramData]
   );
 
   /**
    * Clear current visualization data
    */
   const clearVisualization = useCallback(() => {
-    // Abort any ongoing load
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    // Cancel current task if any
+    if (currentTaskIdRef.current) {
+      visualizationTaskQueue.cancelTask(currentTaskIdRef.current);
+      currentTaskIdRef.current = null;
     }
 
     currentFilePathRef.current = null;
@@ -189,13 +132,51 @@ export function useLazyVisualization(
     setSpectrogramData(null);
     setError(null);
     setIsLoading(false);
+    setProgress(0);
   }, []);
 
-  // Cleanup on unmount
+  // Subscribe to task queue events
   useEffect(() => {
+    // Progress callback
+    const unsubscribeProgress = visualizationTaskQueue.onProgress((task) => {
+      if (task.id === currentTaskIdRef.current) {
+        setProgress(task.progress);
+      }
+    });
+
+    // Completion callback
+    const unsubscribeComplete = visualizationTaskQueue.onComplete((task, result) => {
+      if (task.id === currentTaskIdRef.current) {
+        if (result.waveformData) {
+          setWaveformData(result.waveformData);
+        }
+        if (result.spectrogramData) {
+          setSpectrogramData(result.spectrogramData);
+        }
+        setIsLoading(false);
+        setProgress(100);
+        currentTaskIdRef.current = null;
+      }
+    });
+
+    // Error callback
+    const unsubscribeError = visualizationTaskQueue.onError((task, err) => {
+      if (task.id === currentTaskIdRef.current) {
+        setError(err);
+        setIsLoading(false);
+        currentTaskIdRef.current = null;
+      }
+    });
+
+    // Cleanup on unmount
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      unsubscribeProgress();
+      unsubscribeComplete();
+      unsubscribeError();
+      
+      // Cancel current task
+      if (currentTaskIdRef.current) {
+        visualizationTaskQueue.cancelTask(currentTaskIdRef.current);
       }
     };
   }, []);
@@ -205,6 +186,7 @@ export function useLazyVisualization(
     spectrogramData,
     isLoading,
     error,
+    progress,
     loadVisualization,
     clearVisualization,
   };

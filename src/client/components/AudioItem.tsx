@@ -61,16 +61,19 @@ export const AudioItem = memo(function AudioItem({
   /**
    * Load visualizations when item becomes visible
    * This enables lazy loading and on-demand generation
+   * Selected items get high priority
    */
   useEffect(() => {
     if (isVisible) {
       const audioUrl = `/api/audio/${encodeURIComponent(file.path)}`;
-      visualization.loadVisualization(file.path, audioUrl);
+      // Use high priority for selected items, normal for others
+      const priority = isSelected ? 'high' : 'normal';
+      visualization.loadVisualization(file.path, audioUrl, priority);
     } else {
       // Clear visualization when not visible to save memory
       visualization.clearVisualization();
     }
-  }, [isVisible, file.path, visualization.loadVisualization, visualization.clearVisualization]);
+  }, [isVisible, isSelected, file.path, visualization.loadVisualization, visualization.clearVisualization]);
 
   // Memoize visualization data to prevent unnecessary re-renders
   const waveformData = useMemo(() => visualization.waveformData, [visualization.waveformData]);
