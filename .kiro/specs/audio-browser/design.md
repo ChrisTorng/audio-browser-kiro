@@ -299,7 +299,9 @@ class Database {
 - 波形圖顯示
 - 整合播放進度指示線（垂直線）
 - 使用 Canvas 或 SVG 繪製
-- 即時在瀏覽器中生成（使用 Web Audio API）
+- 在背景執行緒中生成（使用 Web Audio API）
+- 生成完成前顯示載入指示器或佔位圖
+- 生成完成後即時顯示波形圖
 - 只在播放時更新進度指示線，不重新生成整個波形圖
 - 避免閃爍問題
 
@@ -307,7 +309,9 @@ class Database {
 - 頻譜圖顯示
 - 同步顯示播放進度指示線（垂直線）
 - 使用 Canvas 繪製
-- 即時在瀏覽器中生成（使用 Web Audio API）
+- 在背景執行緒中生成（使用 Web Audio API）
+- 生成完成前顯示載入指示器或佔位圖
+- 生成完成後即時顯示頻譜圖
 - 以固定寬度和固定高度顯示，不論音檔長度
 - 將完整音檔內容縮放至固定顯示尺寸
 - 只在播放時更新進度指示線，不重新生成整個頻譜圖
@@ -349,7 +353,7 @@ interface UseWaveformReturn {
   waveformData: number[];  // 波形資料點
   isLoading: boolean;
   error: Error | null;
-  generateWaveform: (audioBuffer: AudioBuffer) => void;
+  generateWaveform: (audioBuffer: AudioBuffer) => Promise<void>;  // 非同步背景生成
 }
 ```
 
@@ -359,7 +363,7 @@ interface UseSpectrogramReturn {
   spectrogramData: number[][];  // 頻譜資料（2D 陣列）
   isLoading: boolean;
   error: Error | null;
-  generateSpectrogram: (audioBuffer: AudioBuffer) => void;
+  generateSpectrogram: (audioBuffer: AudioBuffer) => Promise<void>;  // 非同步背景生成
 }
 ```
 
@@ -416,6 +420,8 @@ class AudioBrowserAPI {
 class WaveformGenerator {
   async generateFromAudioBuffer(audioBuffer: AudioBuffer, width: number): Promise<number[]>;
   async generateFromBlob(audioBlob: Blob, width: number): Promise<number[]>;
+  // 使用 Web Workers 或 requestIdleCallback 在背景執行
+  // 確保不阻塞主執行緒
 }
 ```
 
@@ -424,6 +430,8 @@ class WaveformGenerator {
 class SpectrogramGenerator {
   async generateFromAudioBuffer(audioBuffer: AudioBuffer, width: number, height: number): Promise<number[][]>;
   async generateFromBlob(audioBlob: Blob, width: number, height: number): Promise<number[][]>;
+  // 使用 Web Workers 或 requestIdleCallback 在背景執行
+  // 確保不阻塞主執行緒
 }
 ```
 
@@ -746,10 +754,13 @@ describe('AudioItem', () => {
    - LRU 策略限制記憶體使用
    - 設計理由：避免重複生成，提升效能
 
-3. **延遲載入**
+3. **延遲載入與背景生成**
    - 音檔按需載入
-   - 波形圖和頻譜圖在音檔下載後即時生成
-   - 設計理由：平衡載入速度和使用者體驗
+   - 波形圖和頻譜圖在背景執行緒中生成
+   - 音檔載入完成後立即可播放，不等待視覺化生成
+   - 視覺化生成完成後即時顯示
+   - 使用 Web Workers 或 requestIdleCallback 確保不阻塞主執行緒
+   - 設計理由：平衡載入速度和使用者體驗，確保介面回應性
 
 4. **篩選效能優化**
    - 篩選從所有項目中進行，包括收合和展開的所有資料夾和音檔
@@ -767,7 +778,15 @@ describe('AudioItem', () => {
    - 播放時只更新進度指示線，不重新渲染整個圖形
    - 使用 React.memo 和 useMemo 避免不必要的元件重新渲染
    - 確保描述欄位在取得輸入焦點後不因畫面更新而失去焦點
+   - 背景生成任務完成時使用狀態更新觸發重新渲染，不影響其他元件
    - 設計理由：提供流暢的使用者體驗，避免視覺干擾
+
+7. **背景任務管理**
+   - 使用 Web Workers 處理密集計算（波形圖和頻譜圖生成）
+   - 或使用 requestIdleCallback 在瀏覽器空閒時執行
+   - 確保背景任務不阻塞使用者介面互動
+   - 提供任務取消機制（當使用者切換音檔時）
+   - 設計理由：保持介面回應性，提升使用者體驗
 
 ### Backend Optimization
 

@@ -55,11 +55,11 @@
 
 ### Requirement 3
 
-**User Story:** 作為使用者，我想要為每個音檔即時生成波形圖和頻譜圖，以便視覺化了解音頻內容
+**User Story:** 作為使用者，我想要為每個音檔在背景生成波形圖和頻譜圖，以便在不影響操作的情況下視覺化了解音頻內容
 
 #### Acceptance Criteria
 
-1. WHEN Frontend 下載音檔後，THE Frontend SHALL 即時在瀏覽器中生成波形圖和頻譜圖
+1. WHEN Frontend 下載音檔後，THE Frontend SHALL 在背景執行緒中生成波形圖和頻譜圖
 2. THE Frontend SHALL 使用 Web Audio API 或相關函式庫處理音頻資料
 3. THE Frontend SHALL 在音檔列表中依序顯示波形圖和頻譜圖
 4. THE Frontend SHALL 在波形圖和頻譜圖上同步顯示播放進度指示線（獨立的細直條）
@@ -73,6 +73,10 @@
 12. THE Frontend SHALL 在可顯示高度內完整顯示整個頻率範圍，不截斷或遺漏任何頻率區段
 13. THE Frontend SHALL 使用兩個獨立的細直條分別覆蓋在波形圖與頻譜圖上標示播放位置
 14. THE Frontend SHALL 確保播放進度指示線清晰可見且位置準確
+15. THE Frontend SHALL 允許使用者在波形圖和頻譜圖生成過程中繼續操作介面
+16. WHEN 波形圖或頻譜圖生成完成，THE Frontend SHALL 即時顯示生成的圖形
+17. THE Frontend SHALL 在波形圖和頻譜圖生成期間顯示載入指示器或佔位圖
+18. THE Frontend SHALL 確保背景生成任務不阻塞使用者介面的回應性
 
 ### Requirement 4
 
@@ -107,6 +111,8 @@
 3. WHEN 音檔播放完畢，THE Frontend SHALL 自動重新開始播放
 4. WHEN 使用者選擇其他音檔，THE Frontend SHALL 停止當前播放並開始新音檔的循環播放
 5. WHEN 使用者按下空白鍵停止播放後再次播放，THE Frontend SHALL 從頭開始播放
+6. THE Frontend SHALL 允許音檔在波形圖和頻譜圖生成完成前開始播放
+7. WHEN 音檔載入完成，THE Frontend SHALL 立即開始播放而不等待視覺化生成
 
 ### Requirement 6
 
@@ -197,11 +203,14 @@
 3. THE Audio Browser System SHALL 支援至少 10000 個音檔的管理
 4. THE Frontend SHALL 在載入時顯示載入指示器
 5. THE Waveform Generator SHALL 在背景執行，不阻塞使用者操作
-6. THE Frontend SHALL 避免不必要的畫面更新以防止滑鼠懸停時的閃爍現象
-7. THE Frontend SHALL 優化渲染效能以確保流暢的使用者體驗
-8. THE Frontend SHALL 避免在播放音檔時造成波形圖和頻譜圖閃爍
-9. THE Frontend SHALL 只在必要時重新渲染音檔項目，避免全部項目同時閃爍
-10. THE Frontend SHALL 確保描述欄位在取得輸入焦點後不因畫面更新而失去焦點
+6. THE Spectrogram Generator SHALL 在背景執行，不阻塞使用者操作
+7. THE Frontend SHALL 避免不必要的畫面更新以防止滑鼠懸停時的閃爍現象
+8. THE Frontend SHALL 優化渲染效能以確保流暢的使用者體驗
+9. THE Frontend SHALL 避免在播放音檔時造成波形圖和頻譜圖閃爍
+10. THE Frontend SHALL 只在必要時重新渲染音檔項目，避免全部項目同時閃爍
+11. THE Frontend SHALL 確保描述欄位在取得輸入焦點後不因畫面更新而失去焦點
+12. THE Frontend SHALL 確保音檔載入和視覺化生成不阻塞使用者介面的互動
+13. THE Frontend SHALL 允許使用者在背景任務執行期間自由操作介面
 
 ### Requirement 12
 
