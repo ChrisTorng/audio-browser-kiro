@@ -754,4 +754,64 @@ describe('API Routes Integration', () => {
       expect(response.headers['accept-ranges']).toBe('bytes');
     });
   });
+
+  describe('Caching Support', () => {
+    it('should return ETag and Last-Modified headers', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/api/audio/song1.mp3',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['etag']).toBeDefined();
+      expect(response.headers['last-modified']).toBeDefined();
+      expect(response.headers['cache-control']).toContain('max-age');
+    });
+
+    it('should return 304 for matching ETag', async () => {
+      // First request to get ETag
+      const firstResponse = await server.inject({
+        method: 'GET',
+        url: '/api/audio/song1.mp3',
+      });
+
+      const etag = firstResponse.headers['etag'];
+      expect(etag).toBeDefined();
+
+      // Second request with If-None-Match
+      const secondResponse = await server.inject({
+        method: 'GET',
+        url: '/api/audio/song1.mp3',
+        headers: {
+          'if-none-match': etag as string,
+        },
+      });
+
+      expect(secondResponse.statusCode).toBe(304);
+      expect(secondResponse.body).toBe('');
+    });
+
+    it('should return 304 for matching If-Modified-Since', async () => {
+      // First request to get Last-Modified
+      const firstResponse = await server.inject({
+        method: 'GET',
+        url: '/api/audio/song1.mp3',
+      });
+
+      const lastModified = firstResponse.headers['last-modified'];
+      expect(lastModified).toBeDefined();
+
+      // Second request with If-Modified-Since
+      const secondResponse = await server.inject({
+        method: 'GET',
+        url: '/api/audio/song1.mp3',
+        headers: {
+          'if-modified-since': lastModified as string,
+        },
+      });
+
+      expect(secondResponse.statusCode).toBe(304);
+      expect(secondResponse.body).toBe('');
+    });
+  });
 });

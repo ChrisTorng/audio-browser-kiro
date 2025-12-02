@@ -58,6 +58,7 @@ export class AudioBrowserAPI {
       `${this.baseUrl}/audio/${encodedPath}`,
       {
         method: 'GET',
+        cache: 'force-cache',
       },
       false // Don't parse as JSON
     );

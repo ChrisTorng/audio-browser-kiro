@@ -57,6 +57,34 @@ export async function registerAudioRoutes(fastify: FastifyInstance) {
           rangeHeader
         );
 
+        // Generate ETag and Last-Modified
+        const lastModified = result.stats.mtime.toUTCString();
+        const etag = `W/"${result.stats.size.toString(16)}-${result.stats.mtime.getTime().toString(16)}"`;
+
+        // Set caching headers
+        reply.header('Last-Modified', lastModified);
+        reply.header('ETag', etag);
+        reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+
+        // Check conditional headers
+        const ifNoneMatch = request.headers['if-none-match'];
+        const ifModifiedSince = request.headers['if-modified-since'];
+
+        let notModified = false;
+        if (ifNoneMatch) {
+          if (ifNoneMatch === etag) notModified = true;
+        } else if (ifModifiedSince) {
+          const ifModifiedSinceDate = new Date(ifModifiedSince);
+          const mtime = new Date(result.stats.mtime);
+          mtime.setMilliseconds(0);
+          if (ifModifiedSinceDate >= mtime) notModified = true;
+        }
+
+        if (notModified) {
+          result.stream.destroy();
+          return reply.code(304).send();
+        }
+
         // Set Content-Type header
         reply.header('Content-Type', result.mimeType);
 

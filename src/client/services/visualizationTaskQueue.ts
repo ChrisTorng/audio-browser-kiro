@@ -410,6 +410,7 @@ export class VisualizationTaskQueue {
 
           const response = await fetch(task.audioUrl, {
             signal: task.abortController.signal,
+            cache: 'force-cache',
           });
 
           if (!response.ok) {

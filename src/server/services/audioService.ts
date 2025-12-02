@@ -18,6 +18,10 @@ export interface AudioStreamResult {
   stream: Readable;
   mimeType: string;
   range?: RangeInfo;
+  stats: {
+    size: number;
+    mtime: Date;
+  };
 }
 
 /**
@@ -138,6 +142,10 @@ export class AudioService {
             stream,
             mimeType,
             range,
+            stats: {
+              size: fileSize,
+              mtime: stats.mtime,
+            },
           };
         }
       }
@@ -152,6 +160,10 @@ export class AudioService {
           start: 0,
           end: fileSize - 1,
           total: fileSize,
+        },
+        stats: {
+          size: fileSize,
+          mtime: stats.mtime,
         },
       };
     } catch (error) {

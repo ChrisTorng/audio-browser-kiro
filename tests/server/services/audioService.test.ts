@@ -164,6 +164,10 @@ describe('AudioService', () => {
       expect(result.range?.end).toBe(1023);
       expect(result.range?.total).toBe(1024);
 
+      expect(result.stats).toBeDefined();
+      expect(result.stats.size).toBe(1024);
+      expect(result.stats.mtime).toBeInstanceOf(Date);
+
       // Clean up stream
       result.stream.destroy();
     });
