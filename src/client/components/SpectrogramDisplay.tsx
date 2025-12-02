@@ -43,8 +43,15 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
   useEffect(() => {
     const canvas = spectrogramCanvasRef.current;
     if (!canvas || !spectrogramData || spectrogramData.length === 0) {
+      if (!spectrogramData) {
+        console.log('[SpectrogramDisplay] No spectrogram data to display');
+      } else if (spectrogramData.length === 0) {
+        console.log('[SpectrogramDisplay] Empty spectrogram data array');
+      }
       return;
     }
+
+    console.log(`[SpectrogramDisplay] 🎨 Drawing spectrogram: ${spectrogramData.length}x${spectrogramData[0]?.length || 0}`);
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -78,6 +85,8 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
         ctx.fillRect(Math.floor(x), Math.floor(y), rectWidth, rectHeight);
       });
     });
+    
+    console.log('[SpectrogramDisplay] ✅ Spectrogram drawn successfully');
   }, [spectrogramData, width, height, intensityToColor]);
 
   if (error) {

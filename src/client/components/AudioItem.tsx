@@ -68,8 +68,10 @@ export const AudioItem = memo(function AudioItem({
       const audioUrl = `/api/audio/${encodeURIComponent(file.path)}`;
       // Use high priority for selected items, normal for others
       const priority = isSelected ? 'high' : 'normal';
+      console.log(`[AudioItem] 👁️ Item visible, loading visualization: ${file.name} (priority: ${priority})`);
       visualization.loadVisualization(file.path, audioUrl, priority);
     } else {
+      console.log(`[AudioItem] 🙈 Item not visible, clearing visualization: ${file.name}`);
       // Clear visualization when not visible to save memory
       visualization.clearVisualization();
     }
