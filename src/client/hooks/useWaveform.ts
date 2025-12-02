@@ -11,6 +11,7 @@ export interface UseWaveformReturn {
   error: Error | null;
   generateWaveform: (audioBuffer: AudioBuffer, filePath: string, width?: number) => Promise<void>;
   generateWaveformAsync: (audioBuffer: AudioBuffer, filePath: string, width?: number) => Promise<void>;
+  loadFromPersistence: (filePath: string, width?: number) => Promise<boolean>;
   clearWaveform: () => void;
 }
 
@@ -18,6 +19,7 @@ export interface UseWaveformReturn {
  * Custom hook for generating waveform data from AudioBuffer
  * Uses centralized LRU cache for efficient memory management
  * Supports both synchronous and asynchronous (background) generation
+ * Integrates with IndexedDB for persistent storage across page reloads
  */
 export function useWaveform(): UseWaveformReturn {
   const [waveformData, setWaveformData] = useState<number[]>([]);
@@ -36,7 +38,57 @@ export function useWaveform(): UseWaveformReturn {
   }, []);
 
   /**
+   * Load waveform from persistent storage (IndexedDB)
+   * Use this to restore waveforms after page reload
+   * @param filePath - Audio file path
+   * @param width - Display width (default: 1000)
+   * @returns True if waveform was loaded from persistence
+   */
+  const loadFromPersistence = useCallback(async (filePath: string, width: number = 1000): Promise<boolean> => {
+    if (!isMountedRef.current) {
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // First check memory cache
+      const cached = visualizationCache.getWaveform(filePath, width);
+      if (cached) {
+        if (isMountedRef.current) {
+          setWaveformData(cached);
+          setIsLoading(false);
+        }
+        return true;
+      }
+
+      // Try loading from IndexedDB
+      const persisted = await visualizationCache.loadWaveformFromPersistence(filePath, width);
+      if (persisted && isMountedRef.current) {
+        setWaveformData(persisted);
+        setIsLoading(false);
+        return true;
+      }
+
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+      return false;
+    } catch (err) {
+      if (isMountedRef.current) {
+        const error = err instanceof Error ? err : new Error('Failed to load waveform from persistence');
+        setError(error);
+        setIsLoading(false);
+        console.error('Waveform persistence load error:', error);
+      }
+      return false;
+    }
+  }, []);
+
+  /**
    * Generate waveform data from AudioBuffer (synchronous, main thread)
+   * First tries to load from persistent storage (IndexedDB)
    * @param audioBuffer - Web Audio API AudioBuffer
    * @param filePath - File path for cache key
    * @param width - Number of data points (default: 1000)
@@ -54,11 +106,21 @@ export function useWaveform(): UseWaveformReturn {
     setError(null);
 
     try {
-      // Check cache first
+      // Check memory cache first
       const cached = visualizationCache.getWaveform(filePath, width);
       if (cached) {
         if (isMountedRef.current && currentGenerationRef.current === generationId) {
           setWaveformData(cached);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Try loading from IndexedDB persistence
+      const persisted = await visualizationCache.loadWaveformFromPersistence(filePath, width);
+      if (persisted) {
+        if (isMountedRef.current && currentGenerationRef.current === generationId) {
+          setWaveformData(persisted);
           setIsLoading(false);
         }
         return;
@@ -89,7 +151,7 @@ export function useWaveform(): UseWaveformReturn {
       const max = Math.max(...waveform);
       const normalized = max > 0 ? waveform.map(v => v / max) : waveform;
 
-      // Store in centralized cache
+      // Store in centralized cache (also persists to IndexedDB)
       visualizationCache.setWaveform(filePath, width, normalized);
 
       // Only update state if this generation is still current and component is mounted
@@ -109,6 +171,7 @@ export function useWaveform(): UseWaveformReturn {
 
   /**
    * Generate waveform data from AudioBuffer in background (asynchronous, Web Worker)
+   * First tries to load from persistent storage (IndexedDB)
    * @param audioBuffer - Web Audio API AudioBuffer
    * @param filePath - File path for cache key
    * @param width - Number of data points (default: 1000)
@@ -126,7 +189,7 @@ export function useWaveform(): UseWaveformReturn {
     setError(null);
 
     try {
-      // Check cache first
+      // Check memory cache first
       const cached = visualizationCache.getWaveform(filePath, width);
       if (cached) {
         if (isMountedRef.current && currentGenerationRef.current === generationId) {
@@ -136,10 +199,20 @@ export function useWaveform(): UseWaveformReturn {
         return;
       }
 
+      // Try loading from IndexedDB persistence
+      const persisted = await visualizationCache.loadWaveformFromPersistence(filePath, width);
+      if (persisted) {
+        if (isMountedRef.current && currentGenerationRef.current === generationId) {
+          setWaveformData(persisted);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       // Generate waveform in background using Web Worker
       const normalized = await waveformGenerator.generateFromAudioBufferAsync(audioBuffer, width);
 
-      // Store in centralized cache
+      // Store in centralized cache (also persists to IndexedDB)
       visualizationCache.setWaveform(filePath, width, normalized);
 
       // Only update state if this generation is still current and component is mounted
@@ -179,6 +252,7 @@ export function useWaveform(): UseWaveformReturn {
     error,
     generateWaveform,
     generateWaveformAsync,
+    loadFromPersistence,
     clearWaveform,
   };
 }

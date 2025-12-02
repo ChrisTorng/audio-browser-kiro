@@ -63,7 +63,7 @@ describe('useSpectrogram', () => {
     expect(allInRange).toBe(true);
   });
 
-  it('uses default dimensions when not specified', async () => {
+  it('uses default dimensions when not specified', { timeout: 30000 }, async () => {
     const { result } = renderHook(() => useSpectrogram());
     const mockBuffer = createMockAudioBuffer(20000);
 

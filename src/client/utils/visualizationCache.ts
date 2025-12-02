@@ -1,4 +1,5 @@
 import { LRUCache } from './LRUCache';
+import { visualizationPersistence } from './visualizationPersistence';
 
 /**
  * Cached waveform data
@@ -27,17 +28,48 @@ export interface CachedAudioBuffer {
 /**
  * Visualization cache manager
  * Centralized cache for waveforms, spectrograms, and audio buffers
+ * Integrates with IndexedDB for persistent storage across page reloads
  */
 class VisualizationCacheManager {
   private waveformCache: LRUCache<string, CachedWaveform>;
   private spectrogramCache: LRUCache<string, CachedSpectrogram>;
   private audioBufferCache: LRUCache<string, CachedAudioBuffer>;
+  private persistenceInitialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     // Initialize caches with appropriate sizes
     this.waveformCache = new LRUCache<string, CachedWaveform>(100);
     this.spectrogramCache = new LRUCache<string, CachedSpectrogram>(50);
     this.audioBufferCache = new LRUCache<string, CachedAudioBuffer>(20);
+  }
+
+  /**
+   * Initialize persistent storage (IndexedDB)
+   * Should be called before using cache to enable persistence
+   */
+  async initializePersistence(): Promise<void> {
+    if (this.persistenceInitialized) {
+      return;
+    }
+
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = (async () => {
+      try {
+        await visualizationPersistence.initialize();
+        this.persistenceInitialized = true;
+        // Run cleanup on initialization to ensure storage limits are respected
+        await visualizationPersistence.cleanup();
+      } catch (error) {
+        console.warn('Failed to initialize persistence, using memory-only cache:', error);
+        this.persistenceInitialized = false;
+      }
+    })();
+
+    return this.initPromise;
   }
 
   /**
@@ -64,7 +96,7 @@ class VisualizationCacheManager {
   // Waveform cache methods
 
   /**
-   * Get cached waveform
+   * Get cached waveform from memory cache
    */
   getWaveform(filePath: string, width: number): number[] | null {
     const key = this.getWaveformKey(filePath, width);
@@ -73,7 +105,40 @@ class VisualizationCacheManager {
   }
 
   /**
-   * Set waveform in cache
+   * Load waveform from persistent storage (IndexedDB)
+   * Use this when memory cache doesn't have the data
+   * @param filePath - Audio file path
+   * @param width - Display width
+   * @returns Waveform data or null if not found
+   */
+  async loadWaveformFromPersistence(filePath: string, width: number): Promise<number[] | null> {
+    if (!this.persistenceInitialized) {
+      await this.initializePersistence();
+    }
+
+    if (!this.persistenceInitialized) {
+      return null;
+    }
+
+    try {
+      const data = await visualizationPersistence.getWaveform(filePath, width);
+      if (data) {
+        // Also store in memory cache for faster subsequent access
+        const key = this.getWaveformKey(filePath, width);
+        this.waveformCache.set(key, {
+          data,
+          timestamp: Date.now(),
+        });
+      }
+      return data;
+    } catch (error) {
+      console.warn('Failed to load waveform from persistence:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Set waveform in cache and persist to IndexedDB
    */
   setWaveform(filePath: string, width: number, data: number[]): void {
     const key = this.getWaveformKey(filePath, width);
@@ -81,20 +146,50 @@ class VisualizationCacheManager {
       data,
       timestamp: Date.now(),
     });
+
+    // Persist to IndexedDB asynchronously
+    if (this.persistenceInitialized) {
+      visualizationPersistence.setWaveform(filePath, width, data).catch((error) => {
+        console.warn('Failed to persist waveform:', error);
+      });
+    }
   }
 
   /**
-   * Check if waveform is cached
+   * Check if waveform is cached in memory
    */
   hasWaveform(filePath: string, width: number): boolean {
     const key = this.getWaveformKey(filePath, width);
     return this.waveformCache.has(key);
   }
 
+  /**
+   * Check if waveform exists in persistent storage
+   * @param filePath - Audio file path
+   * @param width - Display width
+   * @returns True if waveform exists in IndexedDB
+   */
+  async hasWaveformInPersistence(filePath: string, width: number): Promise<boolean> {
+    if (!this.persistenceInitialized) {
+      await this.initializePersistence();
+    }
+
+    if (!this.persistenceInitialized) {
+      return false;
+    }
+
+    try {
+      return await visualizationPersistence.hasWaveform(filePath, width);
+    } catch (error) {
+      console.warn('Failed to check waveform in persistence:', error);
+      return false;
+    }
+  }
+
   // Spectrogram cache methods
 
   /**
-   * Get cached spectrogram
+   * Get cached spectrogram from memory cache
    */
   getSpectrogram(filePath: string, width: number, height: number): number[][] | null {
     const key = this.getSpectrogramKey(filePath, width, height);
@@ -103,7 +198,41 @@ class VisualizationCacheManager {
   }
 
   /**
-   * Set spectrogram in cache
+   * Load spectrogram from persistent storage (IndexedDB)
+   * Use this when memory cache doesn't have the data
+   * @param filePath - Audio file path
+   * @param width - Display width
+   * @param height - Display height
+   * @returns Spectrogram data or null if not found
+   */
+  async loadSpectrogramFromPersistence(filePath: string, width: number, height: number): Promise<number[][] | null> {
+    if (!this.persistenceInitialized) {
+      await this.initializePersistence();
+    }
+
+    if (!this.persistenceInitialized) {
+      return null;
+    }
+
+    try {
+      const data = await visualizationPersistence.getSpectrogram(filePath, width, height);
+      if (data) {
+        // Also store in memory cache for faster subsequent access
+        const key = this.getSpectrogramKey(filePath, width, height);
+        this.spectrogramCache.set(key, {
+          data,
+          timestamp: Date.now(),
+        });
+      }
+      return data;
+    } catch (error) {
+      console.warn('Failed to load spectrogram from persistence:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Set spectrogram in cache and persist to IndexedDB
    */
   setSpectrogram(filePath: string, width: number, height: number, data: number[][]): void {
     const key = this.getSpectrogramKey(filePath, width, height);
@@ -111,14 +240,45 @@ class VisualizationCacheManager {
       data,
       timestamp: Date.now(),
     });
+
+    // Persist to IndexedDB asynchronously
+    if (this.persistenceInitialized) {
+      visualizationPersistence.setSpectrogram(filePath, width, height, data).catch((error) => {
+        console.warn('Failed to persist spectrogram:', error);
+      });
+    }
   }
 
   /**
-   * Check if spectrogram is cached
+   * Check if spectrogram is cached in memory
    */
   hasSpectrogram(filePath: string, width: number, height: number): boolean {
     const key = this.getSpectrogramKey(filePath, width, height);
     return this.spectrogramCache.has(key);
+  }
+
+  /**
+   * Check if spectrogram exists in persistent storage
+   * @param filePath - Audio file path
+   * @param width - Display width
+   * @param height - Display height
+   * @returns True if spectrogram exists in IndexedDB
+   */
+  async hasSpectrogramInPersistence(filePath: string, width: number, height: number): Promise<boolean> {
+    if (!this.persistenceInitialized) {
+      await this.initializePersistence();
+    }
+
+    if (!this.persistenceInitialized) {
+      return false;
+    }
+
+    try {
+      return await visualizationPersistence.hasSpectrogram(filePath, width, height);
+    } catch (error) {
+      console.warn('Failed to check spectrogram in persistence:', error);
+      return false;
+    }
   }
 
   // Audio buffer cache methods
@@ -154,37 +314,44 @@ class VisualizationCacheManager {
   // Cache management methods
 
   /**
-   * Clear all caches
+   * Clear all caches (memory and persistent)
    */
   clearAll(): void {
     this.waveformCache.clear();
     this.spectrogramCache.clear();
     this.audioBufferCache.clear();
+
+    // Clear persistent storage asynchronously
+    if (this.persistenceInitialized) {
+      visualizationPersistence.clear().catch((error) => {
+        console.warn('Failed to clear persistent storage:', error);
+      });
+    }
   }
 
   /**
-   * Clear waveform cache
+   * Clear waveform cache (memory and persistent)
    */
   clearWaveforms(): void {
     this.waveformCache.clear();
   }
 
   /**
-   * Clear spectrogram cache
+   * Clear spectrogram cache (memory only)
    */
   clearSpectrograms(): void {
     this.spectrogramCache.clear();
   }
 
   /**
-   * Clear audio buffer cache
+   * Clear audio buffer cache (memory only)
    */
   clearAudioBuffers(): void {
     this.audioBufferCache.clear();
   }
 
   /**
-   * Get cache statistics
+   * Get cache statistics (memory cache)
    */
   getStats() {
     return {
@@ -195,7 +362,36 @@ class VisualizationCacheManager {
   }
 
   /**
-   * Remove all cached data for a specific file
+   * Get persistent storage statistics
+   * @returns Storage statistics from IndexedDB
+   */
+  async getPersistenceStats() {
+    if (!this.persistenceInitialized) {
+      await this.initializePersistence();
+    }
+
+    if (!this.persistenceInitialized) {
+      return {
+        waveformCount: 0,
+        spectrogramCount: 0,
+        totalSize: 0,
+      };
+    }
+
+    try {
+      return await visualizationPersistence.getStorageStats();
+    } catch (error) {
+      console.warn('Failed to get persistence stats:', error);
+      return {
+        waveformCount: 0,
+        spectrogramCount: 0,
+        totalSize: 0,
+      };
+    }
+  }
+
+  /**
+   * Remove all cached data for a specific file (memory and persistent)
    */
   removeFile(filePath: string): void {
     // Remove audio buffer
@@ -217,6 +413,32 @@ class VisualizationCacheManager {
         this.spectrogramCache.delete(key);
       }
     });
+
+    // Remove from persistent storage asynchronously
+    if (this.persistenceInitialized) {
+      visualizationPersistence.removeFile(filePath).catch((error) => {
+        console.warn('Failed to remove file from persistent storage:', error);
+      });
+    }
+  }
+
+  /**
+   * Run cleanup on persistent storage to evict old entries
+   */
+  async runPersistenceCleanup(): Promise<void> {
+    if (!this.persistenceInitialized) {
+      await this.initializePersistence();
+    }
+
+    if (!this.persistenceInitialized) {
+      return;
+    }
+
+    try {
+      await visualizationPersistence.cleanup();
+    } catch (error) {
+      console.warn('Failed to run persistence cleanup:', error);
+    }
   }
 }
 

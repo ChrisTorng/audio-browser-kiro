@@ -4,3 +4,4 @@
 
 export * from './LRUCache';
 export * from './visualizationCache';
+export * from './visualizationPersistence';

@@ -10,6 +10,7 @@ export interface UseSpectrogramReturn {
   isLoading: boolean;
   error: Error | null;
   generateSpectrogram: (audioBuffer: AudioBuffer, filePath: string, width?: number, height?: number) => Promise<void>;
+  loadFromPersistence: (filePath: string, width?: number, height?: number) => Promise<boolean>;
   clearSpectrogram: () => void;
   cancelGeneration: () => void;
 }
@@ -17,6 +18,7 @@ export interface UseSpectrogramReturn {
 /**
  * Custom hook for generating spectrogram data from AudioBuffer using FFT
  * Uses Web Workers for background processing and centralized LRU cache
+ * Integrates with IndexedDB for persistent storage across page reloads
  */
 export function useSpectrogram(): UseSpectrogramReturn {
   const [spectrogramData, setSpectrogramData] = useState<number[][]>([]);
@@ -48,7 +50,62 @@ export function useSpectrogram(): UseSpectrogramReturn {
   }, []);
 
   /**
+   * Load spectrogram from persistent storage (IndexedDB)
+   * Use this to restore spectrograms after page reload
+   * @param filePath - Audio file path
+   * @param width - Display width (default: 200)
+   * @param height - Display height (default: 128)
+   * @returns True if spectrogram was loaded from persistence
+   */
+  const loadFromPersistence = useCallback(async (
+    filePath: string,
+    width: number = 200,
+    height: number = 128
+  ): Promise<boolean> => {
+    if (!isMountedRef.current) {
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // First check memory cache
+      const cached = visualizationCache.getSpectrogram(filePath, width, height);
+      if (cached) {
+        if (isMountedRef.current) {
+          setSpectrogramData(cached);
+          setIsLoading(false);
+        }
+        return true;
+      }
+
+      // Try loading from IndexedDB
+      const persisted = await visualizationCache.loadSpectrogramFromPersistence(filePath, width, height);
+      if (persisted && isMountedRef.current) {
+        setSpectrogramData(persisted);
+        setIsLoading(false);
+        return true;
+      }
+
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+      return false;
+    } catch (err) {
+      if (isMountedRef.current) {
+        const error = err instanceof Error ? err : new Error('Failed to load spectrogram from persistence');
+        setError(error);
+        setIsLoading(false);
+        console.error('Spectrogram persistence load error:', error);
+      }
+      return false;
+    }
+  }, []);
+
+  /**
    * Generate spectrogram data from AudioBuffer using FFT analysis (background processing)
+   * First tries to load from persistent storage (IndexedDB)
    * @param audioBuffer - Web Audio API AudioBuffer
    * @param filePath - File path for cache key
    * @param width - Number of time slices (default: 200)
@@ -69,11 +126,21 @@ export function useSpectrogram(): UseSpectrogramReturn {
     setError(null);
 
     try {
-      // Check cache first
+      // Check memory cache first
       const cached = visualizationCache.getSpectrogram(filePath, width, height);
       if (cached) {
         if (isMountedRef.current) {
           setSpectrogramData(cached);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Try loading from IndexedDB persistence
+      const persisted = await visualizationCache.loadSpectrogramFromPersistence(filePath, width, height);
+      if (persisted) {
+        if (isMountedRef.current) {
+          setSpectrogramData(persisted);
           setIsLoading(false);
         }
         return;
@@ -92,7 +159,7 @@ export function useSpectrogram(): UseSpectrogramReturn {
 
       // Only update state if this is still the current request and component is mounted
       if (isMountedRef.current && currentRequestRef.current === requestId) {
-        // Store in centralized cache
+        // Store in centralized cache (also persists to IndexedDB)
         visualizationCache.setSpectrogram(filePath, width, height, spectrogram);
 
         setSpectrogramData(spectrogram);
@@ -129,6 +196,7 @@ export function useSpectrogram(): UseSpectrogramReturn {
     isLoading,
     error,
     generateSpectrogram,
+    loadFromPersistence,
     clearSpectrogram,
     cancelGeneration,
   };

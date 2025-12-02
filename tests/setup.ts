@@ -2,6 +2,7 @@
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import 'fake-indexeddb/auto';
 
 // Mock react-window for testing (v2 API)
 vi.mock('react-window', () => {
