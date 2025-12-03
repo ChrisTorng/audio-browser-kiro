@@ -380,9 +380,22 @@ export class VisualizationTaskQueue {
       task.progress = 10;
       this.notifyProgress(task);
 
-      // Check cache first
-      const cachedWaveform = visualizationCache.getWaveform(task.filePath, 200);
-      const cachedSpectrogram = visualizationCache.getSpectrogram(task.filePath, 200, 32);
+      // Check memory cache first
+      let cachedWaveform = visualizationCache.getWaveform(task.filePath, 200);
+      let cachedSpectrogram = visualizationCache.getSpectrogram(task.filePath, 200, 32);
+
+      // If not in memory cache, try loading from IndexedDB persistence
+      if (!cachedWaveform || !cachedSpectrogram) {
+        // Initialize persistence if needed
+        await visualizationCache.initializePersistence();
+        
+        if (!cachedWaveform) {
+          cachedWaveform = await visualizationCache.loadWaveformFromPersistence(task.filePath, 200);
+        }
+        if (!cachedSpectrogram) {
+          cachedSpectrogram = await visualizationCache.loadSpectrogramFromPersistence(task.filePath, 200, 32);
+        }
+      }
 
       console.log(`[TaskQueue] 📦 Cache check for ${task.filePath}:`, {
         waveform: cachedWaveform ? 'cached' : 'not cached',
