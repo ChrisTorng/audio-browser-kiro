@@ -18,6 +18,7 @@ export interface UseVirtualScrollOptimizationReturn {
   isItemVisible: (index: number) => boolean;
   isItemInOverscan: (index: number) => boolean;
   updateScrollPosition: (scrollTop: number) => void;
+  updateVisibleRange: (visibleRows: { startIndex: number; stopIndex: number }, allRows: { startIndex: number; stopIndex: number }) => void;
 }
 
 /**
@@ -120,6 +121,35 @@ export function useVirtualScrollOptimization(
   );
 
   /**
+   * Update visible range directly from react-window's onRowsRendered callback
+   * This is more accurate than calculating from scroll position
+   */
+  const updateVisibleRange = useCallback(
+    (visibleRows: { startIndex: number; stopIndex: number }, allRows: { startIndex: number; stopIndex: number }) => {
+      const newRange: VisibleRange = {
+        startIndex: visibleRows.startIndex,
+        endIndex: visibleRows.stopIndex,
+        overscanStartIndex: allRows.startIndex,
+        overscanEndIndex: allRows.stopIndex,
+      };
+      
+      // Only update state if the range actually changed
+      setVisibleRange((prevRange) => {
+        if (
+          prevRange.startIndex === newRange.startIndex &&
+          prevRange.endIndex === newRange.endIndex &&
+          prevRange.overscanStartIndex === newRange.overscanStartIndex &&
+          prevRange.overscanEndIndex === newRange.overscanEndIndex
+        ) {
+          return prevRange;
+        }
+        return newRange;
+      });
+    },
+    []
+  );
+
+  /**
    * Initialize visible range on mount or when options change
    */
   useEffect(() => {
@@ -132,6 +162,7 @@ export function useVirtualScrollOptimization(
     isItemVisible,
     isItemInOverscan,
     updateScrollPosition,
+    updateVisibleRange,
   };
 }
 

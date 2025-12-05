@@ -99,11 +99,12 @@ export function AudioTree({
   });
 
   /**
-   * Handle scroll events
+   * Handle rows rendered events from react-window
+   * Updates the visible range based on what react-window actually renders
    */
-  const handleScroll = useCallback(
-    (props: { scrollOffset: number; scrollUpdateWasRequested: boolean }) => {
-      virtualScroll.updateScrollPosition(props.scrollOffset);
+  const handleRowsRendered = useCallback(
+    (visibleRows: { startIndex: number; stopIndex: number }, allRows: { startIndex: number; stopIndex: number }) => {
+      virtualScroll.updateVisibleRange(visibleRows, allRows);
     },
     [virtualScroll]
   );
@@ -230,6 +231,7 @@ export function AudioTree({
         defaultHeight={height}
         overscanCount={5}
         rowProps={{}}
+        onRowsRendered={handleRowsRendered}
       />
     </div>
   );
