@@ -200,6 +200,20 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions): Us
       return;
     }
 
+    // Check if focus is on an input element (e.g., FilterBar input, textarea)
+    // If so, allow normal input behavior and don't handle navigation keys
+    const activeElement = document.activeElement;
+    const isInputFocused = activeElement && (
+      activeElement.tagName === 'INPUT' ||
+      activeElement.tagName === 'TEXTAREA' ||
+      activeElement.getAttribute('contenteditable') === 'true'
+    );
+
+    if (isInputFocused) {
+      // Don't intercept keyboard events when user is typing in an input field
+      return;
+    }
+
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();

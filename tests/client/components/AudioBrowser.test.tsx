@@ -130,11 +130,52 @@ describe('AudioBrowser', () => {
     const filterInput = screen.getByPlaceholderText('Filter by name or description...');
     fireEvent.change(filterInput, { target: { value: 'album1' } });
 
-    // Wait for filter to apply (debounced)
+    // Wait for filter to apply (debounced - 300ms by default)
     await waitFor(() => {
       // Should show filtered results - album1 directory
       expect(screen.getByText('album1')).toBeInTheDocument();
-    }, { timeout: 200 });
+    }, { timeout: 500 });
+  });
+
+  it('filters with consecutive letters and expands root directory', async () => {
+    // This test verifies the fix for the bug where filtering with consecutive letters
+    // (like "as" to find "Bass.mp3") would not expand the root directory
+    const treeWithNestedFiles: DirectoryTree = {
+      name: 'music',
+      path: '.',
+      files: [],
+      subdirectories: [
+        {
+          name: 'album',
+          path: 'album',
+          files: [
+            { name: 'Bass.mp3', path: 'album/Bass.mp3', size: 1024 },
+            { name: 'Drums.mp3', path: 'album/Drums.mp3', size: 2048 },
+          ],
+          subdirectories: [],
+          totalFileCount: 2,
+        },
+      ],
+      totalFileCount: 2,
+    };
+
+    vi.mocked(audioBrowserAPI.getTree).mockResolvedValue(treeWithNestedFiles);
+
+    renderWithProviders(<AudioBrowser />);
+
+    await waitFor(() => {
+      expect(screen.getByText('music')).toBeInTheDocument();
+    });
+
+    // Filter with consecutive letters that match part of a filename
+    const filterInput = screen.getByPlaceholderText('Filter by name or description...');
+    fireEvent.change(filterInput, { target: { value: 'as' } });
+
+    // Wait for filter to apply - should expand root and show nested folder with matching file
+    await waitFor(() => {
+      expect(screen.getByText('album')).toBeInTheDocument();
+      expect(screen.getByText('1 file')).toBeInTheDocument(); // Only Bass.mp3 matches
+    }, { timeout: 500 });
   });
 
   it('filters from all items including collapsed folders', async () => {
@@ -188,12 +229,12 @@ describe('AudioBrowser', () => {
     const filterInput = screen.getByPlaceholderText('Filter by name or description...');
     fireEvent.change(filterInput, { target: { value: 'song1' } });
 
-    // Wait for filter to apply and auto-expand parent folders
+    // Wait for filter to apply and auto-expand parent folders (debounced - 300ms by default)
     await waitFor(() => {
       // Should auto-expand parent folders and show the nested folder
       expect(screen.getByText('rock')).toBeInTheDocument();
       expect(screen.getByText('classic')).toBeInTheDocument();
-    }, { timeout: 200 });
+    }, { timeout: 500 });
   });
 
   it('auto-expands all parent folders of matching files', async () => {
@@ -243,12 +284,12 @@ describe('AudioBrowser', () => {
     const filterInput = screen.getByPlaceholderText('Filter by name or description...');
     fireEvent.change(filterInput, { target: { value: 'deep' } });
 
-    // Wait for filter to apply and auto-expand all parent folders
+    // Wait for filter to apply and auto-expand all parent folders (debounced - 300ms by default)
     await waitFor(() => {
       expect(screen.getByText('level1')).toBeInTheDocument();
       expect(screen.getByText('level2')).toBeInTheDocument();
       expect(screen.getByText('level3')).toBeInTheDocument();
-    }, { timeout: 200 });
+    }, { timeout: 500 });
   });
 
   it('shows all contents when folder name matches filter', async () => {
@@ -293,7 +334,7 @@ describe('AudioBrowser', () => {
     const filterInput = screen.getByPlaceholderText('Filter by name or description...');
     fireEvent.change(filterInput, { target: { value: 'favorites' } });
 
-    // Wait for filter to apply
+    // Wait for filter to apply (debounced - 300ms by default)
     await waitFor(() => {
       // Should show the matching folder
       expect(screen.getByText('favorites')).toBeInTheDocument();
@@ -301,7 +342,7 @@ describe('AudioBrowser', () => {
       expect(screen.queryByText('other')).not.toBeInTheDocument();
       // Result count should show all 3 files in favorites folder
       expect(screen.getByText('3 files')).toBeInTheDocument();
-    }, { timeout: 200 });
+    }, { timeout: 500 });
   });
 
   it('filters by rating from all items including collapsed', async () => {
@@ -354,11 +395,11 @@ describe('AudioBrowser', () => {
     const ratingSelect = screen.getByLabelText('Rating filter');
     fireEvent.change(ratingSelect, { target: { value: '3' } });
 
-    // Wait for filter to apply and auto-expand parent folder
+    // Wait for filter to apply and auto-expand parent folder (debounced - 300ms by default)
     await waitFor(() => {
       expect(screen.getByText('rated')).toBeInTheDocument();
       expect(screen.getByText('1 file')).toBeInTheDocument();
-    }, { timeout: 200 });
+    }, { timeout: 500 });
   });
 
   it('displays directory tree', async () => {

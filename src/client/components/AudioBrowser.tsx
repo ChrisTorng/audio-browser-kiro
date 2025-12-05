@@ -144,7 +144,13 @@ export function AudioBrowser() {
     // Walk up the tree by removing the last segment
     while (currentPath) {
       const lastSlash = currentPath.lastIndexOf('/');
-      if (lastSlash === -1) break;
+      if (lastSlash === -1) {
+        // No more slashes - add root directory if not already at root
+        if (currentPath !== '.' && currentPath !== '') {
+          parents.push('.');
+        }
+        break;
+      }
       
       currentPath = currentPath.substring(0, lastSlash);
       if (currentPath) {

@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AudioTree, TreeItem } from '../../../src/client/components/AudioTree';
+import { AudioMetadataProvider } from '../../../src/client/contexts/AudioMetadataContext';
+
+// Helper function to render with required providers
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <AudioMetadataProvider>
+      {ui}
+    </AudioMetadataProvider>
+  );
+};
 
 describe('AudioTree', () => {
   const mockItems: TreeItem[] = [
@@ -46,7 +56,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    render(
+    renderWithProviders(
       <AudioTree
         items={mockItems}
         selectedIndex={-1}
@@ -68,7 +78,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    render(
+    renderWithProviders(
       <AudioTree
         items={mockItems}
         selectedIndex={-1}
@@ -88,7 +98,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    render(
+    renderWithProviders(
       <AudioTree
         items={mockItems}
         selectedIndex={-1}
@@ -109,7 +119,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    render(
+    renderWithProviders(
       <AudioTree
         items={mockItems}
         selectedIndex={1}
@@ -127,7 +137,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    render(
+    renderWithProviders(
       <AudioTree
         items={mockItems}
         selectedIndex={-1}
@@ -147,7 +157,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    render(
+    renderWithProviders(
       <AudioTree
         items={[]}
         selectedIndex={-1}
@@ -163,7 +173,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <AudioTree
         items={mockItems}
         selectedIndex={-1}
@@ -184,12 +194,14 @@ describe('AudioTree', () => {
     ];
 
     rerender(
-      <AudioTree
-        items={collapsedItems}
-        selectedIndex={-1}
-        onItemClick={onItemClick}
-        onExpandToggle={onExpandToggle}
-      />
+      <AudioMetadataProvider>
+        <AudioTree
+          items={collapsedItems}
+          selectedIndex={-1}
+          onItemClick={onItemClick}
+          onExpandToggle={onExpandToggle}
+        />
+      </AudioMetadataProvider>
     );
 
     // Check collapsed icon
@@ -200,7 +212,7 @@ describe('AudioTree', () => {
     const onItemClick = vi.fn();
     const onExpandToggle = vi.fn();
 
-    render(
+    renderWithProviders(
       <AudioTree
         items={mockItems}
         selectedIndex={-1}

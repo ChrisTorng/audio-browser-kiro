@@ -947,4 +947,146 @@ describe('useKeyboardNavigation', () => {
     expect(onTogglePlay).toHaveBeenCalledTimes(1);
     expect(event2.preventDefault).toHaveBeenCalled();
   });
+
+  describe('Input focus handling', () => {
+    it('does not handle keyboard events when INPUT element is focused', () => {
+      const onTogglePlay = vi.fn();
+      const onRating = vi.fn();
+      const { result } = renderHook(() =>
+        useKeyboardNavigation({ items: mockItems, onTogglePlay, onRating })
+      );
+
+      // Create and focus an input element
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      input.focus();
+
+      // Try space key
+      const spaceEvent = new KeyboardEvent('keydown', { key: ' ' });
+      spaceEvent.preventDefault = vi.fn();
+
+      act(() => {
+        result.current.handleKeyDown(spaceEvent as any);
+      });
+
+      expect(onTogglePlay).not.toHaveBeenCalled();
+      expect(spaceEvent.preventDefault).not.toHaveBeenCalled();
+
+      // Try number key for rating
+      const numberEvent = new KeyboardEvent('keydown', { key: '1' });
+      numberEvent.preventDefault = vi.fn();
+
+      act(() => {
+        result.current.handleKeyDown(numberEvent as any);
+      });
+
+      expect(onRating).not.toHaveBeenCalled();
+      expect(numberEvent.preventDefault).not.toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(input);
+    });
+
+    it('does not handle keyboard events when TEXTAREA element is focused', () => {
+      const onTogglePlay = vi.fn();
+      const { result } = renderHook(() =>
+        useKeyboardNavigation({ items: mockItems, onTogglePlay })
+      );
+
+      // Create and focus a textarea element
+      const textarea = document.createElement('textarea');
+      document.body.appendChild(textarea);
+      textarea.focus();
+
+      // Try space key
+      const event = new KeyboardEvent('keydown', { key: ' ' });
+      event.preventDefault = vi.fn();
+
+      act(() => {
+        result.current.handleKeyDown(event as any);
+      });
+
+      expect(onTogglePlay).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(textarea);
+    });
+
+    it('does not handle arrow keys when INPUT element is focused', () => {
+      const onSelect = vi.fn();
+      const { result } = renderHook(() =>
+        useKeyboardNavigation({ items: mockItems, onSelect })
+      );
+
+      // Create and focus an input element
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      input.focus();
+
+      // Try arrow down key
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+      event.preventDefault = vi.fn();
+
+      act(() => {
+        result.current.handleKeyDown(event as any);
+      });
+
+      // Selection should not change
+      expect(result.current.selectedIndex).toBe(0);
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(input);
+    });
+
+    it('does not handle contenteditable elements', () => {
+      const onTogglePlay = vi.fn();
+      const { result } = renderHook(() =>
+        useKeyboardNavigation({ items: mockItems, onTogglePlay })
+      );
+
+      // Create and focus a contenteditable element
+      const div = document.createElement('div');
+      div.setAttribute('contenteditable', 'true');
+      document.body.appendChild(div);
+      div.focus();
+
+      // Try space key
+      const event = new KeyboardEvent('keydown', { key: ' ' });
+      event.preventDefault = vi.fn();
+
+      act(() => {
+        result.current.handleKeyDown(event as any);
+      });
+
+      expect(onTogglePlay).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(div);
+    });
+
+    it('handles keyboard events normally when no input is focused', () => {
+      const onTogglePlay = vi.fn();
+      const { result } = renderHook(() =>
+        useKeyboardNavigation({ items: mockItems, onTogglePlay })
+      );
+
+      // Make sure no input is focused (focus on body)
+      document.body.focus();
+
+      // Try space key
+      const event = new KeyboardEvent('keydown', { key: ' ' });
+      event.preventDefault = vi.fn();
+
+      act(() => {
+        result.current.handleKeyDown(event as any);
+      });
+
+      expect(onTogglePlay).toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalled();
+    });
+  });
 });

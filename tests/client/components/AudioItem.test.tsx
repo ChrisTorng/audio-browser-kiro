@@ -167,10 +167,11 @@ describe('AudioItem', () => {
       expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
     });
 
-    // Verify correct parameters (filePath and audioUrl)
+    // Verify correct parameters (filePath, audioUrl, and priority)
     expect(mockLoadVisualization).toHaveBeenCalledWith(
       mockFile.path,
-      `/api/audio/${encodeURIComponent(mockFile.path)}`
+      `/api/audio/${encodeURIComponent(mockFile.path)}`,
+      'normal'
     );
   });
 
@@ -217,7 +218,8 @@ describe('AudioItem', () => {
     // Verify it loaded the new file
     expect(mockLoadVisualization).toHaveBeenLastCalledWith(
       newFile.path,
-      `/api/audio/${encodeURIComponent(newFile.path)}`
+      `/api/audio/${encodeURIComponent(newFile.path)}`,
+      'normal'
     );
   });
 });
