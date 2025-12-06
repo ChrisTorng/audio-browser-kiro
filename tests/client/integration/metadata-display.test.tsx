@@ -18,6 +18,16 @@ vi.mock('../../../src/client/hooks', () => ({
     loadVisualization: mockLoadVisualization,
     clearVisualization: mockClearVisualization,
   })),
+  useWaveform: vi.fn(() => ({
+    imageUrl: null,
+    isLoading: false,
+    error: null,
+  })),
+  useSpectrogram: vi.fn(() => ({
+    imageUrl: null,
+    isLoading: false,
+    error: null,
+  })),
 }));
 
 // Import components AFTER mocks

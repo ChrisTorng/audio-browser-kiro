@@ -11,6 +11,9 @@ export interface UseSpectrogramResult {
   error: Error | null;
 }
 
+// Global cache for spectrogram URLs to avoid re-fetching and flickering
+const spectrogramUrlCache = new Map<string, string>();
+
 /**
  * Custom hook for fetching spectrogram image from server
  * @param filePath - Audio file path
@@ -21,12 +24,17 @@ export function useSpectrogram(filePath: string | null): UseSpectrogramResult {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const imageUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Reset state when filePath changes
+    // Don't reset state when filePath becomes null - keep showing last image
     if (!filePath) {
-      setImageUrl(null);
+      return;
+    }
+
+    // Check cache first
+    const cachedUrl = spectrogramUrlCache.get(filePath);
+    if (cachedUrl) {
+      setImageUrl(cachedUrl);
       setIsLoading(false);
       setError(null);
       return;
@@ -37,12 +45,6 @@ export function useSpectrogram(filePath: string | null): UseSpectrogramResult {
       abortControllerRef.current.abort();
     }
 
-    // Revoke previous object URL
-    if (imageUrlRef.current) {
-      URL.revokeObjectURL(imageUrlRef.current);
-      imageUrlRef.current = null;
-    }
-
     // Create new abort controller
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -50,8 +52,8 @@ export function useSpectrogram(filePath: string | null): UseSpectrogramResult {
     // Fetch spectrogram
     const fetchSpectrogram = async () => {
       try {
-        setIsLoading(true);
         setError(null);
+        setIsLoading(true);
 
         const blob = await audioBrowserAPI.getSpectrogram(filePath);
 
@@ -62,7 +64,8 @@ export function useSpectrogram(filePath: string | null): UseSpectrogramResult {
 
         // Create object URL from blob
         const url = URL.createObjectURL(blob);
-        imageUrlRef.current = url;
+        // Store in cache
+        spectrogramUrlCache.set(filePath, url);
         setImageUrl(url);
         setIsLoading(false);
       } catch (err) {
@@ -83,10 +86,7 @@ export function useSpectrogram(filePath: string | null): UseSpectrogramResult {
     // Cleanup function
     return () => {
       abortController.abort();
-      if (imageUrlRef.current) {
-        URL.revokeObjectURL(imageUrlRef.current);
-        imageUrlRef.current = null;
-      }
+      // Don't revoke URLs - keep them in cache to avoid flickering
     };
   }, [filePath]);
 
