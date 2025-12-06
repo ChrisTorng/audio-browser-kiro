@@ -85,11 +85,39 @@ export class VisualizationTaskQueue {
     type: TaskType = 'both',
     priority: TaskPriority = 'normal'
   ): string {
+    // Check if there's already a pending or running task for this file
+    const existingTask = this.findTaskForFile(filePath);
+    
+    if (existingTask) {
+      // If task is already running or pending, just update priority if higher
+      if (existingTask.status === 'pending' || existingTask.status === 'running') {
+        const priorityOrder: Record<TaskPriority, number> = { high: 0, normal: 1, low: 2 };
+        if (priorityOrder[priority] < priorityOrder[existingTask.priority]) {
+          console.log(`[TaskQueue] ⬆️ Upgrading priority for existing task: ${filePath} (${existingTask.priority} -> ${priority})`);
+          existingTask.priority = priority;
+        } else {
+          console.log(`[TaskQueue] ♻️ Reusing existing task: ${filePath} (Status: ${existingTask.status}, Priority: ${existingTask.priority})`);
+        }
+        return existingTask.id;
+      }
+    }
+
     // Generate unique task ID
     const taskId = `${filePath}-${type}-${Date.now()}`;
+    
+    console.log(`[TaskQueue] ➕ Adding new task: ${filePath} (Priority: ${priority}, Type: ${type})`);
 
-    // Cancel existing task for the same file if any
-    this.cancelTasksForFile(filePath);
+    // Cancel existing completed/failed/cancelled tasks for the same file
+    // (but not pending/running tasks, they were already checked above)
+    const tasksToCancel: string[] = [];
+    this.tasks.forEach((task) => {
+      if (task.filePath === filePath && 
+          task.status !== 'pending' && 
+          task.status !== 'running') {
+        tasksToCancel.push(task.id);
+      }
+    });
+    tasksToCancel.forEach((id) => this.cancelTask(id));
 
     // Create new task
     const task: VisualizationTask = {
@@ -232,6 +260,21 @@ export class VisualizationTaskQueue {
       }
     });
     return tasks;
+  }
+
+  /**
+   * Find active task (pending or running) for a specific file
+   * @param filePath - File path
+   * @returns Active task or undefined
+   */
+  private findTaskForFile(filePath: string): VisualizationTask | undefined {
+    for (const task of this.tasks.values()) {
+      if (task.filePath === filePath && 
+          (task.status === 'pending' || task.status === 'running')) {
+        return task;
+      }
+    }
+    return undefined;
   }
 
   /**
@@ -413,6 +456,7 @@ export class VisualizationTaskQueue {
           task.progress = 20;
           this.notifyProgress(task);
 
+          console.log(`[TaskQueue] 📥 Downloading audio: ${task.filePath}`);
           const response = await fetch(task.audioUrl, {
             signal: task.abortController.signal,
             cache: 'force-cache',
@@ -423,7 +467,7 @@ export class VisualizationTaskQueue {
           }
 
           const arrayBuffer = await response.arrayBuffer();
-
+          console.log(`[TaskQueue] ✅ Audio download completed: ${task.filePath}`);
 
           task.progress = 40;
           this.notifyProgress(task);
@@ -441,8 +485,10 @@ export class VisualizationTaskQueue {
         // Generate visualizations based on task type
         if (task.type === 'waveform' || task.type === 'both') {
           if (!cachedWaveform) {
+            console.log(`[TaskQueue] 📊 Generating waveform: ${task.filePath}`);
             waveformData = await waveformGenerator.generateFromAudioBufferAsync(audioBuffer, 200);
             visualizationCache.setWaveform(task.filePath, 200, waveformData);
+            console.log(`[TaskQueue] ✅ Waveform generation completed: ${task.filePath}`);
           } else {
             waveformData = cachedWaveform;
           }
@@ -452,12 +498,14 @@ export class VisualizationTaskQueue {
 
         if (task.type === 'spectrogram' || task.type === 'both') {
           if (!cachedSpectrogram) {
+            console.log(`[TaskQueue] 🎵 Generating spectrogram: ${task.filePath} (Task ID: ${task.id.slice(-13)})`);
             spectrogramData = await spectrogramGenerator.generateFromAudioBuffer(
               audioBuffer,
               200,
               32
             );
             visualizationCache.setSpectrogram(task.filePath, 200, 32, spectrogramData);
+            console.log(`[TaskQueue] ✅ Spectrogram generation completed: ${task.filePath} (Task ID: ${task.id.slice(-13)})`);
           } else {
             spectrogramData = cachedSpectrogram;
           }

@@ -293,5 +293,38 @@ describe('VisualizationTaskQueue', () => {
       expect(task2).toBeDefined();
       expect(task2?.priority).toBe('high');
     });
+
+    it('should not create duplicate tasks for same file when task is pending or running', () => {
+      // Add first task
+      const taskId1 = taskQueue.addTask('/path/to/file.mp3', '/api/audio/file.mp3', 'both', 'normal');
+      
+      // Try to add another task for the same file immediately
+      const taskId2 = taskQueue.addTask('/path/to/file.mp3', '/api/audio/file.mp3', 'both', 'normal');
+      
+      // Should return the same task ID (no duplicate created)
+      expect(taskId1).toBe(taskId2);
+      
+      // Should only have one task
+      const stats = taskQueue.getQueueStats();
+      expect(stats.total).toBeLessThanOrEqual(1); // May be 0 if task completed or 1 if still pending
+    });
+
+    it('should upgrade priority when adding duplicate task with higher priority', () => {
+      // Add first task with normal priority
+      const taskId1 = taskQueue.addTask('/path/to/file.mp3', '/api/audio/file.mp3', 'both', 'normal');
+      
+      const task1 = taskQueue.getTask(taskId1);
+      expect(task1?.priority).toBe('normal');
+      
+      // Try to add same task with high priority
+      const taskId2 = taskQueue.addTask('/path/to/file.mp3', '/api/audio/file.mp3', 'both', 'high');
+      
+      // Should return same task ID
+      expect(taskId1).toBe(taskId2);
+      
+      // Priority should be upgraded
+      const task2 = taskQueue.getTask(taskId2);
+      expect(task2?.priority).toBe('high');
+    });
   });
 });

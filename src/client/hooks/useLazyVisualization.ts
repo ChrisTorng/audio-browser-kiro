@@ -49,6 +49,19 @@ export function useLazyVisualization(
   // Track current file path and task ID
   const currentFilePathRef = useRef<string | null>(null);
   const currentTaskIdRef = useRef<string | null>(null);
+  
+  // Track data state using refs to avoid re-creating loadVisualization
+  const waveformDataRef = useRef<number[] | null>(null);
+  const spectrogramDataRef = useRef<number[][] | null>(null);
+  
+  // Update refs when data changes
+  useEffect(() => {
+    waveformDataRef.current = waveformData;
+  }, [waveformData]);
+  
+  useEffect(() => {
+    spectrogramDataRef.current = spectrogramData;
+  }, [spectrogramData]);
 
   /**
    * Load visualization data for a file using task queue
@@ -67,8 +80,8 @@ export function useLazyVisualization(
         );
         
         if (cachedWaveform && cachedSpectrogram) {
-          // Update state with cached data if not already set
-          if (!waveformData || !spectrogramData) {
+          // Update state with cached data if not already set (use refs to avoid dependency)
+          if (!waveformDataRef.current || !spectrogramDataRef.current) {
             setWaveformData(cachedWaveform);
             setSpectrogramData(cachedSpectrogram);
             setIsLoading(false);
@@ -114,7 +127,7 @@ export function useLazyVisualization(
       );
       currentTaskIdRef.current = taskId;
     },
-    [waveformWidth, spectrogramWidth, spectrogramHeight, priority, waveformData, spectrogramData]
+    [waveformWidth, spectrogramWidth, spectrogramHeight, priority]
   );
 
   /**

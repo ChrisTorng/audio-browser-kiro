@@ -73,7 +73,10 @@ export const AudioItem = memo(function AudioItem({
       // Clear visualization when not visible to save memory
       visualization.clearVisualization();
     }
-  }, [isVisible, isSelected, file.path, visualization.loadVisualization, visualization.clearVisualization]);
+    // Note: Intentionally omit visualization.loadVisualization and visualization.clearVisualization
+    // from dependencies to prevent unnecessary re-execution when component re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, isSelected, file.path]);
 
   // Memoize visualization data to prevent unnecessary re-renders
   const waveformData = useMemo(() => visualization.waveformData, [visualization.waveformData]);
@@ -168,52 +171,10 @@ export const AudioItem = memo(function AudioItem({
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  // Custom comparison function for memo
-  // Only re-render if these props change
-  
-  // CRITICAL: Minimize re-renders to prevent DescriptionField focus loss
-  // BUT: Allow re-renders when metadata might have changed
-  
-  // If file path changed, always re-render (different file)
-  if (prevProps.file.path !== nextProps.file.path) {
-    return false;
-  }
-  
-  // If selection state changed, always re-render
-  if (prevProps.isSelected !== nextProps.isSelected) {
-    return false;
-  }
-  
-  // If visibility changed, re-render (affects lazy loading)
-  if (prevProps.isVisible !== nextProps.isVisible) {
-    return false;
-  }
-  
-  // If level changed, re-render (affects indentation)
-  if (prevProps.level !== nextProps.level) {
-    return false;
-  }
-  
-  // If filterText changed, re-render (affects highlighting)
-  if (prevProps.filterText !== nextProps.filterText) {
-    return false;
-  }
-  
-  // If onClick handler changed, re-render
-  if (prevProps.onClick !== nextProps.onClick) {
-    return false;
-  }
-  
-  // If onEditStart or onEditComplete changed, re-render
-  if (prevProps.onEditStart !== nextProps.onEditStart || 
-      prevProps.onEditComplete !== nextProps.onEditComplete) {
-    return false;
-  }
-  
-  // All props are effectively the same, skip re-render
-  return true;
 });
+// Note: Removed custom memo comparison to allow visualization data updates to trigger re-renders
+// The component will re-render when internal hook state (waveformData, spectrogramData) changes
+// This ensures visualizations appear immediately after generation completes
 
 /**
  * Highlight text matching the filter
