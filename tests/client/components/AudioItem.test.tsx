@@ -18,27 +18,12 @@ const createMockBlob = () => {
 vi.mock('../../../src/client/services/api', () => ({
   audioBrowserAPI: {
     getAudioFile: vi.fn(() => Promise.resolve(createMockBlob())),
+    getWaveform: vi.fn(() => Promise.resolve(createMockBlob())),
+    getSpectrogram: vi.fn(() => Promise.resolve(createMockBlob())),
   },
 }));
 
-// Mock AudioContext
-const mockDecodeAudioData = vi.fn(() =>
-  Promise.resolve({
-    length: 44100,
-    sampleRate: 44100,
-    numberOfChannels: 2,
-    getChannelData: () => new Float32Array(44100),
-  })
-);
-
-global.AudioContext = vi.fn(() => ({
-  decodeAudioData: mockDecodeAudioData,
-})) as any;
-
 // Mock hooks
-const mockLoadVisualization = vi.fn();
-const mockClearVisualization = vi.fn();
-
 vi.mock('../../../src/client/hooks', () => ({
   useAudioMetadata: vi.fn(() => ({
     getMetadata: vi.fn(() => ({ rating: 2, description: 'Test description' })),
@@ -49,13 +34,15 @@ vi.mock('../../../src/client/hooks', () => ({
     isPlaying: false,
     progress: 0,
   })),
-  useLazyVisualization: vi.fn(() => ({
-    waveformData: null,
-    spectrogramData: null,
+  useWaveform: vi.fn(() => ({
+    imageUrl: null,
     isLoading: false,
     error: null,
-    loadVisualization: mockLoadVisualization,
-    clearVisualization: mockClearVisualization,
+  })),
+  useSpectrogram: vi.fn(() => ({
+    imageUrl: null,
+    isLoading: false,
+    error: null,
   })),
 }));
 
@@ -77,9 +64,6 @@ describe('AudioItem', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLoadVisualization.mockClear();
-    mockClearVisualization.mockClear();
-    mockDecodeAudioData.mockClear();
   });
 
   // Helper function to render with AudioMetadataProvider
@@ -153,73 +137,6 @@ describe('AudioItem', () => {
     expect(description).toBeInTheDocument();
   });
 
-  it('loads audio and generates visualizations when visible', async () => {
-    const { rerender } = renderWithProvider(<AudioItem {...defaultProps} isVisible={false} />);
-
-    // Initially not visible, should not load
-    expect(mockLoadVisualization).not.toHaveBeenCalled();
-
-    // Make item visible
-    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} isVisible={true} /></AudioMetadataProvider>);
-
-    // Wait for async operations
-    await waitFor(() => {
-      expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
-    });
-
-    // Verify correct parameters (filePath, audioUrl, and priority)
-    expect(mockLoadVisualization).toHaveBeenCalledWith(
-      mockFile.path,
-      `/api/audio/${encodeURIComponent(mockFile.path)}`,
-      'normal'
-    );
-  });
-
-  it('clears visualization when not visible', async () => {
-    const { rerender } = renderWithProvider(<AudioItem {...defaultProps} isVisible={true} />);
-
-    await waitFor(() => {
-      expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
-    });
-
-    // Make item not visible
-    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} isVisible={false} /></AudioMetadataProvider>);
-
-    // Should clear visualization
-    await waitFor(() => {
-      expect(mockClearVisualization).toHaveBeenCalled();
-    });
-  });
-
-  it('resets loaded state when file changes', async () => {
-    const { rerender } = renderWithProvider(<AudioItem {...defaultProps} isVisible={true} />);
-
-    await waitFor(() => {
-      expect(mockLoadVisualization).toHaveBeenCalledTimes(1);
-    });
-
-    // Change file and make not visible first
-    const newFile: AudioFile = {
-      name: 'new-song.mp3',
-      path: '/music/new-song.mp3',
-      size: 3145728,
-    };
-
-    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} file={newFile} isVisible={false} /></AudioMetadataProvider>);
-
-    // Make visible to trigger load
-    rerender(<AudioMetadataProvider><AudioItem {...defaultProps} file={newFile} isVisible={true} /></AudioMetadataProvider>);
-
-    // Should load new file
-    await waitFor(() => {
-      expect(mockLoadVisualization).toHaveBeenCalledTimes(2);
-    });
-
-    // Verify it loaded the new file
-    expect(mockLoadVisualization).toHaveBeenLastCalledWith(
-      newFile.path,
-      `/api/audio/${encodeURIComponent(newFile.path)}`,
-      'normal'
-    );
-  });
+  // Note: Visualization loading tests removed due to architecture change
+  // Visualizations are now loaded via server-side API instead of client-side generation
 });

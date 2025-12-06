@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useEffect, memo } from 'react';
+import { useCallback, useMemo, memo } from 'react';
 import { AudioFile } from '../../shared/types';
-import { useAudioPlayer, useLazyVisualization } from '../hooks';
+import { useWaveform, useSpectrogram } from '../hooks';
 import { useAudioMetadataContext } from '../contexts/AudioMetadataContext';
 import { StarRating } from './StarRating';
 import { WaveformDisplay } from './WaveformDisplay';
@@ -39,16 +39,9 @@ export const AudioItem = memo(function AudioItem({
   // Hooks
   const audioMetadata = useAudioMetadataContext();
   
-  // Use lazy visualization hook for on-demand loading
-  // Memoize options to prevent unnecessary re-initialization
-  const visualizationOptions = useMemo(() => ({
-    waveformWidth: 200,
-    spectrogramWidth: 200,
-    spectrogramHeight: 32,
-    priority: 'both' as const,
-  }), []);
-  
-  const visualization = useLazyVisualization(visualizationOptions);
+  // Use visualization hooks to fetch images from server
+  const waveform = useWaveform(isVisible ? file.path : null);
+  const spectrogram = useSpectrogram(isVisible ? file.path : null);
 
   // Get metadata for this file
   const metadata = useMemo(() => {
@@ -57,32 +50,6 @@ export const AudioItem = memo(function AudioItem({
 
   const rating = metadata?.rating || 0;
   const description = metadata?.description || '';
-
-  /**
-   * Load visualizations when item becomes visible
-   * This enables lazy loading and on-demand generation
-   * Selected items get high priority
-   */
-  useEffect(() => {
-    if (isVisible) {
-      const audioUrl = `/api/audio/${encodeURIComponent(file.path)}`;
-      // Use high priority for selected items, normal for others
-      const priority = isSelected ? 'high' : 'normal';
-      visualization.loadVisualization(file.path, audioUrl, priority);
-    } else {
-      // Clear visualization when not visible to save memory
-      visualization.clearVisualization();
-    }
-    // Note: Intentionally omit visualization.loadVisualization and visualization.clearVisualization
-    // from dependencies to prevent unnecessary re-execution when component re-renders
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVisible, isSelected, file.path]);
-
-  // Memoize visualization data to prevent unnecessary re-renders
-  const waveformData = useMemo(() => visualization.waveformData, [visualization.waveformData]);
-  const spectrogramData = useMemo(() => visualization.spectrogramData, [visualization.spectrogramData]);
-  const visualizationError = useMemo(() => visualization.error, [visualization.error]);
-  const visualizationLoading = useMemo(() => visualization.isLoading, [visualization.isLoading]);
 
   /**
    * Handle rating change
@@ -136,22 +103,22 @@ export const AudioItem = memo(function AudioItem({
         {/* Waveform */}
         <div className="audio-item__waveform">
           <WaveformDisplay
-            waveformData={waveformData}
+            imageUrl={waveform.imageUrl}
             width={200}
             height={32}
-            isLoading={visualizationLoading}
-            error={visualizationError}
+            isLoading={waveform.isLoading}
+            error={waveform.error}
           />
         </div>
 
         {/* Spectrogram */}
         <div className="audio-item__spectrogram">
           <SpectrogramDisplay
-            spectrogramData={spectrogramData}
+            imageUrl={spectrogram.imageUrl}
             width={200}
             height={32}
-            isLoading={visualizationLoading}
-            error={visualizationError}
+            isLoading={spectrogram.isLoading}
+            error={spectrogram.error}
           />
         </div>
 

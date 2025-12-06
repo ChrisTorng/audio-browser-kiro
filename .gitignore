@@ -26,8 +26,8 @@ data/*.sqlite
 Thumbs.db
 
 # Generated files
-waveforms/*
-!waveforms/.gitkeep
+cache/
+!cache/.gitkeep
 
 # Test coverage
 coverage/

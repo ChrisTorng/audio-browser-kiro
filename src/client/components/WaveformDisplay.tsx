@@ -1,10 +1,10 @@
-import { useEffect, useRef, memo } from 'react';
+import { memo } from 'react';
 
 /**
  * WaveformDisplay component props
  */
 export interface WaveformDisplayProps {
-  waveformData: number[] | null;
+  imageUrl: string | null;
   width?: number;
   height?: number;
   isLoading?: boolean;
@@ -13,47 +13,15 @@ export interface WaveformDisplayProps {
 
 /**
  * WaveformDisplay component
- * Displays audio waveform
+ * Displays audio waveform image from server
  */
 export const WaveformDisplay = memo(function WaveformDisplay({
-  waveformData,
+  imageUrl,
   width = 200,
   height = 40,
   isLoading = false,
   error = null,
 }: WaveformDisplayProps) {
-  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
-
-  /**
-   * Draw waveform on canvas
-   */
-  useEffect(() => {
-    const canvas = waveformCanvasRef.current;
-    if (!canvas || !waveformData || waveformData.length === 0) {
-      return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw waveform
-    const barWidth = Math.max(1, width / waveformData.length);
-    const centerY = height / 2;
-
-    ctx.fillStyle = '#4a90e2';
-
-    waveformData.forEach((amplitude, index) => {
-      const x = index * barWidth;
-      const barHeight = Math.max(1, amplitude * height * 0.9); // Use 90% of height for better visibility
-
-      // Draw bar from center
-      ctx.fillRect(x, centerY - barHeight / 2, Math.max(1, barWidth - 0.5), barHeight);
-    });
-  }, [waveformData, width, height]);
-
   if (error) {
     return (
       <div className="waveform-display waveform-display--error" style={{ width, height }}>
@@ -70,7 +38,7 @@ export const WaveformDisplay = memo(function WaveformDisplay({
     );
   }
 
-  if (!waveformData || waveformData.length === 0) {
+  if (!imageUrl) {
     return (
       <div className="waveform-display waveform-display--empty" style={{ width, height }}>
         <span className="waveform-display__empty-text">~</span>
@@ -80,11 +48,11 @@ export const WaveformDisplay = memo(function WaveformDisplay({
 
   return (
     <div className="waveform-display" style={{ width, height }}>
-      <canvas
-        ref={waveformCanvasRef}
-        width={width}
-        height={height}
-        className="waveform-display__canvas"
+      <img
+        src={imageUrl}
+        alt="Waveform"
+        className="waveform-display__image"
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
     </div>
   );

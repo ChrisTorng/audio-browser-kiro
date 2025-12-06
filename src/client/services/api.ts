@@ -71,6 +71,58 @@ export class AudioBrowserAPI {
   }
 
   /**
+   * Get waveform image for an audio file
+   * @param filePath - Relative path to audio file
+   * @returns Waveform image as Blob
+   */
+  async getWaveform(filePath: string): Promise<Blob> {
+    // Remove leading slash if present and encode the file path for URL
+    const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+    const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
+
+    const response = await this.fetchWithRetry<Response>(
+      `${this.baseUrl}/waveform/${encodedPath}`,
+      {
+        method: 'GET',
+        cache: 'force-cache',
+      },
+      false // Don't parse as JSON
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch waveform: ${response.statusText}`);
+    }
+
+    return await response.blob();
+  }
+
+  /**
+   * Get spectrogram image for an audio file
+   * @param filePath - Relative path to audio file
+   * @returns Spectrogram image as Blob
+   */
+  async getSpectrogram(filePath: string): Promise<Blob> {
+    // Remove leading slash if present and encode the file path for URL
+    const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+    const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
+
+    const response = await this.fetchWithRetry<Response>(
+      `${this.baseUrl}/spectrogram/${encodedPath}`,
+      {
+        method: 'GET',
+        cache: 'force-cache',
+      },
+      false // Don't parse as JSON
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch spectrogram: ${response.statusText}`);
+    }
+
+    return await response.blob();
+  }
+
+  /**
    * Get all metadata
    * @returns Record of file paths to metadata
    */

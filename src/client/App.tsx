@@ -5,17 +5,9 @@ import { ToastContainer } from './components/Toast';
 import { ToastProvider } from './contexts/ToastContext';
 import { AudioMetadataProvider } from './contexts/AudioMetadataContext';
 import { useToast } from './hooks/useToast';
-import { visualizationCache } from './utils/visualizationCache';
 
 function AppContent() {
   const toast = useToast();
-
-  // Initialize persistent storage on app start
-  useEffect(() => {
-    visualizationCache.initializePersistence().catch((error) => {
-      console.warn('Failed to initialize visualization persistence:', error);
-    });
-  }, []);
 
   // Handle global errors
   const handleError = (error: Error) => {

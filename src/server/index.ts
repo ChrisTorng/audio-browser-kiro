@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { registerScanRoutes } from './routes/scanRoutes.js';
 import { registerAudioRoutes } from './routes/audioRoutes.js';
 import { registerMetadataRoutes } from './routes/metadataRoutes.js';
+import { registerVisualizationRoutes } from './routes/visualizationRoutes.js';
 import { ConfigService } from './services/configService.js';
 import { ScanService } from './services/scanService.js';
 
@@ -225,6 +226,7 @@ if (isProduction) {
 await registerScanRoutes(fastify, scanService);
 await registerAudioRoutes(fastify);
 await registerMetadataRoutes(fastify);
+await registerVisualizationRoutes(fastify);
 
 // Health check endpoint
 fastify.get('/api/health', async () => {
