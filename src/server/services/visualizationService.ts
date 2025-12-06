@@ -21,6 +21,9 @@ export class VisualizationService {
   private cacheDir: string;
   private waveformDir: string;
   private spectrogramDir: string;
+  private placeholderDir: string;
+  private errorWaveformPath: string;
+  private errorSpectrogramPath: string;
 
   /**
    * Create a new VisualizationService
@@ -30,6 +33,9 @@ export class VisualizationService {
     this.cacheDir = cacheDir;
     this.waveformDir = path.join(cacheDir, 'waveforms');
     this.spectrogramDir = path.join(cacheDir, 'spectrograms');
+    this.placeholderDir = path.join(cacheDir, 'placeholders');
+    this.errorWaveformPath = path.join(this.placeholderDir, 'error-waveform.png');
+    this.errorSpectrogramPath = path.join(this.placeholderDir, 'error-spectrogram.png');
   }
 
   /**
@@ -81,20 +87,41 @@ export class VisualizationService {
       throw new Error(`Audio file not found: ${audioPath}`);
     }
 
-    // Generate waveform using ffmpeg
-    // showwavespic filter generates waveform visualization
-    await this.runFfmpeg([
-      '-i', audioPath,
-      '-filter_complex', 'showwavespic=s=800x200:colors=white',
-      '-frames:v', '1',
-      '-y',
-      cachePath
-    ]);
+    try {
+      // Generate waveform using ffmpeg
+      // showwavespic filter generates waveform visualization
+      await this.runFfmpeg([
+        '-i', audioPath,
+        '-filter_complex', 'showwavespic=s=800x200:colors=white',
+        '-frames:v', '1',
+        '-y',
+        cachePath
+      ]);
 
-    return {
-      imagePath: cachePath,
-      cached: false,
-    };
+      // Verify that the output file was actually created and is not empty
+      if (!existsSync(cachePath)) {
+        throw new Error('ffmpeg completed but output file was not created');
+      }
+
+      const stats = await fs.stat(cachePath);
+      if (stats.size === 0) {
+        // Remove empty file
+        await fs.unlink(cachePath);
+        throw new Error('ffmpeg created an empty output file');
+      }
+
+      return {
+        imagePath: cachePath,
+        cached: false,
+      };
+    } catch (error) {
+      // On error, create hard link to error placeholder
+      await this.createErrorPlaceholder(cachePath, 'waveform');
+      return {
+        imagePath: cachePath,
+        cached: false,
+      };
+    }
   }
 
   /**
@@ -121,21 +148,42 @@ export class VisualizationService {
       throw new Error(`Audio file not found: ${audioPath}`);
     }
 
-    // Generate spectrogram using ffmpeg
-    // showspectrumpic filter generates spectrogram visualization
-    // Display frequency range: 20Hz to 20KHz (human hearing range)
-    await this.runFfmpeg([
-      '-i', audioPath,
-      '-filter_complex', 'showspectrumpic=s=800x200:mode=combined:color=fire:scale=log:fscale=log:legend=0',
-      '-frames:v', '1',
-      '-y',
-      cachePath
-    ]);
+    try {
+      // Generate spectrogram using ffmpeg
+      // showspectrumpic filter generates spectrogram visualization
+      // Display frequency range: 20Hz to 20KHz (human hearing range)
+      await this.runFfmpeg([
+        '-i', audioPath,
+        '-filter_complex', 'showspectrumpic=s=800x200:mode=combined:color=fire:scale=log:fscale=log:legend=0',
+        '-frames:v', '1',
+        '-y',
+        cachePath
+      ]);
 
-    return {
-      imagePath: cachePath,
-      cached: false,
-    };
+      // Verify that the output file was actually created and is not empty
+      if (!existsSync(cachePath)) {
+        throw new Error('ffmpeg completed but output file was not created');
+      }
+
+      const stats = await fs.stat(cachePath);
+      if (stats.size === 0) {
+        // Remove empty file
+        await fs.unlink(cachePath);
+        throw new Error('ffmpeg created an empty output file');
+      }
+
+      return {
+        imagePath: cachePath,
+        cached: false,
+      };
+    } catch (error) {
+      // On error, create hard link to error placeholder
+      await this.createErrorPlaceholder(cachePath, 'spectrogram');
+      return {
+        imagePath: cachePath,
+        cached: false,
+      };
+    }
   }
 
   /**
@@ -195,6 +243,36 @@ export class VisualizationService {
       }
     } catch (error) {
       // Ignore errors
+    }
+  }
+
+  /**
+   * Create hard link to error placeholder image
+   * @param targetPath - Target path for the hard link
+   * @param type - Visualization type
+   */
+  private async createErrorPlaceholder(targetPath: string, type: 'waveform' | 'spectrogram'): Promise<void> {
+    const placeholderPath = type === 'waveform' ? this.errorWaveformPath : this.errorSpectrogramPath;
+    
+    try {
+      // Check if placeholder exists
+      if (!existsSync(placeholderPath)) {
+        throw new Error(`Error placeholder not found: ${placeholderPath}`);
+      }
+
+      // Create hard link (if target already exists, remove it first)
+      if (existsSync(targetPath)) {
+        await fs.unlink(targetPath);
+      }
+      
+      await fs.link(placeholderPath, targetPath);
+    } catch (error) {
+      // If hard link fails (e.g., cross-device), fall back to copy
+      try {
+        await fs.copyFile(placeholderPath, targetPath);
+      } catch (copyError) {
+        throw new Error(`Failed to create error placeholder: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 

@@ -17,7 +17,9 @@
     "test:coverage": "vitest --run --coverage",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "setup:placeholders": "node scripts/generate-placeholder-images.cjs",
+    "postinstall": "npm run setup:placeholders"
   },
   "keywords": [
     "audio",

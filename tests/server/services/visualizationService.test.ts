@@ -79,6 +79,47 @@ describe('VisualizationService', () => {
         service.generateWaveform(nonExistentPath, nonExistentRelative)
       ).rejects.toThrow();
     }, 10000);
+
+    it('should create error placeholder on generation failure', async () => {
+      // Use a corrupted or invalid audio file path that exists but can't be processed
+      // For this test, we'll use a text file pretending to be audio
+      const invalidAudioPath = path.join(testAudioRoot, 'invalid.wav');
+      const invalidRelative = 'invalid.wav';
+      
+      // Create a dummy invalid file
+      await fs.writeFile(invalidAudioPath, 'not a valid audio file');
+      
+      try {
+        const result = await service.generateWaveform(invalidAudioPath, invalidRelative);
+        
+        // Should still return a result (error placeholder)
+        expect(result).toBeDefined();
+        expect(result.imagePath).toBeDefined();
+        expect(existsSync(result.imagePath)).toBe(true);
+        
+        // Verify it's a valid PNG (the error placeholder)
+        const buffer = await fs.readFile(result.imagePath);
+        expect(buffer[0]).toBe(0x89);
+        expect(buffer[1]).toBe(0x50);
+        expect(buffer[2]).toBe(0x4e);
+        expect(buffer[3]).toBe(0x47);
+        
+        // Clean up
+        await fs.unlink(invalidAudioPath);
+        const cachePath = service.getCachedPath(invalidRelative, 'waveform');
+        if (existsSync(cachePath)) {
+          await fs.unlink(cachePath);
+        }
+      } catch (error) {
+        // Clean up even on failure
+        try {
+          await fs.unlink(invalidAudioPath);
+        } catch {
+          // Ignore
+        }
+        throw error;
+      }
+    }, 10000);
   });
 
   describe('generateSpectrogram', () => {
@@ -116,6 +157,46 @@ describe('VisualizationService', () => {
       await expect(
         service.generateSpectrogram(nonExistentPath, nonExistentRelative)
       ).rejects.toThrow();
+    }, 10000);
+
+    it('should create error placeholder on generation failure', async () => {
+      // Use a corrupted or invalid audio file path that exists but can't be processed
+      const invalidAudioPath = path.join(testAudioRoot, 'invalid-spec.wav');
+      const invalidRelative = 'invalid-spec.wav';
+      
+      // Create a dummy invalid file
+      await fs.writeFile(invalidAudioPath, 'not a valid audio file');
+      
+      try {
+        const result = await service.generateSpectrogram(invalidAudioPath, invalidRelative);
+        
+        // Should still return a result (error placeholder)
+        expect(result).toBeDefined();
+        expect(result.imagePath).toBeDefined();
+        expect(existsSync(result.imagePath)).toBe(true);
+        
+        // Verify it's a valid PNG (the error placeholder)
+        const buffer = await fs.readFile(result.imagePath);
+        expect(buffer[0]).toBe(0x89);
+        expect(buffer[1]).toBe(0x50);
+        expect(buffer[2]).toBe(0x4e);
+        expect(buffer[3]).toBe(0x47);
+        
+        // Clean up
+        await fs.unlink(invalidAudioPath);
+        const cachePath = service.getCachedPath(invalidRelative, 'spectrogram');
+        if (existsSync(cachePath)) {
+          await fs.unlink(cachePath);
+        }
+      } catch (error) {
+        // Clean up even on failure
+        try {
+          await fs.unlink(invalidAudioPath);
+        } catch {
+          // Ignore
+        }
+        throw error;
+      }
     }, 10000);
   });
 
