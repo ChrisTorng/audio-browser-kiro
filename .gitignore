@@ -6,11 +6,12 @@ build/
 
 # Database
 *.db
+*.db-*
+*.db-journal
 *.sqlite
 *.sqlite3
 data/*.db
 data/*.sqlite
-data/*.db-*
 !data/.gitkeep
 
 # IDE
@@ -31,6 +32,12 @@ waveforms/*
 # Test coverage
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+*.spec.ts.snap
+test-output.log
+*.test.db
+*.test.sqlite
 
 # Environment variables
 .env
