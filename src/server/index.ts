@@ -157,17 +157,10 @@ const scanService = new ScanService();
 
 // Load configuration and initialize scan service
 try {
-  console.log('🔧 Loading configuration...');
   await configService.loadConfig();
   
   const audioDirectories = configService.getAudioDirectories();
-  console.log(`📁 Audio directories configured: ${audioDirectories.length}`);
-  audioDirectories.forEach((dir, index) => {
-    const absolutePath = path.resolve(dir.path);
-    console.log(`   ${index + 1}. ${dir.displayName}: ${absolutePath}`);
-  });
   
-  console.log('🔍 Initializing scan service...');
   const scanStartTime = Date.now();
   await scanService.initialize(audioDirectories);
   const scanDuration = Date.now() - scanStartTime;
@@ -176,13 +169,6 @@ try {
   const tree = scanService.getTree();
   const fileCount = countAudioFiles(tree);
   const dirCount = countDirectories(tree);
-  
-  console.log('✅ Scan service initialized successfully');
-  console.log(`📊 Scan statistics:`);
-  console.log(`   - Audio files found: ${fileCount}`);
-  console.log(`   - Directories with audio: ${dirCount}`);
-  console.log(`   - Scan duration: ${scanDuration}ms`);
-  console.log(`   - Supported formats: ${scanService.getSupportedFormats().join(', ')}`);
   
   fastify.log.info({
     audioDirectories: audioDirectories.map(d => ({ 
@@ -198,10 +184,6 @@ try {
 } catch (error) {
   const err = error instanceof Error ? error : new Error(String(error));
   console.error('❌ Failed to initialize application:', err.message);
-  console.error('💡 Please check:');
-  console.error('   1. config.json exists in the project root');
-  console.error('   2. audioDirectories array in config.json is correctly configured');
-  console.error('   3. All audio directory paths exist and are accessible');
   fastify.log.fatal({ err }, 'Application initialization failed');
   process.exit(1);
 }

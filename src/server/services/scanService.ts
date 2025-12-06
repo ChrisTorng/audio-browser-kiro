@@ -30,7 +30,6 @@ export class ScanService {
    */
   async initialize(audioDirectories: AudioDirectory[]): Promise<void> {
     try {
-      console.log(`Starting scan of ${audioDirectories.length} audio director${audioDirectories.length === 1 ? 'y' : 'ies'}...`);
       const startTime = Date.now();
 
       // Scan and build merged tree (this will also cache the result)
@@ -38,9 +37,6 @@ export class ScanService {
 
       const duration = Date.now() - startTime;
       const fileCount = this.countFiles(tree);
-      console.log(
-        `Scan completed in ${duration}ms. Found ${fileCount} audio files.`
-      );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new Error(
@@ -103,12 +99,10 @@ export class ScanService {
     for (const audioDir of audioDirectories) {
       try {
         const absolutePath = path.resolve(audioDir.path);
-        console.log(`Scanning: ${audioDir.displayName} (${absolutePath})`);
 
         // Check if directory exists
         const stats = await fs.stat(absolutePath);
         if (!stats.isDirectory()) {
-          console.warn(`Skipping ${audioDir.path}: not a directory`);
           continue;
         }
 
@@ -130,9 +124,6 @@ export class ScanService {
           // Calculate total file count
           this.calculateTotalFileCount(dirNode);
           rootNode.subdirectories.push(dirNode);
-          console.log(`Added ${audioDir.displayName}: ${dirNode.totalFileCount} files`);
-        } else {
-          console.log(`Skipped ${audioDir.displayName}: no audio files found`);
         }
       } catch (error) {
         console.error(`Error scanning ${audioDir.displayName}:`, (error as Error).message);

@@ -30,15 +30,8 @@ export const WaveformDisplay = memo(function WaveformDisplay({
   useEffect(() => {
     const canvas = waveformCanvasRef.current;
     if (!canvas || !waveformData || waveformData.length === 0) {
-      if (!waveformData) {
-        console.log('[WaveformDisplay] No waveform data to display');
-      } else if (waveformData.length === 0) {
-        console.log('[WaveformDisplay] Empty waveform data array');
-      }
       return;
     }
-
-    console.log(`[WaveformDisplay] 🎨 Drawing waveform: ${waveformData.length} points`);
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -59,8 +52,6 @@ export const WaveformDisplay = memo(function WaveformDisplay({
       // Draw bar from center
       ctx.fillRect(x, centerY - barHeight / 2, Math.max(1, barWidth - 0.5), barHeight);
     });
-    
-    console.log('[WaveformDisplay] ✅ Waveform drawn successfully');
   }, [waveformData, width, height]);
 
   if (error) {

@@ -49,7 +49,6 @@ export class ConfigService {
       // Cache the config
       this.config = parsedConfig;
       
-      console.log(`Configuration loaded successfully from ${this.configPath}`);
       return this.config;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {

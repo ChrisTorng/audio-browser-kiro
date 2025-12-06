@@ -354,8 +354,6 @@ export class VisualizationTaskQueue {
    * @param task - Task to start
    */
   private async startTask(task: VisualizationTask): Promise<void> {
-    console.log(`[TaskQueue] 🚀 Starting task for: ${task.filePath}`);
-    
     // Mark as running
     task.status = 'running';
     task.startedAt = Date.now();
@@ -372,7 +370,6 @@ export class VisualizationTaskQueue {
 
       // Check if task was cancelled
       if (task.abortController.signal.aborted) {
-        console.log(`[TaskQueue] ❌ Task cancelled: ${task.filePath}`);
         throw new Error('Task cancelled');
       }
 
@@ -397,17 +394,11 @@ export class VisualizationTaskQueue {
         }
       }
 
-      console.log(`[TaskQueue] 📦 Cache check for ${task.filePath}:`, {
-        waveform: cachedWaveform ? 'cached' : 'not cached',
-        spectrogram: cachedSpectrogram ? 'cached' : 'not cached'
-      });
-
       let waveformData: number[] | undefined;
       let spectrogramData: number[][] | undefined;
 
       // If both are cached, use them
       if (cachedWaveform && cachedSpectrogram && task.type === 'both') {
-        console.log(`[TaskQueue] ✅ Using cached data for: ${task.filePath}`);
         waveformData = cachedWaveform;
         spectrogramData = cachedSpectrogram;
         task.progress = 100;
@@ -417,7 +408,6 @@ export class VisualizationTaskQueue {
         let audioBuffer = visualizationCache.getAudioBuffer(task.filePath);
 
         if (!audioBuffer) {
-          console.log(`[TaskQueue] 📥 Downloading audio: ${task.filePath}`);
           task.progress = 20;
           this.notifyProgress(task);
 
@@ -431,7 +421,7 @@ export class VisualizationTaskQueue {
           }
 
           const arrayBuffer = await response.arrayBuffer();
-          console.log(`[TaskQueue] ✅ Download complete: ${task.filePath} (${arrayBuffer.byteLength} bytes)`);
+
 
           task.progress = 40;
           this.notifyProgress(task);
@@ -441,9 +431,6 @@ export class VisualizationTaskQueue {
           audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
           visualizationCache.setAudioBuffer(task.filePath, audioBuffer);
           await audioContext.close();
-          console.log(`[TaskQueue] ✅ Audio decoded: ${task.filePath} (${audioBuffer.duration.toFixed(2)}s)`);
-        } else {
-          console.log(`[TaskQueue] 📦 Using cached audio buffer: ${task.filePath}`);
         }
 
         task.progress = 50;
@@ -452,13 +439,10 @@ export class VisualizationTaskQueue {
         // Generate visualizations based on task type
         if (task.type === 'waveform' || task.type === 'both') {
           if (!cachedWaveform) {
-            console.log(`[TaskQueue] 🌊 Generating waveform: ${task.filePath}`);
             waveformData = await waveformGenerator.generateFromAudioBufferAsync(audioBuffer, 200);
             visualizationCache.setWaveform(task.filePath, 200, waveformData);
-            console.log(`[TaskQueue] ✅ Waveform generated: ${task.filePath} (${waveformData.length} points)`);
           } else {
             waveformData = cachedWaveform;
-            console.log(`[TaskQueue] 📦 Using cached waveform: ${task.filePath}`);
           }
           task.progress = task.type === 'waveform' ? 100 : 75;
           this.notifyProgress(task);
@@ -466,37 +450,26 @@ export class VisualizationTaskQueue {
 
         if (task.type === 'spectrogram' || task.type === 'both') {
           if (!cachedSpectrogram) {
-            console.log(`[TaskQueue] 📊 Generating spectrogram: ${task.filePath}`);
             spectrogramData = await spectrogramGenerator.generateFromAudioBuffer(
               audioBuffer,
               200,
               32
             );
             visualizationCache.setSpectrogram(task.filePath, 200, 32, spectrogramData);
-            console.log(`[TaskQueue] ✅ Spectrogram generated: ${task.filePath} (${spectrogramData.length}x${spectrogramData[0]?.length || 0})`);
           } else {
             spectrogramData = cachedSpectrogram;
-            console.log(`[TaskQueue] 📦 Using cached spectrogram: ${task.filePath}`);
           }
           task.progress = 100;
           this.notifyProgress(task);
         }
       }
 
-      // Verify data before completion
-      if (!waveformData || !spectrogramData) {
-        console.error(`[TaskQueue] ⚠️ Missing data for ${task.filePath}:`, {
-          waveformData: waveformData ? `${waveformData.length} points` : 'null',
-          spectrogramData: spectrogramData ? `${spectrogramData.length}x${spectrogramData[0]?.length || 0}` : 'null'
-        });
-      }
+      // Verify data before completion (silently)
 
       // Mark as completed
       task.status = 'completed';
       task.completedAt = Date.now();
       this.runningTasks.delete(task.id);
-
-      console.log(`[TaskQueue] ✅ Task completed: ${task.filePath} (${task.completedAt - task.startedAt!}ms)`);
 
       // Notify completion
       this.notifyCompletion(task, { waveformData, spectrogramData });
@@ -556,12 +529,6 @@ export class VisualizationTaskQueue {
     task: VisualizationTask,
     result: { waveformData?: number[]; spectrogramData?: number[][] }
   ): void {
-    console.log(`[TaskQueue] 📢 Notifying completion for: ${task.filePath}`, {
-      waveformData: result.waveformData ? `${result.waveformData.length} points` : 'undefined',
-      spectrogramData: result.spectrogramData ? `${result.spectrogramData.length}x${result.spectrogramData[0]?.length || 0}` : 'undefined',
-      callbackCount: this.completionCallbacks.size
-    });
-    
     this.completionCallbacks.forEach((callback) => {
       try {
         callback(task, result);
