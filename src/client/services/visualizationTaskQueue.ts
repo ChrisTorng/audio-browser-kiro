@@ -123,7 +123,7 @@ export class VisualizationTaskQueue {
     const task = this.tasks.get(taskId);
     if (!task) return;
 
-    // Abort the task
+    // Abort the task silently
     task.abortController.abort();
     task.status = 'cancelled';
     task.completedAt = Date.now();
@@ -131,11 +131,13 @@ export class VisualizationTaskQueue {
     // Remove from running tasks
     this.runningTasks.delete(taskId);
 
-    // Remove from queue
+    // Remove from queue immediately (no delay needed for cancelled tasks)
     this.tasks.delete(taskId);
 
-    // Process next tasks
-    this.processQueue();
+    // Process next tasks only if this was a running task
+    if (this.runningTasks.size < this.maxConcurrent) {
+      this.processQueue();
+    }
   }
 
   /**
@@ -482,12 +484,13 @@ export class VisualizationTaskQueue {
       // Handle error
       const err = error instanceof Error ? error : new Error('Unknown error');
       
-      console.error(`[TaskQueue] ❌ Task error for ${task.filePath}:`, err.message);
-      
-      // Don't treat cancellation as error
+      // Don't treat cancellation as error - it's a normal queue management behavior
       if (err.message.includes('cancelled') || err.message.includes('aborted')) {
         task.status = 'cancelled';
+        // Silently handle cancellation - no error logging needed
       } else {
+        // Only log actual errors, not cancellations
+        console.error(`[TaskQueue] ❌ Task error for ${task.filePath}:`, err.message);
         task.status = 'failed';
         task.error = err;
         this.notifyError(task, err);
