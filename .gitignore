@@ -28,6 +28,8 @@ Thumbs.db
 # Generated files
 cache/
 !cache/.gitkeep
+!cache/placeholders/
+!cache/placeholders/*.png
 
 # Test coverage
 coverage/
