@@ -45,3 +45,6 @@ test-output.log
 
 # TypeScript
 *.tsbuildinfo
+
+# Test audios
+tests/audio
