@@ -145,6 +145,7 @@ npm test -- path/to/test.spec.ts
 npm install
 
 # 執行開發伺服器（前後端整合）
+# 注意：Agent 執行時，假定 npm run dev 一直執行中，不需再執行或停止。程式修改後會自動更新，若需網頁測試，直接開啟即可。
 npm run dev
 
 # 執行測試

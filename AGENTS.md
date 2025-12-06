@@ -50,6 +50,9 @@
      [此次 commit 的具體異動說明]
      ```
 
+### 開發環境假設 (Development Environment Assumptions)
+- **npm run dev**: 假定開發伺服器一直執行中，Agent 不需執行或停止它。程式修改後，伺服器會自動更新。若需要網頁測試，直接開啟即可。
+
 ## 4. 程式碼風格 (Coding Style)
 
 - **註解**: JSDoc/TSDoc 必須使用**英文**。
