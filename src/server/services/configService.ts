@@ -1,11 +1,22 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import JSON5 from 'json5';
+
+/**
+ * Audio directory configuration
+ */
+export interface AudioDirectory {
+  path: string;
+  displayName: string;
+}
 
 /**
  * Configuration interface
+ * Supports both legacy single directory and new multiple directories format
  */
 export interface Config {
-  audioDirectory: string;
+  audioDirectory?: string; // Legacy format (backward compatibility)
+  audioDirectories?: AudioDirectory[]; // New format (multiple directories)
 }
 
 /**
@@ -30,9 +41,9 @@ export class ConfigService {
       // Check if config file exists
       await fs.access(this.configPath);
       
-      // Read and parse config file
+      // Read and parse config file with JSON5 to support comments
       const configContent = await fs.readFile(this.configPath, 'utf-8');
-      const parsedConfig = JSON.parse(configContent);
+      const parsedConfig = JSON5.parse(configContent);
       
       // Validate config structure
       this.validateConfig(parsedConfig);
@@ -73,25 +84,91 @@ export class ConfigService {
 
     const cfg = config as Record<string, unknown>;
 
-    if (!('audioDirectory' in cfg)) {
+    // Check if either audioDirectory or audioDirectories exists
+    if (!('audioDirectory' in cfg) && !('audioDirectories' in cfg)) {
       throw new Error(
-        'Configuration must include "audioDirectory" field as a string'
+        'Configuration must include either "audioDirectory" or "audioDirectories" field'
       );
     }
 
-    if (typeof cfg.audioDirectory !== 'string') {
-      throw new Error(
-        'Configuration must include "audioDirectory" field as a string'
-      );
+    // Validate legacy format (audioDirectory)
+    if ('audioDirectory' in cfg) {
+      if (typeof cfg.audioDirectory !== 'string') {
+        throw new Error(
+          'Configuration must include "audioDirectory" field as a string'
+        );
+      }
+
+      if (cfg.audioDirectory.trim() === '') {
+        throw new Error('Configuration field "audioDirectory" cannot be empty');
+      }
     }
 
-    if (cfg.audioDirectory.trim() === '') {
-      throw new Error('Configuration field "audioDirectory" cannot be empty');
+    // Validate new format (audioDirectories)
+    if ('audioDirectories' in cfg) {
+      if (!Array.isArray(cfg.audioDirectories)) {
+        throw new Error(
+          'Configuration field "audioDirectories" must be an array'
+        );
+      }
+
+      if (cfg.audioDirectories.length === 0) {
+        throw new Error(
+          'Configuration field "audioDirectories" cannot be empty'
+        );
+      }
+
+      // Validate each directory entry
+      for (const dir of cfg.audioDirectories) {
+        if (!dir || typeof dir !== 'object' || Array.isArray(dir)) {
+          throw new Error(
+            'Each audio directory entry must be a valid object'
+          );
+        }
+
+        const dirObj = dir as Record<string, unknown>;
+
+        if (!('path' in dirObj)) {
+          throw new Error(
+            'Each audio directory entry must include "path" field'
+          );
+        }
+
+        if (typeof dirObj.path !== 'string') {
+          throw new Error(
+            'Audio directory "path" field must be a string'
+          );
+        }
+
+        if (dirObj.path.trim() === '') {
+          throw new Error(
+            'Audio directory "path" cannot be empty'
+          );
+        }
+
+        if (!('displayName' in dirObj)) {
+          throw new Error(
+            'Each audio directory entry must include "displayName" field'
+          );
+        }
+
+        if (typeof dirObj.displayName !== 'string') {
+          throw new Error(
+            'Audio directory "displayName" field must be a string'
+          );
+        }
+
+        if (dirObj.displayName.trim() === '') {
+          throw new Error(
+            'Audio directory "displayName" cannot be empty'
+          );
+        }
+      }
     }
   }
 
   /**
-   * Get audio directory path from configuration
+   * Get audio directory path from configuration (legacy method for backward compatibility)
    * @throws Error if configuration is not loaded
    * @returns Audio directory path
    */
@@ -102,7 +179,45 @@ export class ConfigService {
       );
     }
 
-    return this.config.audioDirectory;
+    // Support legacy format
+    if (this.config.audioDirectory) {
+      return this.config.audioDirectory;
+    }
+
+    // If using new format, return first directory path
+    if (this.config.audioDirectories && this.config.audioDirectories.length > 0) {
+      return this.config.audioDirectories[0].path;
+    }
+
+    throw new Error('No audio directory configured');
+  }
+
+  /**
+   * Get all audio directories with display names
+   * @throws Error if configuration is not loaded
+   * @returns Array of audio directories with paths and display names
+   */
+  getAudioDirectories(): AudioDirectory[] {
+    if (!this.config) {
+      throw new Error(
+        'Configuration not loaded. Call loadConfig() first.'
+      );
+    }
+
+    // If using new format, return as-is
+    if (this.config.audioDirectories) {
+      return this.config.audioDirectories;
+    }
+
+    // Convert legacy format to new format
+    if (this.config.audioDirectory) {
+      return [{
+        path: this.config.audioDirectory,
+        displayName: this.config.audioDirectory,
+      }];
+    }
+
+    throw new Error('No audio directories configured');
   }
 
   /**
