@@ -126,7 +126,7 @@ async function 掃描音檔(資料夾路徑: string): Promise<音檔[]> {
 
 - README、設計文件、需求文件等使用繁體中文
 - 程式碼內的 JSDoc/TSDoc 註解使用英文
-- Git commit 訊息可使用中文或英文，但要保持一致性
+- Git commit 訊息使用中文
 - 變數名稱、函式名稱、檔案名稱使用英文
 
 ## 注意事項
