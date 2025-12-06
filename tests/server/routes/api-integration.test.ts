@@ -49,7 +49,10 @@ describe('API Routes Integration', () => {
 
     // Initialize scan service
     scanService = new ScanService();
-    await scanService.initialize(musicDir);
+    await scanService.initialize([{
+      path: musicDir,
+      displayName: 'Test Music'
+    }]);
 
     // Create Fastify server instance
     server = Fastify({
@@ -92,9 +95,13 @@ describe('API Routes Integration', () => {
       const body = JSON.parse(response.body);
       
       expect(body).toHaveProperty('tree');
-      expect(body.tree.name).toBe('music');
-      expect(body.tree.files).toHaveLength(2);
+      expect(body.tree.name).toBe('');
       expect(body.tree.subdirectories).toHaveLength(1);
+      
+      const testMusicDir = body.tree.subdirectories[0];
+      expect(testMusicDir.name).toBe('Test Music');
+      expect(testMusicDir.files).toHaveLength(2);
+      expect(testMusicDir.subdirectories).toHaveLength(1);
     });
 
     it('should return same tree on multiple calls', async () => {
@@ -134,6 +141,7 @@ describe('API Routes Integration', () => {
       const body = JSON.parse(response.body);
       
       expect(body).toHaveProperty('tree');
+      // POST /api/scan scans a single directory directly, no virtual root
       expect(body.tree.name).toBe('music');
       expect(body.tree.files).toHaveLength(2);
       expect(body.tree.subdirectories).toHaveLength(1);
@@ -153,6 +161,7 @@ describe('API Routes Integration', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       
+      // POST /api/scan scans a single directory directly, files are at root
       const fileNames = body.tree.files.map((f: any) => f.name);
       expect(fileNames).not.toContain('readme.txt');
     });
@@ -211,6 +220,7 @@ describe('API Routes Integration', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       
+      // POST /api/scan scans a single directory directly, files are at root
       const mp3File = body.tree.files.find((f: any) => f.name === 'song1.mp3');
       expect(mp3File).toBeDefined();
       expect(mp3File.name).toBe('song1.mp3');
@@ -558,6 +568,7 @@ describe('API Routes Integration', () => {
 
       expect(scanResponse.statusCode).toBe(200);
       const scanBody = JSON.parse(scanResponse.body);
+      // POST /api/scan scans a single directory directly, files are at root
       const firstFile = scanBody.tree.files[0];
 
       // Step 2: Stream audio file

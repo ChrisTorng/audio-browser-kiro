@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AudioService } from '../services/audioService.js';
 import { ConfigService } from '../services/configService.js';
 import { ApiErrorResponse } from '../../shared/types/api.js';
+import path from 'path';
 
 /**
  * Register audio streaming routes
@@ -10,18 +11,29 @@ import { ApiErrorResponse } from '../../shared/types/api.js';
 export async function registerAudioRoutes(fastify: FastifyInstance) {
   const audioService = new AudioService();
   
-  // Determine audio root path:
-  // 1. Use AUDIO_ROOT_PATH environment variable if set (for testing)
-  // 2. Otherwise, use ConfigService to get audio directory from config.json
-  let audioRootPath: string;
+  // Load configuration for path resolution
+  // Use AUDIO_ROOT_PATH for testing (single directory mode)
+  // Otherwise use ConfigService for multi-directory support
+  const useEnvPath = !!process.env.AUDIO_ROOT_PATH;
+  const configService = new ConfigService();
   
-  if (process.env.AUDIO_ROOT_PATH) {
-    audioRootPath = process.env.AUDIO_ROOT_PATH;
-  } else {
-    const configService = new ConfigService();
+  if (!useEnvPath) {
     await configService.loadConfig();
-    audioRootPath = configService.getAudioDirectoryAbsolutePath();
   }
+
+  /**
+   * Resolve file path to absolute path
+   * Supports both testing mode (AUDIO_ROOT_PATH) and production (multi-directory)
+   */
+  const resolveToAbsolutePath = (filePath: string): string => {
+    if (useEnvPath) {
+      // Testing mode: use AUDIO_ROOT_PATH
+      return path.resolve(process.env.AUDIO_ROOT_PATH!, filePath);
+    } else {
+      // Production mode: use ConfigService to resolve displayName-prefixed path
+      return configService.resolveFilePath(filePath);
+    }
+  };
 
   /**
    * GET /api/audio/*
@@ -47,12 +59,17 @@ export async function registerAudioRoutes(fastify: FastifyInstance) {
           });
         }
 
+        // Resolve to absolute path
+        const absolutePath = resolveToAbsolutePath(filePath);
+        const audioRootPath = path.dirname(absolutePath);
+        const fileName = path.basename(absolutePath);
+
         // Get Range header if present
         const rangeHeader = request.headers.range;
 
         // Stream the audio file
         const result = await audioService.streamAudio(
-          filePath,
+          fileName,
           audioRootPath,
           rangeHeader
         );

@@ -18,10 +18,13 @@ describe('ConfigService', () => {
   });
 
   describe('loadConfig', () => {
-    it('should load valid configuration file', async () => {
+    it('should load valid configuration file with multiple directories', async () => {
       // Create valid config file
       const validConfig = {
-        audioDirectory: '../music-player',
+        audioDirectories: [
+          { path: '../music-player', displayName: 'Music Library' },
+          { path: '../podcasts', displayName: 'Podcasts' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(validConfig, null, 2));
 
@@ -29,7 +32,26 @@ describe('ConfigService', () => {
       const config = await configService.loadConfig();
 
       expect(config).toEqual(validConfig);
-      expect(config.audioDirectory).toBe('../music-player');
+      expect(config.audioDirectories).toHaveLength(2);
+      expect(config.audioDirectories[0].path).toBe('../music-player');
+      expect(config.audioDirectories[0].displayName).toBe('Music Library');
+    });
+
+    it('should load configuration with single directory', async () => {
+      // Create config with single directory
+      const validConfig = {
+        audioDirectories: [
+          { path: '../music-player', displayName: 'Music' },
+        ],
+      };
+      await fs.writeFile(testConfigPath, JSON.stringify(validConfig, null, 2));
+
+      const configService = new ConfigService(testConfigPath);
+      const config = await configService.loadConfig();
+
+      expect(config.audioDirectories).toHaveLength(1);
+      expect(config.audioDirectories[0].path).toBe('../music-player');
+      expect(config.audioDirectories[0].displayName).toBe('Music');
     });
 
     it('should throw error if config file does not exist', async () => {
@@ -52,8 +74,8 @@ describe('ConfigService', () => {
       );
     });
 
-    it('should throw error if audioDirectory field is missing', async () => {
-      // Create config without audioDirectory
+    it('should throw error if audioDirectories field is missing', async () => {
+      // Create config without audioDirectories
       const invalidConfig = {
         someOtherField: 'value',
       };
@@ -62,49 +84,35 @@ describe('ConfigService', () => {
       const configService = new ConfigService(testConfigPath);
 
       await expect(configService.loadConfig()).rejects.toThrow(
-        /must include either "audioDirectory" or "audioDirectories"/
+        /must include "audioDirectories"/
       );
     });
 
-    it('should throw error if audioDirectory is not a string', async () => {
-      // Create config with non-string audioDirectory
+    it('should throw error if audioDirectories is not an array', async () => {
+      // Create config with non-array audioDirectories
       const invalidConfig = {
-        audioDirectory: 123,
+        audioDirectories: 'not-an-array',
       };
       await fs.writeFile(testConfigPath, JSON.stringify(invalidConfig));
 
       const configService = new ConfigService(testConfigPath);
 
       await expect(configService.loadConfig()).rejects.toThrow(
-        /must include "audioDirectory" field as a string/
+        /"audioDirectories" must be an array/
       );
     });
 
-    it('should throw error if audioDirectory is empty string', async () => {
-      // Create config with empty audioDirectory
+    it('should throw error if audioDirectories is empty array', async () => {
+      // Create config with empty audioDirectories
       const invalidConfig = {
-        audioDirectory: '',
+        audioDirectories: [],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(invalidConfig));
 
       const configService = new ConfigService(testConfigPath);
 
       await expect(configService.loadConfig()).rejects.toThrow(
-        /"audioDirectory" cannot be empty/
-      );
-    });
-
-    it('should throw error if audioDirectory is whitespace only', async () => {
-      // Create config with whitespace-only audioDirectory
-      const invalidConfig = {
-        audioDirectory: '   ',
-      };
-      await fs.writeFile(testConfigPath, JSON.stringify(invalidConfig));
-
-      const configService = new ConfigService(testConfigPath);
-
-      await expect(configService.loadConfig()).rejects.toThrow(
-        /"audioDirectory" cannot be empty/
+        /"audioDirectories" cannot be empty/
       );
     });
 
@@ -121,7 +129,9 @@ describe('ConfigService', () => {
 
     it('should cache loaded configuration', async () => {
       const validConfig = {
-        audioDirectory: '../music-player',
+        audioDirectories: [
+          { path: '../music-player', displayName: 'Music' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(validConfig));
 
@@ -135,9 +145,12 @@ describe('ConfigService', () => {
   });
 
   describe('getAudioDirectory', () => {
-    it('should return audio directory path after loading config', async () => {
+    it('should return first audio directory path after loading config', async () => {
       const validConfig = {
-        audioDirectory: '../music-player',
+        audioDirectories: [
+          { path: '../music-player', displayName: 'Music' },
+          { path: '../podcasts', displayName: 'Podcasts' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(validConfig));
 
@@ -158,9 +171,11 @@ describe('ConfigService', () => {
   });
 
   describe('getAudioDirectoryAbsolutePath', () => {
-    it('should return absolute path of audio directory', async () => {
+    it('should return absolute path of first audio directory', async () => {
       const validConfig = {
-        audioDirectory: '../music-player',
+        audioDirectories: [
+          { path: '../music-player', displayName: 'Music' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(validConfig));
 
@@ -190,7 +205,9 @@ describe('ConfigService', () => {
 
     it('should return true after loading config', async () => {
       const validConfig = {
-        audioDirectory: '../music-player',
+        audioDirectories: [
+          { path: '../music-player', displayName: 'Music' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(validConfig));
 
@@ -210,7 +227,9 @@ describe('ConfigService', () => {
 
     it('should return config object after loading', async () => {
       const validConfig = {
-        audioDirectory: '../music-player',
+        audioDirectories: [
+          { path: '../music-player', displayName: 'Music' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(validConfig));
 
@@ -235,41 +254,48 @@ describe('ConfigService', () => {
   describe('JSON5 support (comments)', () => {
     it('should parse config file with single-line comments', async () => {
       const configWithComments = `{
-  // This is the audio directory
-  "audioDirectory": "../music-player"
+  // Audio directories configuration
+  "audioDirectories": [
+    { "path": "../music-player", "displayName": "Music Library" }
+  ]
 }`;
       await fs.writeFile(testConfigPath, configWithComments);
 
       const configService = new ConfigService(testConfigPath);
       const config = await configService.loadConfig();
 
-      expect(config.audioDirectory).toBe('../music-player');
+      expect(config.audioDirectories).toHaveLength(1);
+      expect(config.audioDirectories[0].path).toBe('../music-player');
     });
 
     it('should parse config file with multi-line comments', async () => {
       const configWithComments = `{
   /* This is a multi-line comment
-     describing the audio directory */
-  "audioDirectory": "../music-player"
+     describing the configuration */
+  "audioDirectories": [
+    { "path": "../music-player", "displayName": "Music Library" }
+  ]
 }`;
       await fs.writeFile(testConfigPath, configWithComments);
 
       const configService = new ConfigService(testConfigPath);
       const config = await configService.loadConfig();
 
-      expect(config.audioDirectory).toBe('../music-player');
+      expect(config.audioDirectories).toHaveLength(1);
     });
 
     it('should parse config file with trailing commas', async () => {
       const configWithTrailingComma = `{
-  "audioDirectory": "../music-player",
+  "audioDirectories": [
+    { "path": "../music-player", "displayName": "Music Library" },
+  ],
 }`;
       await fs.writeFile(testConfigPath, configWithTrailingComma);
 
       const configService = new ConfigService(testConfigPath);
       const config = await configService.loadConfig();
 
-      expect(config.audioDirectory).toBe('../music-player');
+      expect(config.audioDirectories).toHaveLength(1);
     });
   });
 
@@ -338,32 +364,6 @@ describe('ConfigService', () => {
         /"displayName" cannot be empty/
       );
     });
-
-    it('should support backward compatibility with audioDirectory field', async () => {
-      const oldConfig = {
-        audioDirectory: '../music-player',
-      };
-      await fs.writeFile(testConfigPath, JSON.stringify(oldConfig));
-
-      const configService = new ConfigService(testConfigPath);
-      const config = await configService.loadConfig();
-
-      expect(config.audioDirectory).toBe('../music-player');
-      expect(configService.getAudioDirectory()).toBe('../music-player');
-    });
-
-    it('should throw error if neither audioDirectory nor audioDirectories is provided', async () => {
-      const invalidConfig = {
-        someOtherField: 'value',
-      };
-      await fs.writeFile(testConfigPath, JSON.stringify(invalidConfig));
-
-      const configService = new ConfigService(testConfigPath);
-
-      await expect(configService.loadConfig()).rejects.toThrow(
-        /must include either "audioDirectory" or "audioDirectories"/
-      );
-    });
   });
 
   describe('getAudioDirectories', () => {
@@ -383,21 +383,6 @@ describe('ConfigService', () => {
       expect(directories).toHaveLength(2);
       expect(directories[0]).toEqual({ path: '../music-player', displayName: 'Music Library' });
       expect(directories[1]).toEqual({ path: '../podcasts', displayName: 'Podcasts' });
-    });
-
-    it('should convert single audioDirectory to audioDirectories array', async () => {
-      const oldConfig = {
-        audioDirectory: '../music-player',
-      };
-      await fs.writeFile(testConfigPath, JSON.stringify(oldConfig));
-
-      const configService = new ConfigService(testConfigPath);
-      await configService.loadConfig();
-
-      const directories = configService.getAudioDirectories();
-      expect(directories).toHaveLength(1);
-      expect(directories[0].path).toBe('../music-player');
-      expect(directories[0].displayName).toBe('../music-player'); // Use path as displayName
     });
 
     it('should throw error if config is not loaded', () => {

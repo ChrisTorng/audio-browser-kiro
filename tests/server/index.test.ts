@@ -342,7 +342,9 @@ describe('Application Initialization', () => {
     it('should load config and initialize scan service successfully', async () => {
       // Create valid config file
       const config = {
-        audioDirectory: testAudioDir,
+        audioDirectories: [
+          { path: testAudioDir, displayName: 'Test Audio' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
 
@@ -352,17 +354,20 @@ describe('Application Initialization', () => {
 
       // Load configuration
       await configService.loadConfig();
-      const audioDirectory = configService.getAudioDirectory();
-      expect(audioDirectory).toBe(testAudioDir);
+      const audioDirectories = configService.getAudioDirectories();
+      expect(audioDirectories).toHaveLength(1);
+      expect(audioDirectories[0].path).toBe(testAudioDir);
 
       // Initialize scan service
-      await scanService.initialize(audioDirectory);
+      await scanService.initialize(audioDirectories);
       expect(scanService.isInitialized()).toBe(true);
 
       // Get scan results
       const tree = scanService.getTree();
       expect(tree).toBeDefined();
-      expect(tree.files).toHaveLength(2);
+      expect(tree.subdirectories).toHaveLength(1); // One top-level directory
+      expect(tree.subdirectories[0].name).toBe('Test Audio');
+      expect(tree.subdirectories[0].files).toHaveLength(2);
     });
 
     it('should fail initialization if config file does not exist', async () => {
@@ -377,7 +382,9 @@ describe('Application Initialization', () => {
     it('should fail initialization if audio directory does not exist', async () => {
       // Create config with non-existent audio directory
       const config = {
-        audioDirectory: path.join(testDir, 'non-existent-audio'),
+        audioDirectories: [
+          { path: path.join(testDir, 'non-existent-audio'), displayName: 'Non-existent' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
 
@@ -385,17 +392,23 @@ describe('Application Initialization', () => {
       const scanService = new ScanService();
 
       await configService.loadConfig();
-      const audioDirectory = configService.getAudioDirectory();
+      const audioDirectories = configService.getAudioDirectories();
 
-      await expect(scanService.initialize(audioDirectory)).rejects.toThrow(
-        /Audio directory not found/
-      );
+      // Initialize should complete but log error and skip the non-existent directory
+      await scanService.initialize(audioDirectories);
+      
+      // Verify no directories were added (only virtual root exists)
+      const tree = scanService.getTree();
+      expect(tree.subdirectories).toHaveLength(0);
+      expect(tree.totalFileCount).toBe(0);
     });
 
     it('should log scan statistics after initialization', async () => {
       // Create config file
       const config = {
-        audioDirectory: testAudioDir,
+        audioDirectories: [
+          { path: testAudioDir, displayName: 'Test Audio' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
 
@@ -404,12 +417,13 @@ describe('Application Initialization', () => {
       const scanService = new ScanService();
 
       await configService.loadConfig();
-      const audioDirectory = configService.getAudioDirectory();
-      await scanService.initialize(audioDirectory);
+      const audioDirectories = configService.getAudioDirectories();
+      await scanService.initialize(audioDirectories);
 
       // Verify scan results
       const tree = scanService.getTree();
-      expect(tree.files).toHaveLength(2);
+      expect(tree.subdirectories).toHaveLength(1);
+      expect(tree.subdirectories[0].files).toHaveLength(2);
 
       // Verify supported formats
       const formats = scanService.getSupportedFormats();
@@ -423,7 +437,9 @@ describe('Application Initialization', () => {
 
       // Create config file
       const config = {
-        audioDirectory: emptyDir,
+        audioDirectories: [
+          { path: emptyDir, displayName: 'Empty' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
 
@@ -432,19 +448,21 @@ describe('Application Initialization', () => {
       const scanService = new ScanService();
 
       await configService.loadConfig();
-      const audioDirectory = configService.getAudioDirectory();
-      await scanService.initialize(audioDirectory);
+      const audioDirectories = configService.getAudioDirectories();
+      await scanService.initialize(audioDirectories);
 
       // Verify scan results
       const tree = scanService.getTree();
       expect(tree.files).toHaveLength(0);
-      expect(tree.subdirectories).toHaveLength(0);
+      expect(tree.subdirectories).toHaveLength(0); // Empty directory won't be included
     });
 
     it('should provide absolute path for audio directory', async () => {
       // Create config with relative path
       const config = {
-        audioDirectory: './audio',
+        audioDirectories: [
+          { path: './audio', displayName: 'Audio' },
+        ],
       };
       await fs.writeFile(testConfigPath, JSON.stringify(config, null, 2));
 

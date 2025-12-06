@@ -12,11 +12,9 @@ export interface AudioDirectory {
 
 /**
  * Configuration interface
- * Supports both legacy single directory and new multiple directories format
  */
 export interface Config {
-  audioDirectory?: string; // Legacy format (backward compatibility)
-  audioDirectories?: AudioDirectory[]; // New format (multiple directories)
+  audioDirectories: AudioDirectory[];
 }
 
 /**
@@ -84,93 +82,77 @@ export class ConfigService {
 
     const cfg = config as Record<string, unknown>;
 
-    // Check if either audioDirectory or audioDirectories exists
-    if (!('audioDirectory' in cfg) && !('audioDirectories' in cfg)) {
+    // Check if audioDirectories exists
+    if (!('audioDirectories' in cfg)) {
       throw new Error(
-        'Configuration must include either "audioDirectory" or "audioDirectories" field'
+        'Configuration must include "audioDirectories" field as an array'
       );
     }
 
-    // Validate legacy format (audioDirectory)
-    if ('audioDirectory' in cfg) {
-      if (typeof cfg.audioDirectory !== 'string') {
-        throw new Error(
-          'Configuration must include "audioDirectory" field as a string'
-        );
-      }
-
-      if (cfg.audioDirectory.trim() === '') {
-        throw new Error('Configuration field "audioDirectory" cannot be empty');
-      }
+    if (!Array.isArray(cfg.audioDirectories)) {
+      throw new Error(
+        'Configuration field "audioDirectories" must be an array'
+      );
     }
 
-    // Validate new format (audioDirectories)
-    if ('audioDirectories' in cfg) {
-      if (!Array.isArray(cfg.audioDirectories)) {
+    if (cfg.audioDirectories.length === 0) {
+      throw new Error(
+        'Configuration field "audioDirectories" cannot be empty'
+      );
+    }
+
+    // Validate each directory entry
+    for (const dir of cfg.audioDirectories) {
+      if (!dir || typeof dir !== 'object' || Array.isArray(dir)) {
         throw new Error(
-          'Configuration field "audioDirectories" must be an array'
+          'Each audio directory entry must be a valid object'
         );
       }
 
-      if (cfg.audioDirectories.length === 0) {
+      const dirObj = dir as Record<string, unknown>;
+
+      if (!('path' in dirObj)) {
         throw new Error(
-          'Configuration field "audioDirectories" cannot be empty'
+          'Each audio directory entry must include "path" field'
         );
       }
 
-      // Validate each directory entry
-      for (const dir of cfg.audioDirectories) {
-        if (!dir || typeof dir !== 'object' || Array.isArray(dir)) {
-          throw new Error(
-            'Each audio directory entry must be a valid object'
-          );
-        }
+      if (typeof dirObj.path !== 'string') {
+        throw new Error(
+          'Audio directory "path" field must be a string'
+        );
+      }
 
-        const dirObj = dir as Record<string, unknown>;
+      if (dirObj.path.trim() === '') {
+        throw new Error(
+          'Audio directory "path" cannot be empty'
+        );
+      }
 
-        if (!('path' in dirObj)) {
-          throw new Error(
-            'Each audio directory entry must include "path" field'
-          );
-        }
+      if (!('displayName' in dirObj)) {
+        throw new Error(
+          'Each audio directory entry must include "displayName" field'
+        );
+      }
 
-        if (typeof dirObj.path !== 'string') {
-          throw new Error(
-            'Audio directory "path" field must be a string'
-          );
-        }
+      if (typeof dirObj.displayName !== 'string') {
+        throw new Error(
+          'Audio directory "displayName" field must be a string'
+        );
+      }
 
-        if (dirObj.path.trim() === '') {
-          throw new Error(
-            'Audio directory "path" cannot be empty'
-          );
-        }
-
-        if (!('displayName' in dirObj)) {
-          throw new Error(
-            'Each audio directory entry must include "displayName" field'
-          );
-        }
-
-        if (typeof dirObj.displayName !== 'string') {
-          throw new Error(
-            'Audio directory "displayName" field must be a string'
-          );
-        }
-
-        if (dirObj.displayName.trim() === '') {
-          throw new Error(
-            'Audio directory "displayName" cannot be empty'
-          );
-        }
+      if (dirObj.displayName.trim() === '') {
+        throw new Error(
+          'Audio directory "displayName" cannot be empty'
+        );
       }
     }
   }
 
   /**
-   * Get audio directory path from configuration (legacy method for backward compatibility)
+   * Get first audio directory path from configuration (for backward compatibility)
    * @throws Error if configuration is not loaded
-   * @returns Audio directory path
+   * @returns First audio directory path
    */
   getAudioDirectory(): string {
     if (!this.config) {
@@ -179,17 +161,11 @@ export class ConfigService {
       );
     }
 
-    // Support legacy format
-    if (this.config.audioDirectory) {
-      return this.config.audioDirectory;
+    if (this.config.audioDirectories.length === 0) {
+      throw new Error('No audio directories configured');
     }
 
-    // If using new format, return first directory path
-    if (this.config.audioDirectories && this.config.audioDirectories.length > 0) {
-      return this.config.audioDirectories[0].path;
-    }
-
-    throw new Error('No audio directory configured');
+    return this.config.audioDirectories[0].path;
   }
 
   /**
@@ -204,30 +180,62 @@ export class ConfigService {
       );
     }
 
-    // If using new format, return as-is
-    if (this.config.audioDirectories) {
-      return this.config.audioDirectories;
-    }
-
-    // Convert legacy format to new format
-    if (this.config.audioDirectory) {
-      return [{
-        path: this.config.audioDirectory,
-        displayName: this.config.audioDirectory,
-      }];
-    }
-
-    throw new Error('No audio directories configured');
+    return this.config.audioDirectories;
   }
 
   /**
    * Get resolved absolute path of audio directory
    * @throws Error if configuration is not loaded
    * @returns Absolute path to audio directory
+   * @deprecated Use resolveFilePath() for multi-directory support
    */
   getAudioDirectoryAbsolutePath(): string {
     const audioDir = this.getAudioDirectory();
     return path.resolve(audioDir);
+  }
+
+  /**
+   * Resolve a file path that includes displayName prefix to absolute path
+   * Path format: "displayName/relative/path/to/file.mp3"
+   * @param displayNamePath - Path with displayName prefix
+   * @throws Error if configuration is not loaded or displayName not found
+   * @returns Absolute path to the file
+   */
+  resolveFilePath(displayNamePath: string): string {
+    if (!this.config) {
+      throw new Error(
+        'Configuration not loaded. Call loadConfig() first.'
+      );
+    }
+
+    // Extract displayName from path (first segment)
+    const firstSlash = displayNamePath.indexOf('/');
+    
+    if (firstSlash === -1) {
+      // No slash - the entire path is the displayName (directory root)
+      const audioDir = this.config.audioDirectories.find(
+        dir => dir.displayName === displayNamePath
+      );
+      if (!audioDir) {
+        throw new Error(`Audio directory not found: ${displayNamePath}`);
+      }
+      return path.resolve(audioDir.path);
+    }
+
+    const displayName = displayNamePath.substring(0, firstSlash);
+    const relativePath = displayNamePath.substring(firstSlash + 1);
+
+    // Find matching audio directory
+    const audioDir = this.config.audioDirectories.find(
+      dir => dir.displayName === displayName
+    );
+
+    if (!audioDir) {
+      throw new Error(`Audio directory not found: ${displayName}`);
+    }
+
+    // Resolve to absolute path
+    return path.resolve(audioDir.path, relativePath);
   }
 
   /**

@@ -2,16 +2,18 @@
   // Audio Browser Configuration
   // Supports JSON5 format with comments and trailing commas
 
-  // Option 1: Single directory (legacy format)
-  // "audioDirectory": "../music-player"
-
-  // Option 2: Multiple directories with display names (recommended)
+  // Configure multiple audio directories with custom display names
+  // Each directory will appear as a top-level folder in the UI using the displayName
   "audioDirectories": [
     {
       "path": "../music-player",
       "displayName": "Music Library"
     },
-    // Add more directories as needed
+    {
+      "path": "tests/audio",
+      "displayName": "Tests"
+    }
+    // Add more directories as needed:
     // {
     //   "path": "../podcasts",
     //   "displayName": "Podcasts"

@@ -77,13 +77,16 @@ audio-browser-kiro/
    在專案根目錄建立 `config.json` 檔案：
    ```json
    {
-     "audioDirectory": "../music-player"
+     "audioDirectories": [
+       { "path": "../music-player", "displayName": "Music Library" }
+     ]
    }
    ```
    
    > ⚠️ **重要**: `config.json` 是必要檔案，如果不存在，應用程式將無法啟動。
    > 
-   > 請將 `audioDirectory` 設定為您的音檔資料夾路徑（可使用相對路徑或絕對路徑）。
+   > `audioDirectories` 是一個陣列，可以設定多個音檔資料夾，每個資料夾需指定 `path` (路徑) 和 `displayName` (顯示名稱)。
+   > `displayName` 會顯示在 UI 的頂層資料夾名稱，而不是使用路徑的最後一層資料夾名稱。
 
 3. **啟動應用程式**
    
@@ -100,22 +103,52 @@ audio-browser-kiro/
 
 ### 設定檔說明 (config.json)
 
-`config.json` 是應用程式的核心設定檔，必須放置在專案根目錄。
+`config.json` 是應用程式的核心設定檔，必須放置在專案根目錄。支援 JSON5 格式，可以使用註解和尾隨逗號。
 
 #### 設定檔格式
 
 ```json
 {
-  "audioDirectory": "音檔資料夾路徑"
+  // 音檔目錄陣列
+  "audioDirectories": [
+    {
+      "path": "音檔資料夾路徑",
+      "displayName": "在 UI 顯示的名稱"
+    }
+  ]
 }
 ```
 
 #### 路徑設定範例
 
+**單一資料夾**:
+```json
+{
+  "audioDirectories": [
+    { "path": "../music-player", "displayName": "My Music" }
+  ]
+}
+```
+
+**多個資料夾**:
+```json
+{
+  // 支援 JSON5 註解
+  "audioDirectories": [
+    { "path": "../music-player", "displayName": "Music Library" },
+    { "path": "../podcasts", "displayName": "Podcasts" },
+    { "path": "../audiobooks", "displayName": "Audio Books" },
+  ]  // 支援尾隨逗號
+}
+```
+
 **相對路徑** (相對於專案根目錄):
 ```json
 {
-  "audioDirectory": "../music-player"
+  "audioDirectories": [
+    { "path": "../music-player", "displayName": "Music" },
+    { "path": "tests/audio", "displayName": "Test Files" }
+  ]
 }
 ```
 
@@ -124,24 +157,32 @@ audio-browser-kiro/
 Windows:
 ```json
 {
-  "audioDirectory": "C:/Users/YourName/Music"
+  "audioDirectories": [
+    { "path": "C:/Users/YourName/Music", "displayName": "Music" },
+    { "path": "D:/Audio/Podcasts", "displayName": "Podcasts" }
+  ]
 }
 ```
 
 Linux / macOS:
 ```json
 {
-  "audioDirectory": "/home/username/Music"
+  "audioDirectories": [
+    { "path": "/home/username/Music", "displayName": "Music" },
+    { "path": "/mnt/nas/audio", "displayName": "NAS Audio" }
+  ]
 }
 ```
 
 #### 設定檔注意事項
 
-- 設定檔必須是有效的 JSON 格式
-- `audioDirectory` 欄位為必填
+- 設定檔支援 JSON5 格式（可使用 `//` 單行註解、`/* */` 多行註解、尾隨逗號）
+- `audioDirectories` 欄位為必填，且必須是陣列
+- 每個目錄項目必須包含 `path` 和 `displayName` 兩個欄位
+- `displayName` 會作為 UI 中的頂層資料夾名稱顯示
 - 路徑中的反斜線 `\` 需要轉義為 `\\` 或使用正斜線 `/`
 - 指定的資料夾必須存在且可讀取
-- 系統會自動掃描該資料夾及所有子資料夾
+- 系統會自動掃描每個資料夾及所有子資料夾
 - 只有包含音檔的資料夾會被顯示
 
 #### 啟動流程
@@ -151,7 +192,7 @@ Linux / macOS:
 1. **載入設定檔**: 讀取 `config.json`，如果不存在則終止啟動
 2. **驗證設定**: 檢查設定檔格式和必要欄位
 3. **初始化資料庫**: 建立或開啟 SQLite 資料庫
-4. **掃描音檔**: 掃描設定檔指定的資料夾，建立目錄樹結構
+4. **掃描音檔**: 掃描設定檔中所有指定的資料夾，建立合併的目錄樹結構
 5. **啟動伺服器**: 開始接受請求
 
 > 💡 **提示**: 掃描大量音檔可能需要幾秒鐘時間，請耐心等待啟動完成。

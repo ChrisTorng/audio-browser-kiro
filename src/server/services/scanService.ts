@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { DirectoryTree, DirectoryNode, AudioFile } from '../../shared/types/audio';
+import { AudioDirectory } from '../services/configService';
 
 /**
  * Supported audio file formats
@@ -23,17 +24,17 @@ export class ScanService {
   private rootPath: string = '';
 
   /**
-   * Initialize the scan service by scanning the audio directory
-   * @param audioDirectory - Root directory to scan for audio files
-   * @throws Error if directory doesn't exist or cannot be accessed
+   * Initialize the scan service by scanning multiple audio directories
+   * @param audioDirectories - Array of audio directories with paths and display names
+   * @throws Error if any directory doesn't exist or cannot be accessed
    */
-  async initialize(audioDirectory: string): Promise<void> {
+  async initialize(audioDirectories: AudioDirectory[]): Promise<void> {
     try {
-      console.log(`Starting scan of audio directory: ${audioDirectory}`);
+      console.log(`Starting scan of ${audioDirectories.length} audio director${audioDirectories.length === 1 ? 'y' : 'ies'}...`);
       const startTime = Date.now();
 
-      // Scan and build tree (this will also cache the result)
-      const tree = await this.scanDirectory(audioDirectory, false);
+      // Scan and build merged tree (this will also cache the result)
+      const tree = await this.scanMultipleDirectories(audioDirectories);
 
       const duration = Date.now() - startTime;
       const fileCount = this.countFiles(tree);
@@ -43,14 +44,14 @@ export class ScanService {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new Error(
-          `Audio directory not found: ${audioDirectory}. ` +
-          `Please check the path in config.json.`
+          `Audio directory not found. ` +
+          `Please check the paths in config.json.`
         );
       }
 
       if ((error as NodeJS.ErrnoException).code === 'EACCES') {
         console.warn(
-          `Permission denied accessing directory: ${audioDirectory}. ` +
+          `Permission denied accessing directory. ` +
           `Continuing with available files.`
         );
         throw error;
@@ -81,6 +82,75 @@ export class ScanService {
    */
   getSupportedFormats(): string[] {
     return [...SUPPORTED_AUDIO_FORMATS];
+  }
+
+  /**
+   * Scan multiple directories and merge into single tree structure
+   * @param audioDirectories - Array of audio directories with paths and display names
+   * @returns Merged directory tree structure with multiple top-level directories
+   */
+  private async scanMultipleDirectories(audioDirectories: AudioDirectory[]): Promise<DirectoryTree> {
+    // Create a root node with empty name (frontend will show subdirectories directly)
+    const rootNode: DirectoryNode = {
+      name: '',
+      path: '',
+      files: [],
+      subdirectories: [],
+      totalFileCount: 0,
+    };
+
+    // Scan each directory and add as top-level subdirectory
+    for (const audioDir of audioDirectories) {
+      try {
+        const absolutePath = path.resolve(audioDir.path);
+        console.log(`Scanning: ${audioDir.displayName} (${absolutePath})`);
+
+        // Check if directory exists
+        const stats = await fs.stat(absolutePath);
+        if (!stats.isDirectory()) {
+          console.warn(`Skipping ${audioDir.path}: not a directory`);
+          continue;
+        }
+
+        // Scan the directory
+        this.rootPath = absolutePath;
+        const dirNode = await this.buildTree(absolutePath);
+
+        // Use displayName instead of actual directory name
+        dirNode.name = audioDir.displayName;
+        
+        // Rewrite all paths to use displayName as prefix
+        this.rewritePathsWithPrefix(dirNode, audioDir.displayName);
+
+        // Filter empty directories
+        this.filterEmptyDirectories(dirNode);
+
+        // Only add if it contains audio files
+        if (this.hasAudioFiles(dirNode)) {
+          // Calculate total file count
+          this.calculateTotalFileCount(dirNode);
+          rootNode.subdirectories.push(dirNode);
+          console.log(`Added ${audioDir.displayName}: ${dirNode.totalFileCount} files`);
+        } else {
+          console.log(`Skipped ${audioDir.displayName}: no audio files found`);
+        }
+      } catch (error) {
+        console.error(`Error scanning ${audioDir.displayName}:`, (error as Error).message);
+        // Continue with other directories
+      }
+    }
+
+    // Calculate total for root
+    rootNode.totalFileCount = rootNode.subdirectories.reduce(
+      (sum, dir) => sum + dir.totalFileCount,
+      0
+    );
+
+    // Cache the merged result
+    this.cachedTree = rootNode;
+    this.rootPath = ''; // Reset root path as we have multiple roots
+
+    return rootNode;
   }
 
   /**
@@ -246,6 +316,31 @@ export class ScanService {
     }
 
     return count;
+  }
+
+  /**
+   * Rewrite all paths in a directory tree with a new prefix
+   * This is used to make paths unique across multiple root directories
+   * @param node - Directory node to rewrite
+   * @param prefix - Prefix to add to all paths (typically the displayName)
+   */
+  private rewritePathsWithPrefix(node: DirectoryNode, prefix: string): void {
+    // Rewrite this node's path
+    if (node.path === '.' || node.path === '') {
+      node.path = prefix;
+    } else {
+      node.path = `${prefix}/${node.path}`;
+    }
+
+    // Rewrite all file paths
+    for (const file of node.files) {
+      file.path = `${prefix}/${file.path}`;
+    }
+
+    // Recursively rewrite subdirectory paths
+    for (const subNode of node.subdirectories) {
+      this.rewritePathsWithPrefix(subNode, prefix);
+    }
   }
 
   /**

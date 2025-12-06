@@ -47,32 +47,41 @@ export function AudioBrowser() {
     (node: DirectoryNode, level: number = 0, parentPath?: string, forceExpand: boolean = false): FlatTreeItem[] => {
       const items: FlatTreeItem[] = [];
 
-      // Add directory itself
-      const isExpanded = forceExpand || expandedPaths.has(node.path);
-      items.push({
-        id: `dir-${node.path}`,
-        type: 'directory',
-        isExpanded,
-        directory: node,
-        level,
-        parentPath,
-      });
-
-      // If expanded, add children
-      if (isExpanded) {
-        // Add subdirectories
-        node.subdirectories.forEach((subdir) => {
-          items.push(...flattenTree(subdir, level + 1, node.path, forceExpand));
+      // Skip root node if it has empty name (multi-directory setup)
+      const isRoot = level === 0 && node.name === '';
+      
+      if (!isRoot) {
+        // Add directory itself
+        const isExpanded = forceExpand || expandedPaths.has(node.path);
+        items.push({
+          id: `dir-${node.path}`,
+          type: 'directory',
+          isExpanded,
+          directory: node,
+          level,
+          parentPath,
         });
 
-        // Add files
+        // If not expanded, return early
+        if (!isExpanded) {
+          return items;
+        }
+      }
+
+      // Add subdirectories (always for root, only if expanded for others)
+      node.subdirectories.forEach((subdir) => {
+        items.push(...flattenTree(subdir, isRoot ? 0 : level + 1, isRoot ? undefined : node.path, forceExpand));
+      });
+
+      // Add files (only if expanded or is root)
+      if (isRoot || forceExpand || expandedPaths.has(node.path)) {
         node.files.forEach((file) => {
           items.push({
             id: `file-${file.path}`,
             type: 'file',
             file,
-            level: level + 1,
-            parentPath: node.path,
+            level: isRoot ? 0 : level + 1,
+            parentPath: isRoot ? undefined : node.path,
           });
         });
       }
@@ -236,9 +245,18 @@ export function AudioBrowser() {
     const buildFilteredTree = (
       node: DirectoryNode,
       level: number = 0,
-      parentPath?: string
+      parentPath?: string,
+      isRoot: boolean = false
     ): FlatTreeItem[] => {
       const items: FlatTreeItem[] = [];
+
+      // Skip root node if it has empty name (multi-directory mode)
+      if (isRoot && node.name === '') {
+        node.subdirectories.forEach((subdir) => {
+          items.push(...buildFilteredTree(subdir, 0, undefined, false));
+        });
+        return items;
+      }
 
       // Check if this directory matches or has any matching descendants
       const dirMatches = matchingDirPaths.has(node.path);
@@ -303,7 +321,7 @@ export function AudioBrowser() {
       return items;
     };
 
-    return buildFilteredTree(directoryTree);
+    return buildFilteredTree(directoryTree, 0, undefined, true);
   }, [directoryTree, filterCriteria, flattenTree, itemMatchesFilter, getParentPaths, shouldIncludeDirectory, audioMetadata]);
 
   /**
