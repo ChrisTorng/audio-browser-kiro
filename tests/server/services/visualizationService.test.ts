@@ -1,21 +1,23 @@
 /**
  * VisualizationService Tests
- * Tests for waveform and spectrogram generation using ffmpeg
+ * Tests for waveform and spectrogram generation using gen_visuals.py
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { VisualizationService } from '../../../src/server/services/visualizationService.js';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import path from 'path';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
+import { VisualizationService } from '../../../src/server/services/visualizationService.js';
 
 describe('VisualizationService', () => {
   let service: VisualizationService;
+  const originalPlaceholderEnv = process.env.GEN_VISUALS_PLACEHOLDER;
   const testAudioRoot = process.env.AUDIO_ROOT_PATH || path.join(process.cwd(), 'tests', 'audio');
   const testAudioFile = 'Echo/Samples/Noise1.wav';
   const testAudioPath = path.join(testAudioRoot, testAudioFile);
   const cacheDir = path.join(process.cwd(), 'cache');
 
   beforeAll(async () => {
+    process.env.GEN_VISUALS_PLACEHOLDER = '1';
     // Ensure test audio file exists
     if (!existsSync(testAudioPath)) {
       throw new Error(`Test audio file not found: ${testAudioPath}`);
@@ -24,6 +26,14 @@ describe('VisualizationService', () => {
 
   beforeEach(() => {
     service = new VisualizationService(cacheDir);
+  });
+
+  afterAll(async () => {
+    if (originalPlaceholderEnv === undefined) {
+      delete process.env.GEN_VISUALS_PLACEHOLDER;
+    } else {
+      process.env.GEN_VISUALS_PLACEHOLDER = originalPlaceholderEnv;
+    }
   });
 
   afterEach(async () => {
@@ -44,7 +54,30 @@ describe('VisualizationService', () => {
   });
 
   describe('generateWaveform', () => {
-    it('should generate waveform image using ffmpeg', async () => {
+    it('should invoke gen_visuals.py for waveform generation', async () => {
+      const expectedCachePath = service.getCachedPath(testAudioFile, 'waveform');
+      if (existsSync(expectedCachePath)) {
+        await fs.unlink(expectedCachePath);
+      }
+      const runGenSpy = vi.fn(async (options: any) => {
+        const outputPath = options.outputPath || expectedCachePath;
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
+        await fs.writeFile(outputPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+      });
+      (service as any).runGenVisuals = runGenSpy;
+
+      const result = await service.generateWaveform(testAudioPath, testAudioFile);
+
+      expect(runGenSpy).toHaveBeenCalled();
+      const [options] = runGenSpy.mock.calls[0] as [any];
+      expect(options.audioPath).toBe(testAudioPath);
+      expect(options.type).toBe('waveform');
+      expect(options.outputPath).toBe(expectedCachePath);
+      expect(result.imagePath).toBe(expectedCachePath);
+      expect(existsSync(expectedCachePath)).toBe(true);
+    }, 10000);
+
+    it('should generate waveform image via generator script', async () => {
       const result = await service.generateWaveform(testAudioPath, testAudioFile);
 
       expect(result).toBeDefined();
@@ -123,7 +156,7 @@ describe('VisualizationService', () => {
   });
 
   describe('generateSpectrogram', () => {
-    it('should generate spectrogram image using ffmpeg', async () => {
+    it('should generate spectrogram image via generator script', async () => {
       const result = await service.generateSpectrogram(testAudioPath, testAudioFile);
 
       expect(result).toBeDefined();

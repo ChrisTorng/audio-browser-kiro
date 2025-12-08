@@ -93,9 +93,9 @@ export async function registerVisualizationRoutes(fastify: FastifyInstance) {
             });
           }
 
-          // ffmpeg error
-          if (error.message.includes('ffmpeg')) {
-            fastify.log.error({ err: error }, 'ffmpeg error generating waveform');
+          // Visualization generator error
+          if (error.message.includes('gen_visuals.py') || error.message.includes('visual generation')) {
+            fastify.log.error({ err: error }, 'visualization generator error generating waveform');
             return reply.code(500).send({
               error: {
                 code: 'GENERATION_FAILED',
@@ -182,9 +182,9 @@ export async function registerVisualizationRoutes(fastify: FastifyInstance) {
             });
           }
 
-          // ffmpeg error
-          if (error.message.includes('ffmpeg')) {
-            fastify.log.error({ err: error }, 'ffmpeg error generating spectrogram');
+          // Visualization generator error
+          if (error.message.includes('gen_visuals.py') || error.message.includes('visual generation')) {
+            fastify.log.error({ err: error }, 'visualization generator error generating spectrogram');
             return reply.code(500).send({
               error: {
                 code: 'GENERATION_FAILED',

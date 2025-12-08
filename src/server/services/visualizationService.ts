@@ -1,5 +1,5 @@
 /**
- * VisualizationService - Generate waveform and spectrogram images using ffmpeg
+ * VisualizationService - Generate waveform and spectrogram images using gen_visuals.py
  * Manages caching of generated images in the cache directory
  */
 import path from 'path';
@@ -15,7 +15,7 @@ export interface VisualizationResult {
 }
 
 /**
- * Service for generating audio visualizations using ffmpeg
+ * Service for generating audio visualizations using the Python generator script
  */
 export class VisualizationService {
   private cacheDir: string;
@@ -24,6 +24,8 @@ export class VisualizationService {
   private placeholderDir: string;
   private errorWaveformPath: string;
   private errorSpectrogramPath: string;
+  private generatorScriptPath: string;
+  private pythonCommand: string;
 
   /**
    * Create a new VisualizationService
@@ -36,6 +38,19 @@ export class VisualizationService {
     this.placeholderDir = path.join(cacheDir, 'placeholders');
     this.errorWaveformPath = path.join(this.placeholderDir, 'error-waveform.png');
     this.errorSpectrogramPath = path.join(this.placeholderDir, 'error-spectrogram.png');
+    this.generatorScriptPath = path.join(process.cwd(), 'scripts', 'gen_visuals.py');
+
+    const venvPython = process.platform === 'win32'
+      ? path.join(process.cwd(), '.venv', 'Scripts', 'python.exe')
+      : path.join(process.cwd(), '.venv', 'bin', 'python');
+
+    if (process.env.PYTHON_PATH) {
+      this.pythonCommand = process.env.PYTHON_PATH;
+    } else if (existsSync(venvPython)) {
+      this.pythonCommand = venvPython;
+    } else {
+      this.pythonCommand = 'python3';
+    }
   }
 
   /**
@@ -64,7 +79,7 @@ export class VisualizationService {
   }
 
   /**
-   * Generate waveform image using ffmpeg
+   * Generate waveform image using the Python generator script
    * @param audioPath - Absolute path to audio file
    * @param relativeFilePath - Relative path of audio file (for cache key)
    * @returns Visualization result with image path and cached status
@@ -88,26 +103,23 @@ export class VisualizationService {
     }
 
     try {
-      // Generate waveform using ffmpeg
-      // showwavespic filter generates waveform visualization
-      await this.runFfmpeg([
-        '-i', audioPath,
-        '-filter_complex', 'showwavespic=s=800x200:colors=white',
-        '-frames:v', '1',
-        '-y',
-        cachePath
-      ]);
+      // Generate waveform using the Python helper script
+      await this.runGenVisuals({
+        audioPath,
+        outputPath: cachePath,
+        type: 'waveform',
+      });
 
       // Verify that the output file was actually created and is not empty
       if (!existsSync(cachePath)) {
-        throw new Error('ffmpeg completed but output file was not created');
+        throw new Error('visual generation completed but output file was not created');
       }
 
       const stats = await fs.stat(cachePath);
       if (stats.size === 0) {
         // Remove empty file
         await fs.unlink(cachePath);
-        throw new Error('ffmpeg created an empty output file');
+        throw new Error('visual generation created an empty output file');
       }
 
       return {
@@ -125,7 +137,7 @@ export class VisualizationService {
   }
 
   /**
-   * Generate spectrogram image using ffmpeg
+   * Generate spectrogram image using the Python generator script
    * @param audioPath - Absolute path to audio file
    * @param relativeFilePath - Relative path of audio file (for cache key)
    * @returns Visualization result with image path and cached status
@@ -149,27 +161,23 @@ export class VisualizationService {
     }
 
     try {
-      // Generate spectrogram using ffmpeg
-      // showspectrumpic filter generates spectrogram visualization
-      // Display frequency range: 20Hz to 20KHz (human hearing range)
-      await this.runFfmpeg([
-        '-i', audioPath,
-        '-filter_complex', 'showspectrumpic=s=800x200:mode=combined:color=fire:scale=log:fscale=log:legend=0',
-        '-frames:v', '1',
-        '-y',
-        cachePath
-      ]);
+      // Generate spectrogram using the Python helper script
+      await this.runGenVisuals({
+        audioPath,
+        outputPath: cachePath,
+        type: 'spectrogram',
+      });
 
       // Verify that the output file was actually created and is not empty
       if (!existsSync(cachePath)) {
-        throw new Error('ffmpeg completed but output file was not created');
+        throw new Error('visual generation completed but output file was not created');
       }
 
       const stats = await fs.stat(cachePath);
       if (stats.size === 0) {
         // Remove empty file
         await fs.unlink(cachePath);
-        throw new Error('ffmpeg created an empty output file');
+        throw new Error('visual generation created an empty output file');
       }
 
       return {
@@ -277,27 +285,54 @@ export class VisualizationService {
   }
 
   /**
-   * Run ffmpeg command
-   * @param args - ffmpeg arguments
+   * Run gen_visuals.py to generate a visualization image
+   * @param options - Generation options
    */
-  private async runFfmpeg(args: string[]): Promise<void> {
+  private async runGenVisuals(options: {
+    audioPath: string;
+    outputPath: string;
+    type: Exclude<VisualizationType, 'both'>;
+  }): Promise<void> {
     return new Promise((resolve, reject) => {
-      const ffmpeg = spawn('ffmpeg', args);
+      if (!existsSync(this.generatorScriptPath)) {
+        reject(new Error(`gen_visuals.py not found at ${this.generatorScriptPath}`));
+        return;
+      }
+
+      const args = [
+        this.generatorScriptPath,
+        '--file',
+        options.audioPath,
+        '--type',
+        options.type,
+      ];
+
+      if (options.type === 'waveform') {
+        args.push('--waveform-output', options.outputPath);
+      } else {
+        args.push('--spectrogram-output', options.outputPath);
+      }
+
+      args.push('--force');
+
+      const generator = spawn(this.pythonCommand, args);
       let stderr = '';
 
-      ffmpeg.stderr.on('data', (data) => {
-        stderr += data.toString();
+      if (generator.stderr) {
+        generator.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+      }
+
+      generator.on('error', (error) => {
+        reject(new Error(`gen_visuals.py execution failed: ${error.message}`));
       });
 
-      ffmpeg.on('error', (error) => {
-        reject(new Error(`ffmpeg execution failed: ${error.message}`));
-      });
-
-      ffmpeg.on('close', (code) => {
+      generator.on('close', (code) => {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`ffmpeg exited with code ${code}: ${stderr}`));
+          reject(new Error(`gen_visuals.py exited with code ${code}: ${stderr}`));
         }
       });
     });
