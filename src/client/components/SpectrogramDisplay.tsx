@@ -59,7 +59,7 @@ export const SpectrogramDisplay = memo(function SpectrogramDisplay({
         src={imageUrl}
         alt="Spectrogram"
         className="spectrogram-display__image"
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        style={{ width: '100%', height: '100%' }}
       />
     );
   }

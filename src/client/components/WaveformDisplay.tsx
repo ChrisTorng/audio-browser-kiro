@@ -59,7 +59,7 @@ export const WaveformDisplay = memo(function WaveformDisplay({
         src={imageUrl}
         alt="Waveform"
         className="waveform-display__image"
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        style={{ width: '100%', height: '100%' }}
       />
     );
   }
