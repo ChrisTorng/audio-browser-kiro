@@ -9,3 +9,4 @@ export * from './useKeyboardNavigation';
 export * from './useAudioMetadata';
 export * from './useVirtualScrollOptimization';
 export * from './useToast';
+export * from './useHoverPreview';

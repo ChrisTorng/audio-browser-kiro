@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { createPortal } from 'react-dom';
+import { useHoverPreview } from '../hooks';
 
 /**
  * WaveformDisplay component props
@@ -22,38 +24,84 @@ export const WaveformDisplay = memo(function WaveformDisplay({
   isLoading = false,
   error = null,
 }: WaveformDisplayProps) {
+  const previewFallbackWidth = width * 4;
+  const previewFallbackHeight = height * 6;
+  const previewEnabled = !!imageUrl && !isLoading && !error;
+
+  const { anchorRef, isVisible, position, handleMouseEnter, handleMouseLeave, handlePreviewLoad } = useHoverPreview({
+    imageUrl: previewEnabled ? imageUrl : null,
+    disabled: !previewEnabled,
+    fallbackWidth: previewFallbackWidth,
+    fallbackHeight: previewFallbackHeight,
+  });
+
+  const stateClass = error
+    ? 'waveform-display--error'
+    : isLoading
+    ? 'waveform-display--loading'
+    : !imageUrl
+    ? 'waveform-display--empty'
+    : '';
+
+  const showPreview = isVisible && previewEnabled && position;
+
+  let content: JSX.Element;
+
   if (error) {
-    return (
-      <div className="waveform-display waveform-display--error" style={{ width, height }}>
-        <span className="waveform-display__error-icon">⚠️</span>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="waveform-display waveform-display--loading" style={{ width, height }}>
-        <span className="waveform-display__loading-text">Loading...</span>
-      </div>
-    );
-  }
-
-  if (!imageUrl) {
-    return (
-      <div className="waveform-display waveform-display--empty" style={{ width, height }}>
-        <span className="waveform-display__empty-text">~</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="waveform-display" style={{ width, height }}>
+    content = <span className="waveform-display__error-icon">⚠️</span>;
+  } else if (isLoading) {
+    content = <span className="waveform-display__loading-text">Loading...</span>;
+  } else if (!imageUrl) {
+    content = <span className="waveform-display__empty-text">~</span>;
+  } else {
+    content = (
       <img
         src={imageUrl}
         alt="Waveform"
         className="waveform-display__image"
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
+    );
+  }
+
+  return (
+    <div
+      className={`waveform-display ${stateClass}`.trim()}
+      style={{ width, height }}
+      ref={anchorRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {content}
+      {showPreview &&
+        position &&
+        createPortal(
+          <div
+            className="visualization-preview"
+            data-variant="waveform"
+            data-placement={position.placement}
+            data-testid="waveform-preview"
+            style={{
+              width: position.width,
+              height: position.height,
+              top: position.top,
+              left: position.left,
+            }}
+          >
+            <img
+              src={imageUrl!}
+              alt="Waveform preview"
+              className="visualization-preview__image"
+              onLoad={handlePreviewLoad}
+              draggable={false}
+              style={{
+                width: position.width,
+                height: position.height,
+              }}
+            />
+          </div>,
+          document.body
+        )}
     </div>
   );
 });
