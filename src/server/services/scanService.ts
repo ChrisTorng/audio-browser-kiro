@@ -211,6 +211,11 @@ export class ScanService {
 
       // Process all entries in parallel
       const promises = entries.map(async (entry) => {
+        // Skip hidden directories (and their contents)
+        if (entry.isDirectory() && entry.name.startsWith('.')) {
+          return;
+        }
+
         const fullPath = path.join(dirPath, entry.name);
 
         try {

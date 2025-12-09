@@ -189,6 +189,18 @@ describe('ScanService', () => {
       const disc1 = album1?.subdirectories.find(d => d.name === 'disc1');
       expect(disc1?.totalFileCount).toBe(1);
     });
+
+    it('should skip hidden directories when scanning', async () => {
+      const hiddenDir = path.join(testDir, '.hidden');
+      await fs.mkdir(hiddenDir, { recursive: true });
+      await fs.writeFile(path.join(hiddenDir, 'secret.mp3'), 'hidden content');
+
+      const tree = await scanService.scanDirectory(testDir);
+
+      const hiddenNode = tree.subdirectories.find(d => d.name === '.hidden');
+      expect(hiddenNode).toBeUndefined();
+      expect(tree.totalFileCount).toBe(7);
+    }, { timeout: 10000 });
   });
 
   describe('caching', () => {
@@ -242,4 +254,3 @@ describe('ScanService', () => {
     });
   });
 });
-
